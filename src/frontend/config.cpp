@@ -1,8 +1,11 @@
 #include "config.hpp"
 
-Configuration Configuration::current{};
-
-Configuration &Configuration::get_current()
+namespace AngbeGui
 {
-	return current;
+	Configuration Configuration::current{};
+
+	Configuration &Configuration::get()
+	{
+		return current;
+	}
 }

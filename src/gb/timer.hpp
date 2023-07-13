@@ -1,7 +1,7 @@
 #pragma once
 #include <cinttypes>
 
-namespace GameBoy
+namespace Angbe
 {
 	class Core;
 	class Timer

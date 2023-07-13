@@ -1,6 +1,6 @@
 #include "pad.hpp"
 
-namespace GameBoy
+namespace Angbe
 {
 	void Gamepad::select_pad_state(uint8_t value)
 	{

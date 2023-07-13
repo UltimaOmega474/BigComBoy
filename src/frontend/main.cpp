@@ -1,45 +1,60 @@
-#include <gb/core.hpp>
+#include "menu_bar.hpp"
+#include "gui_constants.hpp"
+#include "state.hpp"
+#include <gb/constants.hpp>
 #include <string>
 #include <fmt/format.h>
 #include <SDL.h>
 #include <imgui.h>
 #include <imgui_impl_sdl2.h>
 #include <imgui_impl_sdlrenderer2.h>
-#include "menu_bar.hpp"
+#include <nfd.hpp>
+#include <chrono>
+
 int main(int argc, char **argv)
 {
-	constexpr float FONT_SIZE = 22.0f;
-	constexpr float FONT_RENDER_SIZE = 24.0f;
+	using namespace std::chrono_literals;
 
 	if (SDL_Init(SDL_INIT_VIDEO) != 0)
 	{
 		fmt::print("Unable to initialize SDL2 Video\n");
 		return 0;
 	}
+
+	NFD::Init();
+
 #ifdef WIN32
 	// d3d12 crashes when resizing and the default is d3d9
 	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "vulkan");
 #endif
 
-	SDL_Window *window = SDL_CreateWindow("Angbe", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 480, 432, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+	SDL_Window *window = SDL_CreateWindow("AngbeGui", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, Angbe::LCD_WIDTH, Angbe::LCD_HEIGHT, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
-	SDL_SetWindowMinimumSize(window, 480, 432);
+
+	SDL_SetWindowMinimumSize(window, Angbe::LCD_WIDTH, Angbe::LCD_HEIGHT + AngbeGui::MENU_HEIGHT);
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+
 	auto ctx = ImGui::CreateContext();
 	ImGui::StyleColorsLight();
 	ImGuiIO &io = ImGui::GetIO();
 	io.IniFilename = nullptr;
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
+	io.FontDefault = io.Fonts->AddFontFromFileTTF(AngbeGui::OPEN_SANS_SEMIBOLD_PATH.c_str(), AngbeGui::FONT_RENDER_SIZE);
+	io.FontGlobalScale = AngbeGui::FONT_SIZE / AngbeGui::FONT_RENDER_SIZE;
 
 	ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
 	ImGui_ImplSDLRenderer2_Init(renderer);
-	io.FontDefault = io.Fonts->AddFontFromFileTTF("fonts/Open_Sans/OpenSans-SemiBold.ttf", FONT_RENDER_SIZE);
-	io.FontGlobalScale = FONT_SIZE / FONT_RENDER_SIZE;
 
 	bool running = true;
-	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-	ImVec2 scale = io.DisplayFramebufferScale;
-	MenuBar menu{};
+	constexpr std::chrono::nanoseconds max_step_delay = 33ms;
+	constexpr auto logic_rate = AngbeGui::set_update_frequency_hz(60);
+	auto accumulator = 0ns;
+	auto old_time = std::chrono::steady_clock::now();
+
+	AngbeGui::EmulationState::current_state().create_texture(renderer);
+	AngbeGui::MenuBar menu{};
+
 	while (running)
 	{
 		SDL_Event event;
@@ -56,14 +71,37 @@ int main(int argc, char **argv)
 			}
 		}
 
+		auto time_now = std::chrono::steady_clock::now();
+		auto full_delta = time_now - old_time;
+		old_time = time_now;
+
+		if (full_delta > max_step_delay)
+			full_delta = max_step_delay;
+
+		accumulator += full_delta;
+
+		auto &state = AngbeGui::EmulationState::current_state();
+
+		if (accumulator >= logic_rate)
+		{
+			if (state.status == AngbeGui::Status::Running)
+				state.step_frame();
+
+			accumulator -= logic_rate;
+		}
+
+		SDL_RenderClear(renderer);
+
+		if (state.status == AngbeGui::Status::Running)
+			state.draw_frame(window, renderer);
+
 		ImGui_ImplSDLRenderer2_NewFrame();
 		ImGui_ImplSDL2_NewFrame();
 		ImGui::NewFrame();
 		menu.draw();
 		ImGui::Render();
 		SDL_RenderSetScale(renderer, io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y);
-		SDL_SetRenderDrawColor(renderer, (Uint8)(clear_color.x * 255), (Uint8)(clear_color.y * 255), (Uint8)(clear_color.z * 255), (Uint8)(clear_color.w * 255));
-		SDL_RenderClear(renderer);
+
 		ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData());
 		SDL_RenderPresent(renderer);
 	}
@@ -73,6 +111,8 @@ int main(int argc, char **argv)
 	ImGui::DestroyContext();
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
+	NFD::Quit();
 	SDL_Quit();
+
 	return 0;
 }

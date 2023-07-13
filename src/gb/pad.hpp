@@ -2,7 +2,7 @@
 #include <cinttypes>
 #include <vector>
 
-namespace GameBoy
+namespace Angbe
 {
 	class Gamepad
 	{

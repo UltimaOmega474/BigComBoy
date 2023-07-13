@@ -32,18 +32,22 @@ target_sources(Angbe-Core PRIVATE
 
 if(imgui_FOUND AND fmt_FOUND AND SDL2_FOUND)
 	add_executable(Angbe-Gui src/frontend/main.cpp)
+	add_subdirectory(extern/nativefiledialog-extended)
 	target_sources(Angbe-Gui PRIVATE
 		src/frontend/config.cpp
 		src/frontend/menu_bar.cpp
+		src/frontend/gui_constants.cpp
+		src/frontend/state.cpp
 	)
 	set_target_properties(Angbe-Gui PROPERTIES
 		CXX_STANDARD 20
 		RUNTIME_OUTPUT_DIRECTORY "$<1:${CMAKE_SOURCE_DIR}/bin>"
+
 		OUTPUT_NAME "Angbe-Gui"
 	)
 
 	target_include_directories(Angbe-Gui PRIVATE src/)
-	target_link_libraries(Angbe-Gui PRIVATE SDL2::SDL2 SDL2::SDL2main imgui::imgui Angbe-Core fmt::fmt)
+	target_link_libraries(Angbe-Gui PRIVATE SDL2::SDL2 SDL2::SDL2main imgui::imgui Angbe-Core fmt::fmt nfd)
 
 	configure_file(fonts/Open_Sans/OpenSans-VariableFont_wdth,wght.ttf ${CMAKE_SOURCE_DIR}/bin/fonts/Open_Sans/OpenSans-VariableFont_wdth,wght.ttf COPYONLY)
 	configure_file(fonts/Open_Sans/OpenSans-SemiBold.ttf ${CMAKE_SOURCE_DIR}/bin/fonts/Open_Sans/OpenSans-SemiBold.ttf COPYONLY)

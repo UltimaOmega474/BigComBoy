@@ -1,14 +1,14 @@
 #include "cartridge.hpp"
 
 #include <fstream>
-namespace GameBoy
+namespace Angbe
 {
 	Cartridge::Cartridge(CartHeader &&header)
 		: header(std::move(header))
 	{
 	}
 
-	std::unique_ptr<Cartridge> Cartridge::from_file(std::string_view rom_path)
+	std::shared_ptr<Cartridge> Cartridge::from_file(std::string_view rom_path)
 	{
 		CartHeader header{};
 		header.file_path = rom_path;
@@ -45,13 +45,13 @@ namespace GameBoy
 			{
 			case 0:
 			{
-				auto mbc = std::make_unique<NoMBC>(std::move(header));
+				auto mbc = std::make_shared<NoMBC>(std::move(header));
 				rom.close();
 				return std::move(mbc);
 			}
 			case 1:
 			{
-				auto mbc = std::make_unique<MBC1>(std::move(header));
+				auto mbc = std::make_shared<MBC1>(std::move(header));
 				mbc->init_banks(rom);
 				mbc->load_sram_from_file();
 				rom.close();

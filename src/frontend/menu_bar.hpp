@@ -1,9 +1,12 @@
 #pragma once
 
-class MenuBar
+namespace AngbeGui
 {
-	bool shown = true;
+	class MenuBar
+	{
+		bool shown = true;
 
-public:
-	void draw();
-};
+	public:
+		void draw();
+	};
+}

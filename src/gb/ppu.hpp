@@ -2,7 +2,7 @@
 
 #include <cinttypes>
 #include <array>
-namespace GameBoy
+namespace Angbe
 {
 	struct Color
 	{

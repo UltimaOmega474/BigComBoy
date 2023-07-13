@@ -4,7 +4,7 @@
 #include <iostream>
 #include <exception>
 
-namespace GameBoy
+namespace Angbe
 {
 
 	SM83::SM83(Core &gbcore)

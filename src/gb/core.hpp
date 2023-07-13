@@ -8,7 +8,7 @@
 
 #include <memory>
 #include <ostream>
-namespace GameBoy
+namespace Angbe
 {
 
 	struct CoreSettings
@@ -33,11 +33,11 @@ namespace GameBoy
 		std::array<uint8_t, 127> hram{};  // ff80h - fffeh
 		std::array<uint8_t, 256> boot_rom{};
 
-		std::unique_ptr<Cartridge> cart{};
+		std::shared_ptr<Cartridge> cart{};
 
 		Core();
 
-		void start(std::unique_ptr<Cartridge> cart);
+		void start(std::shared_ptr<Cartridge> cart);
 
 		void run_for_frames(uint32_t frames);
 		void run_for_cycles(uint32_t cycles, std::ostream &log_stream);

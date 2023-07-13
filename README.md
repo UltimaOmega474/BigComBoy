@@ -15,7 +15,10 @@ Angbe is an emulator that runs games for the GameBoy handheld console written in
 
 ## Building
 
-You will need a C++ compiler that supports C++20 or later.
+You will need a C++ compiler that supports C++20 or later. The following insturctions are to install the dependencies for Angbe-Gui. Angbe-Core does not have any external dependencies.
+
+Angbe-Gui uses [Native File Dialog Extended](https://github.com/btzy/nativefiledialog-extended) as a submodule, please make sure the dependencies are installed before building Angbe-Gui.
+
 
 1. Download and setup [vcpkg](https://github.com/microsoft/vcpkg) and [cmake](https://cmake.org/).
 

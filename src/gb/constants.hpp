@@ -2,8 +2,10 @@
 
 #include <cinttypes>
 #include <array>
-namespace GameBoy
+namespace Angbe
 {
+	constexpr int32_t LCD_WIDTH = 160;
+	constexpr int32_t LCD_HEIGHT = 144;
 	constexpr uint8_t INT_VBLANK_BIT = 0x01;
 	constexpr uint8_t INT_LCD_STAT_BIT = 0x02;
 	constexpr uint8_t INT_TIMER_BIT = 0x04;
@@ -24,10 +26,4 @@ namespace GameBoy
 		{1, 0, 0, 0, 0, 0, 0, 1},
 		{1, 0, 0, 0, 0, 1, 1, 1},
 		{0, 1, 1, 1, 1, 1, 1, 0}};
-
-	constexpr std::array<std::array<uint8_t, 8>, 4> dt{
-		{{0, 0, 0, 0, 0, 0, 0, 1},
-		 {1, 0, 0, 0, 0, 0, 0, 1},
-		 {1, 0, 0, 0, 0, 1, 1, 1},
-		 {0, 1, 1, 1, 1, 1, 1, 0}}};
 }

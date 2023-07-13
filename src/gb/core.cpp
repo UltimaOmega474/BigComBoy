@@ -4,22 +4,30 @@
 #include <fstream>
 #include <sstream>
 
-namespace GameBoy
+namespace Angbe
 {
 	Core::Core()
 		: cpu(*this), timer(*this), ppu(*this)
 	{
 	}
 
-	void Core::start(std::unique_ptr<Cartridge> cart)
+	void Core::start(std::shared_ptr<Cartridge> cart)
 	{
-		this->cart = std::move(cart);
-		cpu.reset(0x0);
-		boot_rom_enabled = true;
-		load_boot_rom_from_file();
-		// some games may forget to do this?
-
-		ppu.set_stat(DisplayEnable, true);
+		this->cart = cart;
+		ppu.reset(true);
+		if (settings.skip_boot_rom)
+		{
+			cpu.reset(0x100);
+			boot_rom_enabled = false;
+			// some games may forget to do this?
+			ppu.set_stat(DisplayEnable, true);
+		}
+		else
+		{
+			cpu.reset(0x0);
+			boot_rom_enabled = true;
+			load_boot_rom_from_file();
+		}
 	}
 
 	void Core::run_for_frames(uint32_t frames)
@@ -353,7 +361,7 @@ namespace GameBoy
 				return;
 
 			case 0x50:
-				boot_rom_enabled = value != 0 ? false : true;
+				boot_rom_enabled = false;
 				return;
 			}
 			return;

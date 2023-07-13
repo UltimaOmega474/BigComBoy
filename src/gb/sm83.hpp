@@ -5,7 +5,7 @@
 #include <array>
 #include <ostream>
 #include <iomanip>
-namespace GameBoy
+namespace Angbe
 {
 	class Core;
 	enum Register

@@ -1,7 +1,7 @@
 #include "timer.hpp"
 #include "core.hpp"
 
-namespace GameBoy
+namespace Angbe
 {
 	constexpr uint32_t tac_table[4] = {1024, 16, 64, 256};
 

@@ -1,6 +1,6 @@
 #include "apu.hpp"
 
-namespace GameBoy
+namespace Angbe
 {
 	Square::Square()
 		: enabled(0), stereo_left_enabled(0), stereo_right_enabled(0),
