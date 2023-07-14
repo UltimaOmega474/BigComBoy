@@ -57,10 +57,10 @@ namespace Angbe
 		virtual ~Cartridge() = default;
 
 		virtual void init_banks(std::ifstream &rom_stream) = 0;
-		virtual uint8_t read(uint16_t addr) = 0;
-		virtual void write(uint16_t addr, uint8_t value) = 0;
-		virtual uint8_t read_ram(uint16_t addr) = 0;
-		virtual void write_ram(uint16_t addr, uint8_t value) = 0;
+		virtual uint8_t read(uint16_t address) = 0;
+		virtual void write(uint16_t address, uint8_t value) = 0;
+		virtual uint8_t read_ram(uint16_t address) = 0;
+		virtual void write_ram(uint16_t address, uint8_t value) = 0;
 
 		virtual void save_sram_to_file() = 0;
 		virtual void load_sram_from_file() = 0;
@@ -76,10 +76,10 @@ namespace Angbe
 		NoMBC(CartHeader &&header);
 		virtual ~NoMBC() = default;
 		void init_banks(std::ifstream &rom_stream) override;
-		uint8_t read(uint16_t addr) override;
-		void write(uint16_t addr, uint8_t value) override;
-		uint8_t read_ram(uint16_t addr) override;
-		void write_ram(uint16_t addr, uint8_t value) override;
+		uint8_t read(uint16_t address) override;
+		void write(uint16_t address, uint8_t value) override;
+		uint8_t read_ram(uint16_t address) override;
+		void write_ram(uint16_t address, uint8_t value) override;
 		void save_sram_to_file() override{};
 		void load_sram_from_file() override{};
 	};
@@ -101,6 +101,27 @@ namespace Angbe
 		void write(uint16_t addr, uint8_t value) override;
 		uint8_t read_ram(uint16_t addr) override;
 		void write_ram(uint16_t addr, uint8_t value) override;
+
+		void save_sram_to_file() override;
+		void load_sram_from_file() override;
+	};
+
+	class MBC2 : public Cartridge
+	{
+		uint8_t rom_bank_num = 1;
+		bool ram_enabled = false;
+		std::array<uint8_t, 512> ram;
+		std::vector<std::vector<uint8_t>> bank_list;
+
+	public:
+		MBC2(CartHeader &&header);
+		virtual ~MBC2() = default;
+
+		void init_banks(std::ifstream &rom_stream) override;
+		uint8_t read(uint16_t address) override;
+		void write(uint16_t address, uint8_t value) override;
+		uint8_t read_ram(uint16_t address) override;
+		void write_ram(uint16_t address, uint8_t value) override;
 
 		void save_sram_to_file() override;
 		void load_sram_from_file() override;

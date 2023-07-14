@@ -8,7 +8,7 @@ Angbe is an emulator that runs games for the GameBoy handheld console written in
 - [ ] Audio Support
 - [ ] Input Support
 - [x] MBC1
-- [ ] MBC2
+- [x] MBC2
 - [ ] MBC3
 - [ ] MBC5
 - [ ] Serial Port

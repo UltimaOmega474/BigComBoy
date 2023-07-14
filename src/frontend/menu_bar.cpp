@@ -19,7 +19,7 @@ namespace AngbeGui
 			{
 				if (MenuItem("Load Cartridge"))
 				{
-					NFD::UniquePathN out_path;
+					NFD::UniquePath out_path;
 
 					if (NFD::OpenDialog(out_path) == nfdresult_t::NFD_OKAY)
 						state.try_play(out_path.get());
