@@ -1,6 +1,8 @@
 #include "menu_bar.hpp"
 #include "gui_constants.hpp"
 #include "state.hpp"
+#include "config.hpp"
+#include "palette_edit.hpp"
 #include <gb/constants.hpp>
 #include <string>
 #include <fmt/format.h>
@@ -28,7 +30,7 @@ int main(int argc, char **argv)
 	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "vulkan");
 #endif
 
-	SDL_Window *window = SDL_CreateWindow("AngbeGui", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, Angbe::LCD_WIDTH, Angbe::LCD_HEIGHT, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+	SDL_Window *window = SDL_CreateWindow("AngbeGui", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, Angbe::LCD_WIDTH * 3, Angbe::LCD_HEIGHT * 3 + AngbeGui::MENU_HEIGHT, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
 
 	SDL_SetWindowMinimumSize(window, Angbe::LCD_WIDTH, Angbe::LCD_HEIGHT + AngbeGui::MENU_HEIGHT);
@@ -53,7 +55,7 @@ int main(int argc, char **argv)
 	auto old_time = std::chrono::steady_clock::now();
 
 	AngbeGui::EmulationState::current_state().create_texture(renderer);
-	AngbeGui::MenuBar menu{};
+	AngbeGui::MenuBar menu;
 
 	while (running)
 	{
@@ -81,6 +83,7 @@ int main(int argc, char **argv)
 		accumulator += full_delta;
 
 		auto &state = AngbeGui::EmulationState::current_state();
+		state.keyboard_input.update_state(state.core.pad);
 
 		if (accumulator >= logic_rate)
 		{

@@ -4,9 +4,8 @@ namespace AngbeGui
 {
 	class MenuBar
 	{
-		bool shown = true;
-
 	public:
+		bool shown = true;
 		void draw();
 	};
 }

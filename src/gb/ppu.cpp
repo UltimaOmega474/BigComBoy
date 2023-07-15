@@ -28,7 +28,7 @@ namespace Angbe
 			vram.fill(0);
 			oam.fill(0);
 			framebuffer.fill(0);
-			framebuffer_bg_color.fill(0);
+			bg_color_table.fill(0);
 			objects_on_scanline.fill({});
 			mode = PPUState::HBlank;
 		}
@@ -38,6 +38,15 @@ namespace Angbe
 		line_y = 0;
 
 		window_line_y = 0;
+	}
+
+	void PPU::set_post_boot_state()
+	{
+		window_draw_flag = true;
+		previously_disabled = false;
+		cycles = 420;
+		status = 1;
+		lcd_control = 0x91;
 	}
 
 	void PPU::step(uint32_t accumulated_cycles)
@@ -148,12 +157,6 @@ namespace Angbe
 
 		set_stat(ModeFlag, false);
 		status |= mode & 0x03;
-	}
-
-	const std::array<uint8_t, 160 * 144 * 3> &PPU::get_framebuffer() const
-	{
-		// TODO: insert return statement here
-		return framebuffer;
 	}
 
 	void PPU::write_vram(uint16_t address, uint8_t value)
@@ -271,25 +274,22 @@ namespace Angbe
 			uint8_t high_bit = (high_byte >> bit) & 0x01;
 			uint8_t pixel = (high_bit << 1) | low_bit;
 
-			size_t framebuffer_line_x = i * 3;
-			size_t framebuffer_line_y = (line_y)*160 * 3;
+			size_t framebuffer_line_x = i;
+			size_t framebuffer_line_y = (line_y)*LCD_WIDTH;
 
-			Color pixel_color;
-
+			uint32_t pixel_color;
 			if (!check_lcdc(BGEnable))
 			{
 				pixel_color = palette_index_to_color(background_palette, 0);
-				framebuffer_bg_color[(line_y * 160) + i] = 0;
+				bg_color_table[(line_y * 160) + i] = 0;
 			}
 			else
 			{
 				pixel_color = palette_index_to_color(background_palette, pixel);
-				framebuffer_bg_color[(line_y * 160) + i] = pixel;
+				bg_color_table[(line_y * 160) + i] = pixel;
 			}
 
-			framebuffer[framebuffer_line_y + framebuffer_line_x] = pixel_color.red;
-			framebuffer[framebuffer_line_y + framebuffer_line_x + 1] = pixel_color.green;
-			framebuffer[framebuffer_line_y + framebuffer_line_x + 2] = pixel_color.blue;
+			framebuffer[framebuffer_line_y + framebuffer_line_x] = pixel_color;
 		}
 	}
 
@@ -324,16 +324,13 @@ namespace Angbe
 					uint8_t high_bit = (high_byte >> bit) & 0x01;
 					uint8_t pixel = (high_bit << 1) | low_bit;
 
-					size_t framebuffer_line_y = (line_y)*160 * 3;
-					size_t framebuffer_line_x = i * 3;
-
+					size_t framebuffer_line_x = i;
+					size_t framebuffer_line_y = (line_y)*LCD_WIDTH;
 					advance_by = 1;
 
-					Color pixel_color = palette_index_to_color(background_palette, pixel);
-					framebuffer_bg_color[(line_y * 160) + i] = pixel;
-					framebuffer[framebuffer_line_y + framebuffer_line_x] = pixel_color.red;
-					framebuffer[framebuffer_line_y + framebuffer_line_x + 1] = pixel_color.green;
-					framebuffer[framebuffer_line_y + framebuffer_line_x + 2] = pixel_color.blue;
+					bg_color_table[(line_y * 160) + i] = pixel;
+
+					framebuffer[framebuffer_line_y + framebuffer_line_x] = palette_index_to_color(background_palette, pixel);
 				}
 			}
 
@@ -404,8 +401,8 @@ namespace Angbe
 
 				for (auto x = 0; x < 8; ++x)
 				{
-					size_t framebuffer_line_x = (sprite.x + x) * 3;
-					size_t framebuffer_line_y = (line_y)*160 * 3;
+					size_t framebuffer_line_x = (sprite.x + x);
+					size_t framebuffer_line_y = (line_y)*LCD_WIDTH;
 
 					if ((sprite.x + x) >= 0 && (sprite.x + x) < 160)
 					{
@@ -423,24 +420,15 @@ namespace Angbe
 						if (pixel == 0)
 							continue;
 
-						Color pixel_color;
-
 						if (!get_sprite_attrib(sprite, Priority))
 						{
-							pixel_color = palette_index_to_color(palette, pixel);
-							framebuffer[framebuffer_line_y + framebuffer_line_x] = pixel_color.red;
-							framebuffer[framebuffer_line_y + framebuffer_line_x + 1] = pixel_color.green;
-							framebuffer[framebuffer_line_y + framebuffer_line_x + 2] = pixel_color.blue;
+							framebuffer[framebuffer_line_y + framebuffer_line_x] = palette_index_to_color(palette, pixel);
 						}
 						else
 						{
-							if (framebuffer_bg_color[(line_y * 160) + (sprite.x + x)] == 0)
+							if (bg_color_table[(line_y * 160) + (sprite.x + x)] == 0)
 							{
-								pixel_color = palette_index_to_color(palette, pixel);
-
-								framebuffer[framebuffer_line_y + framebuffer_line_x] = pixel_color.red;
-								framebuffer[framebuffer_line_y + framebuffer_line_x + 1] = pixel_color.green;
-								framebuffer[framebuffer_line_y + framebuffer_line_x + 2] = pixel_color.blue;
+								framebuffer[framebuffer_line_y + framebuffer_line_x] = palette_index_to_color(palette, pixel);
 							}
 						}
 					}
@@ -467,29 +455,22 @@ namespace Angbe
 		}
 	}
 
-	Color PPU::palette_index_to_color(uint8_t palette, uint8_t bitIndex) const
+	uint32_t PPU::palette_index_to_color(uint8_t palette, uint8_t bitIndex) const
 	{
-		constexpr std::array<Color, 4> lut{
-			Color{.red = 0xFF, .green = 0xFF, .blue = 0xFF},
-			Color{.red = 0xAA, .green = 0xAA, .blue = 0xAA},
-			Color{.red = 0x55, .green = 0x55, .blue = 0x55},
-			Color{.red = 0x00, .green = 0x00, .blue = 0x00},
-		};
-
 		switch (bitIndex)
 		{
 		case 0:
-			return lut[palette & 0x3];
+			return color_table[palette & 0x3];
 		case 1:
-			return lut[(palette >> 2) & 0x3];
+			return color_table[(palette >> 2) & 0x3];
 		case 2:
-			return lut[(palette >> 4) & 0x3];
+			return color_table[(palette >> 4) & 0x3];
 		case 3:
-			return lut[(palette >> 6) & 0x3];
+			return color_table[(palette >> 6) & 0x3];
 
 		default:
 			// in case of a screw up, turn the pixel red
-			return Color{.red = 0xFF, .green = 0x00, .blue = 0x00};
+			return 0xFF0000FF;
 		}
 	}
 }

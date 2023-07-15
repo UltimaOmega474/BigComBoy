@@ -2,15 +2,6 @@
 
 namespace Angbe
 {
-	Square::Square()
-		: enabled(0), stereo_left_enabled(0), stereo_right_enabled(0),
-		  frequency(0), frequency_shadow(0), frequency_timer(0),
-		  duty_select(0), duty_length(0), length_load(0),
-		  volume(0), envelope_direction(0), envelope_period(0), envelope_timer(0),
-		  volume_out(0), duty_position(0), length_enabled(0)
-	{
-	}
-
 	void Square::step()
 	{
 		frequency_timer--;
@@ -23,6 +14,11 @@ namespace Angbe
 
 	uint16_t Square::sample(uint8_t side) const
 	{
+		constexpr uint8_t duty_table[4][8]{
+			{0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 1, 1, 1},
+			{0, 1, 1, 1, 1, 1, 1, 0}};
 		auto volume = (duty_table[duty_select][duty_position] * volume_out);
 
 		if (side == 0 && stereo_left_enabled)
@@ -111,10 +107,6 @@ namespace Angbe
 		{
 			trigger_channel();
 		}
-		else
-		{
-			int dummy = 56;
-		}
 	}
 
 	void Square::trigger_channel()
@@ -164,11 +156,6 @@ namespace Angbe
 		result |= enabled >> 7;
 		result |= length_enabled >> 6;
 		return result;
-	}
-
-	SweepSquare::SweepSquare()
-		: sweep_period(0), sweep_shift(0), sweep_direction(0), Square()
-	{
 	}
 
 	void SweepSquare::trigger_channel()
@@ -245,12 +232,6 @@ namespace Angbe
 		return nFreq;
 	}
 
-	APU::APU()
-		: frame_sequence(0), sequencer_count(0), square_2(), square_1(), buffer_index(0), samples_buffer(), sample_counter(0), power(0),
-		  stereo_left_volume(0), stereo_right_volume(0)
-	{
-	}
-
 	void APU::write_power(uint8_t value)
 	{
 		power = value >> 7;
@@ -283,7 +264,6 @@ namespace Angbe
 
 	void APU::step(uint32_t cpuCycles)
 	{
-
 		while (cpuCycles && power)
 		{
 			sequencer_count--;

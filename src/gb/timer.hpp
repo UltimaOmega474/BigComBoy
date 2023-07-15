@@ -7,14 +7,14 @@ namespace Angbe
 	class Timer
 	{
 		Core &core;
-		uint32_t div_cycles, tima_cycles;
+		uint32_t div_cycles = 0, tima_cycles = 0;
 
 	public:
-		uint8_t div;
-		uint8_t tima;
-		uint8_t tma;
-		uint8_t tac;
-		uint32_t tac_rate;
+		uint8_t div = 0;
+		uint8_t tima = 0;
+		uint8_t tma = 0;
+		uint8_t tac = 0;
+		uint32_t tac_rate = 0;
 
 		Timer(Core &core);
 

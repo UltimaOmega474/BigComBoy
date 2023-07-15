@@ -16,8 +16,18 @@ namespace AngbeGui
 
 	void EmulationState::create_texture(SDL_Renderer *renderer)
 	{
-		texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, Angbe::LCD_WIDTH, Angbe::LCD_HEIGHT);
-		SDL_SetTextureScaleMode(texture, SDL_ScaleModeLinear);
+		texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, Angbe::LCD_WIDTH, Angbe::LCD_HEIGHT);
+		auto &config = Configuration::get();
+
+		if (config.linear_filtering)
+			SDL_SetTextureScaleMode(texture, SDL_ScaleModeLinear);
+		else
+			SDL_SetTextureScaleMode(texture, SDL_ScaleModeNearest);
+
+		core.ppu.color_table[3] = 0x553840FF;
+		core.ppu.color_table[2] = 0x9b6859FF;
+		core.ppu.color_table[1] = 0xbebc6aFF;
+		core.ppu.color_table[0] = 0xedf8c8FF;
 	}
 
 	bool EmulationState::try_play(std::string path)
@@ -30,6 +40,7 @@ namespace AngbeGui
 			core.settings.skip_boot_rom = config.skip_boot_rom;
 			core.settings.boot_rom_path = config.boot_rom_path;
 			core.start(cart);
+			core.ppu.color_table = config.color_table;
 			status = Status::Running;
 			return true;
 		}
@@ -45,6 +56,7 @@ namespace AngbeGui
 			core.settings.skip_boot_rom = config.skip_boot_rom;
 			core.settings.boot_rom_path = config.boot_rom_path;
 			core.start(cart);
+			core.ppu.color_table = config.color_table;
 			status = Status::Running;
 		}
 	}
@@ -65,8 +77,8 @@ namespace AngbeGui
 	{
 		if (status == Status::Running && texture)
 		{
-			const auto &framebuffer = core.ppu.get_framebuffer();
-			SDL_UpdateTexture(texture, nullptr, framebuffer.data(), Angbe::LCD_WIDTH * 3);
+			const auto &framebuffer = core.ppu.framebuffer;
+			SDL_UpdateTexture(texture, nullptr, framebuffer.data(), Angbe::LCD_WIDTH * sizeof(uint32_t));
 
 			int w = 0, h = 0;
 			SDL_GetWindowSize(window, &w, &h);

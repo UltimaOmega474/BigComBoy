@@ -2,14 +2,80 @@
 
 namespace Angbe
 {
-	void Gamepad::select_pad_state(uint8_t value)
+	void Gamepad::set_pad_state(Button btn, bool pressed)
 	{
-		info_select = value;
+		if (pressed)
+		{
+			switch (btn)
+			{
+			case Button::Right:
+				dpad &= ~0x1;
+				break;
+			case Button::Left:
+				dpad &= ~0x2;
+				break;
+			case Button::Up:
+				dpad &= ~0x4;
+				break;
+			case Button::Down:
+				dpad &= ~0x8;
+				break;
+
+			case Button::A:
+				action &= ~0x1;
+				break;
+			case Button::B:
+				action &= ~0x2;
+				break;
+			case Button::Select:
+				action &= ~0x4;
+				break;
+			case Button::Start:
+				action &= ~0x8;
+				break;
+			}
+		}
+		else
+		{
+			switch (btn)
+			{
+			case Button::Right:
+				dpad |= 0x1;
+				break;
+			case Button::Left:
+				dpad |= 0x2;
+				break;
+			case Button::Up:
+				dpad |= 0x4;
+				break;
+			case Button::Down:
+				dpad |= 0x8;
+				break;
+
+			case Button::A:
+				action |= 0x1;
+				break;
+			case Button::B:
+				action |= 0x2;
+				break;
+			case Button::Select:
+				action |= 0x4;
+				break;
+			case Button::Start:
+				action |= 0x8;
+				break;
+			}
+		}
+	}
+
+	void Gamepad::select_button_mode(uint8_t value)
+	{
+		mode = value;
 	}
 
 	uint8_t Gamepad::get_pad_state()
 	{
-		if (info_select & 0x10)
+		if (mode & 0x10)
 		{
 			return action;
 		}

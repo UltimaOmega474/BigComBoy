@@ -8,18 +8,13 @@ namespace Angbe
 	class Square
 	{
 	public:
-		uint8_t enabled;
-		uint8_t stereo_left_enabled, stereo_right_enabled;
 		bool envelope_enable = false;
-		uint16_t frequency, frequency_shadow, frequency_timer;
-		uint8_t duty_select, duty_length, duty_position;
-		uint8_t length_load, length_enabled;
-
-		uint8_t volume, envelope_direction, envelope_period, envelope_timer;
-		uint16_t volume_out;
-
-		Square();
-		virtual ~Square() = default;
+		uint8_t enabled = 0, stereo_left_enabled = 0, stereo_right_enabled = 0;
+		uint8_t duty_select = 0, duty_length = 0, duty_position = 0;
+		uint8_t length_enabled = 0, length_load = 0, volume = 0;
+		uint8_t envelope_direction = 0, envelope_period = 0, envelope_timer = 0;
+		uint16_t frequency = 0, frequency_shadow = 0, frequency_timer = 0;
+		uint16_t volume_out = 0;
 
 		void step();
 		void length_step();
@@ -45,9 +40,9 @@ namespace Angbe
 	class SweepSquare : public Square
 	{
 	public:
-		uint8_t sweep_period, sweep_direction, sweep_shift, sweep_timer;
-		uint8_t sweep_enabled;
-		SweepSquare();
+		uint8_t sweep_enabled = 0;
+		uint8_t sweep_period = 0, sweep_direction = 0;
+		uint8_t sweep_shift = 0, sweep_timer = 0;
 
 		void trigger_channel() override;
 		void write_NRX0(uint8_t value) override;
@@ -59,19 +54,17 @@ namespace Angbe
 
 	class APU
 	{
-		uint8_t power;
+		uint8_t power = 0;
+		uint8_t stereo_left_volume = 0, stereo_right_volume = 0;
+		uint16_t frame_sequence = 0, sequencer_count = 0, sample_counter = 0;
+		uint16_t buffer_index = 0;
+		uint16_t output_sample_rate = 0;
 
-		uint16_t frame_sequence, sequencer_count, sample_counter;
-		uint16_t buffer_index;
-		uint16_t output_sample_rate;
-		uint8_t stereo_left_volume, stereo_right_volume;
-		std::array<float, 2048> samples_buffer;
+		std::array<float, 2048> samples_buffer{};
 
 	public:
 		Square square_1;
 		SweepSquare square_2;
-
-		APU();
 
 		void write_power(uint8_t value);
 		uint8_t read_power() const;

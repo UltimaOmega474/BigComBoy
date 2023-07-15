@@ -37,15 +37,14 @@ namespace Angbe
 	struct CartHeader
 	{
 		std::string file_path;
-		uint16_t entry_point;
 		std::string title;
-		uint8_t cgb_support;
-		uint16_t license_code;
-		uint8_t sgb_flag, mbc_type;
-		uint8_t rom_size, ram_size;
-		uint8_t region_code, old_license_code;
-		uint8_t version, header_checksum;
-		uint16_t checksum;
+
+		uint8_t cgb_support = 0;
+		uint8_t sgb_flag = 0, mbc_type = 0;
+		uint8_t rom_size = 0, ram_size = 0;
+		uint8_t region_code = 0, old_license_code = 0;
+		uint8_t version = 0, header_checksum = 0;
+		uint16_t entry_point = 0, license_code = 0, checksum = 0;
 	};
 
 	class Cartridge
@@ -86,10 +85,11 @@ namespace Angbe
 
 	class MBC1 : public Cartridge
 	{
-		uint8_t mode;
-		uint8_t rom_bank_num, ram_bank_num;
-		uint8_t bank_upper_bits, ram_enabled;
-		std::array<uint8_t, 8192> eram;
+		uint8_t mode = 0, rom_bank_num = 1,
+				ram_bank_num = 0, bank_upper_bits = 0;
+
+		bool ram_enabled = false;
+		std::array<uint8_t, 8192> eram{};
 		std::vector<std::vector<uint8_t>> bank_list;
 
 	public:
@@ -110,7 +110,7 @@ namespace Angbe
 	{
 		uint8_t rom_bank_num = 1;
 		bool ram_enabled = false;
-		std::array<uint8_t, 512> ram;
+		std::array<uint8_t, 512> ram{};
 		std::vector<std::vector<uint8_t>> bank_list;
 
 	public:

@@ -14,7 +14,7 @@ namespace Angbe
 	struct CoreSettings
 	{
 		std::string boot_rom_path;
-		bool skip_boot_rom;
+		bool skip_boot_rom = false;
 	};
 
 	class Core
@@ -26,14 +26,13 @@ namespace Angbe
 		SM83 cpu;
 		Timer timer;
 		PPU ppu;
-		APU apu{};
-		Gamepad pad{};
-		CoreSettings settings{};
-		std::array<uint8_t, 8192> wram{}; // c000h - cfffh
-		std::array<uint8_t, 127> hram{};  // ff80h - fffeh
+		APU apu;
+		Gamepad pad;
+		CoreSettings settings;
+		std::array<uint8_t, 8192> wram{};
+		std::array<uint8_t, 127> hram{};
 		std::array<uint8_t, 256> boot_rom{};
-
-		std::shared_ptr<Cartridge> cart{};
+		std::shared_ptr<Cartridge> cart;
 
 		Core();
 

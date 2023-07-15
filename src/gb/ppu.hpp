@@ -1,14 +1,9 @@
 #pragma once
-
+#include "constants.hpp"
 #include <cinttypes>
 #include <array>
 namespace Angbe
 {
-	struct Color
-	{
-		uint8_t red, green, blue, transparent;
-	};
-
 	enum PPUState
 	{
 		HBlank,
@@ -58,35 +53,32 @@ namespace Angbe
 	class Core;
 	class PPU
 	{
-		bool window_draw_flag = false;
+		Core &core;
+		bool window_draw_flag = false, previously_disabled = false;
+		uint8_t num_obj_on_scanline = 0;
 		uint32_t cycles = 0;
 		PPUState mode = PPUState::HBlank;
-		std::array<uint8_t, 8193> vram{}; // 8000h - 9fffh
-		std::array<uint8_t, 256> oam{};	  // fe00h - fe9fh
+		std::array<uint8_t, 8193> vram{};
+		std::array<uint8_t, 256> oam{};
 		std::array<Object, 10> objects_on_scanline{};
-		std::array<uint8_t, 160 * 144 * 3> framebuffer{};
-		std::array<uint8_t, 160 * 144> framebuffer_bg_color{};
-		uint8_t num_obj_on_scanline = 0;
-		bool previously_disabled = false;
-		Core &core;
+		std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT> bg_color_table{};
 
 	public:
-		uint8_t lcd_control = 0;
-		uint8_t status = 0;
+		uint8_t lcd_control = 0, status = 0;
 		uint8_t screen_scroll_y = 0, screen_scroll_x = 0;
-		uint8_t line_y = 0;
-		uint8_t line_y_compare = 0;
+		uint8_t line_y = 0, line_y_compare = 0;
 		uint8_t window_y = 0, window_x = 0;
-		uint8_t background_palette = 0;
+		uint8_t window_line_y = 0, background_palette = 0;
 		uint8_t object_palette_0 = 0, object_palette_1 = 0;
-		uint8_t window_line_y = 0;
+
+		std::array<uint32_t, LCD_WIDTH * LCD_HEIGHT> framebuffer{};
+		std::array<uint32_t, 4> color_table = LCD_GRAY_PALETTE;
 
 		PPU(Core &core);
 
 		void reset(bool hard_reset);
+		void set_post_boot_state();
 		void step(uint32_t accumulated_cycles);
-
-		const std::array<uint8_t, 160 * 144 * 3> &get_framebuffer() const;
 
 		void write_vram(uint16_t address, uint8_t value);
 		void write_oam(uint16_t address, uint8_t value);
@@ -109,6 +101,6 @@ namespace Angbe
 		bool get_sprite_attrib(const Object &spr, uint8_t attrib);
 		void check_ly_lyc(bool allow_interrupts);
 
-		Color palette_index_to_color(uint8_t palette, uint8_t bitIndex) const;
+		uint32_t palette_index_to_color(uint8_t palette, uint8_t bitIndex) const;
 	};
 }

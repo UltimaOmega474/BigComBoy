@@ -17,15 +17,14 @@ namespace Angbe
 		ppu.reset(true);
 		if (settings.skip_boot_rom)
 		{
-			cpu.reset(0x100);
 			boot_rom_enabled = false;
-			// some games may forget to do this?
-			ppu.set_stat(DisplayEnable, true);
+			cpu.reset(0x100);
+			ppu.set_post_boot_state();
 		}
 		else
 		{
-			cpu.reset(0x0);
 			boot_rom_enabled = true;
+			cpu.reset(0x0);
 			load_boot_rom_from_file();
 		}
 	}
@@ -256,7 +255,7 @@ namespace Angbe
 			switch (address & 0xFF)
 			{
 			case 0x00:
-				pad.select_pad_state(value);
+				pad.select_button_mode(value);
 				return;
 
 			case 0x01:

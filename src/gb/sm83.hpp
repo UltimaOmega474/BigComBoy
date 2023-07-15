@@ -1,10 +1,8 @@
 #pragma once
-
 #include <cinttypes>
-#include <vector>
 #include <array>
 #include <ostream>
-#include <iomanip>
+
 namespace Angbe
 {
 	class Core;
@@ -50,11 +48,12 @@ namespace Angbe
 		Core &core;
 
 	public:
-		std::array<uint8_t, 8> registers{};
-		uint16_t sp = 0xFFFE, pc = 0;
-		uint8_t master_interrupt_enable = true;
-		uint8_t interrupt_flag = 0, interrupt_enable = 0;
+		bool master_interrupt_enable = true;
 		bool halted = false, stopped = false;
+		uint8_t interrupt_flag = 0, interrupt_enable = 0;
+		uint16_t sp = 0xFFFE, pc = 0;
+		std::array<uint8_t, 8> registers{};
+
 		SM83(Core &gbcore);
 
 		void reset(uint16_t new_pc);

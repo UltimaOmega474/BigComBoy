@@ -21,9 +21,10 @@ namespace Angbe
 	constexpr auto DONT_SET_IME = false;
 	constexpr auto SET_IME = true;
 
-	constexpr uint8_t duty_table[4][8]{
-		{0, 0, 0, 0, 0, 0, 0, 1},
-		{1, 0, 0, 0, 0, 0, 0, 1},
-		{1, 0, 0, 0, 0, 1, 1, 1},
-		{0, 1, 1, 1, 1, 1, 1, 0}};
+	constexpr std::array<uint32_t, 4> LCD_GRAY_PALETTE{
+		0xFFFFFFFF,
+		0xAAAAAAFF,
+		0x555555FF,
+		0x000000FF,
+	};
 }

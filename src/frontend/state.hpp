@@ -1,4 +1,5 @@
 #pragma once
+#include "input.hpp"
 #include <string>
 #include <gb/core.hpp>
 #include <memory>
@@ -22,11 +23,11 @@ namespace AngbeGui
 
 	public:
 		Angbe::Core core;
+		KeyboardInput keyboard_input;
 		Status status = Status::Stopped;
 		bool paused = false;
 		std::shared_ptr<Angbe::Cartridge> cart;
 
-		EmulationState() = default;
 		~EmulationState();
 
 		void create_texture(SDL_Renderer *renderer);

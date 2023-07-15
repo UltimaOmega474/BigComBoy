@@ -3,16 +3,16 @@
 
 namespace Angbe
 {
-	constexpr uint32_t tac_table[4] = {1024, 16, 64, 256};
-
 	Timer::Timer(Core &core)
-		: core(core), div(0), div_cycles(0), tima(0), tma(0), tac(0), tima_cycles(0)
+		: core(core)
 	{
 		set_tac(0);
 	}
 
 	void Timer::set_tac(uint8_t rate)
 	{
+		constexpr uint32_t tac_table[4] = {1024, 16, 64, 256};
+
 		tac_rate = tac_table[rate & 0x3];
 		tac = rate;
 	}
