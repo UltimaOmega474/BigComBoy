@@ -59,4 +59,4 @@ Note: To use these dependencies as a static library change triplet to: `--triple
 
 ## License
 
-Angbe is open source and distributed under the MIT License. See LICENSE.md for details. Release packages for Angbe contain code from SDL2, {fmt} and imgui which contain their own licenses included with the release. Angbe also uses the OpenSans font. See `fonts/Open_Sans/OFL.txt` in both the source and release package for the license.
+Angbe is open source and distributed under the MIT License. See LICENSE.md for details.
