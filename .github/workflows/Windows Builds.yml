@@ -1,0 +1,53 @@
+name: Windows Build
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: "recursive"
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install SDL2
+        run: vcpkg install sdl2 --triplet=x64-windows-static
+
+      - name: Install Imgui
+        run: vcpkg install "imgui[core,sdl2-binding,sdl2-renderer-binding]" --triplet=x64-windows-static
+
+      - name: Install {fmt}
+        run: vcpkg install fmt --triplet=x64-windows-static
+
+      - name: Configure CMake
+        run: |
+          mkdir build
+          cmake -B build -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+
+      - name: Build
+        run: cmake --build build -t SunBoy --config Release
+
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v3.1.2
+        with:
+          name: Windows Build Result
+          path: D:/a/SunBoy/SunBoy/bin/*
+
+      - name: Zipping bin directory
+        run: |
+          tar -c -f "SunBoy_Release.zip" -C bin/ **
+
+      - uses: benjlevesque/short-sha@v2.2
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "nightly"
+          prerelease: false
+          title: "Nightly Release - ${{ env.SHA }}"
+          files: SunBoy_Release.zip

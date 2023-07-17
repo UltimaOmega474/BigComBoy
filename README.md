@@ -35,25 +35,29 @@ Below you will find the current status of various feature implementations and te
 
 You will need a C++ compiler that supports C++20 or later. The following insturctions are to install the dependencies for SunBoy's frontend. The emulator core does not have any dependencies.
 
-SunBoy uses [Native File Dialog Extended](https://github.com/btzy/nativefiledialog-extended) as a submodule, please make sure to clone with the submodule included.
+- SunBoy uses [Native File Dialog Extended](https://github.com/btzy/nativefiledialog-extended) as a submodule, please make sure to clone with the submodule included.
 
+- Download and setup [vcpkg](https://github.com/microsoft/vcpkg) and [cmake](https://cmake.org/).
 
-1. Download and setup [vcpkg](https://github.com/microsoft/vcpkg) and [cmake](https://cmake.org/).
+- Install imgui
 
-2. Install imgui
 ```bash
 vcpkg install "imgui[core,sdl2-binding,sdl2-renderer-binding]" --triplet=x64-windows
 ```
-1. Install {fmt}
+
+- Install {fmt}
+
 ```bash
 vcpkg install fmt --triplet=x64-windows
 ```
-1. Install SDL2
+
+- Install SDL2
+
 ```bash
 vcpkg install sdl2 --triplet=x64-windows
 ```
 
-1. Configure and Build the project. Binaries are written to the `bin/` folder in the source directory.
+- Configure and Build the project. Binaries are written to the `bin/` folder in the source directory.
 
 Note: To use these dependencies as a static library change triplet to: `--triplet=x64-windows-static`
 

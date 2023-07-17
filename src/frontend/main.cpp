@@ -30,7 +30,7 @@ int main(int argc, char **argv)
 	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "vulkan");
 #endif
 
-	SDL_Window *window = SDL_CreateWindow("AngbeGui", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SunBoy::LCD_WIDTH * 3, SunBoy::LCD_HEIGHT * 3 + SunBoy::MENU_HEIGHT, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+	SDL_Window *window = SDL_CreateWindow("SunBoy", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SunBoy::LCD_WIDTH * 3, SunBoy::LCD_HEIGHT * 3 + SunBoy::MENU_HEIGHT, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
 
 	SDL_SetWindowMinimumSize(window, SunBoy::LCD_WIDTH, SunBoy::LCD_HEIGHT + SunBoy::MENU_HEIGHT);
