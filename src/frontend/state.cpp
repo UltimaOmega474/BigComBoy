@@ -1,7 +1,7 @@
 #include "state.hpp"
 #include "config.hpp"
 #include <SDL.h>
-namespace AngbeGui
+namespace SunBoy
 {
 	EmulationState EmulationState::current{};
 
@@ -16,7 +16,7 @@ namespace AngbeGui
 
 	void EmulationState::create_texture(SDL_Renderer *renderer)
 	{
-		texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, Angbe::LCD_WIDTH, Angbe::LCD_HEIGHT);
+		texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, SunBoy::LCD_WIDTH, SunBoy::LCD_HEIGHT);
 		auto &config = Configuration::get();
 
 		if (config.linear_filtering)
@@ -32,7 +32,7 @@ namespace AngbeGui
 
 	bool EmulationState::try_play(std::string path)
 	{
-		cart = Angbe::Cartridge::from_file(path);
+		cart = SunBoy::Cartridge::from_file(path);
 		auto &config = Configuration::get();
 		if (cart)
 		{
@@ -78,7 +78,7 @@ namespace AngbeGui
 		if (status == Status::Running && texture)
 		{
 			const auto &framebuffer = core.ppu.framebuffer;
-			SDL_UpdateTexture(texture, nullptr, framebuffer.data(), Angbe::LCD_WIDTH * sizeof(uint32_t));
+			SDL_UpdateTexture(texture, nullptr, framebuffer.data(), SunBoy::LCD_WIDTH * sizeof(uint32_t));
 
 			int w = 0, h = 0;
 			SDL_GetWindowSize(window, &w, &h);

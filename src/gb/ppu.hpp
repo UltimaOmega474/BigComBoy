@@ -2,7 +2,7 @@
 #include "constants.hpp"
 #include <cinttypes>
 #include <array>
-namespace Angbe
+namespace SunBoy
 {
 	enum PPUState
 	{

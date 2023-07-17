@@ -5,7 +5,7 @@
 #include <imgui.h>
 #include <nfd.hpp>
 
-namespace AngbeGui
+namespace SunBoy
 {
 	void MenuBar::draw()
 	{

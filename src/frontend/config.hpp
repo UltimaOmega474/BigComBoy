@@ -5,7 +5,7 @@
 #include <array>
 #include <vector>
 
-namespace AngbeGui
+namespace SunBoy
 {
 	class Configuration
 	{
@@ -17,7 +17,7 @@ namespace AngbeGui
 		bool keep_aspect_ratio = true, linear_filtering = false;
 		bool allow_sram_saving = true, skip_boot_rom = true;
 		uint32_t sram_save_interval = 30;
-		std::array<uint32_t, 4> color_table = Angbe::LCD_GRAY_PALETTE;
+		std::array<uint32_t, 4> color_table = SunBoy::LCD_GRAY_PALETTE;
 
 		static Configuration &
 		get();

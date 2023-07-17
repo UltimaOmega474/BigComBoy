@@ -1,6 +1,6 @@
 #include "apu.hpp"
 
-namespace Angbe
+namespace SunBoy
 {
 	void Square::step()
 	{

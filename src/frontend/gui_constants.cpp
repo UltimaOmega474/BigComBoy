@@ -4,7 +4,7 @@
 #include <mach-o/dyld.h>
 #endif
 
-namespace AngbeGui
+namespace SunBoy
 {
 	std::string get_current_directory()
 	{

@@ -8,7 +8,7 @@
 
 #include <memory>
 #include <ostream>
-namespace Angbe
+namespace SunBoy
 {
 
 	struct CoreSettings

@@ -6,7 +6,7 @@
 #include <string_view>
 #include <fstream>
 #include <memory>
-namespace Angbe
+namespace SunBoy
 {
 	enum RomSizes
 	{

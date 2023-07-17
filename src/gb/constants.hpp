@@ -2,7 +2,7 @@
 
 #include <cinttypes>
 #include <array>
-namespace Angbe
+namespace SunBoy
 {
 	constexpr int32_t LCD_WIDTH = 160;
 	constexpr int32_t LCD_HEIGHT = 144;

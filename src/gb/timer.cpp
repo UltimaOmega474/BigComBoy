@@ -1,7 +1,7 @@
 #include "timer.hpp"
 #include "core.hpp"
 
-namespace Angbe
+namespace SunBoy
 {
 	Timer::Timer(Core &core)
 		: core(core)

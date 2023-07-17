@@ -1,6 +1,6 @@
 #pragma once
 
-namespace AngbeGui
+namespace SunBoy
 {
 	class MenuBar
 	{

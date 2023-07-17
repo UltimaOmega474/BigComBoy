@@ -1,6 +1,6 @@
-# Angbe (Another Nameless GameBoy Emulator)
+# SunBoy
 
-An emulator for the GameBoy written in C++. Only DMG compatible games work at this time. CGB support is planned but not in active development. The project is split into two modules, Angbe the emulator core and Angbe-Gui the frontend.
+An emulator for the GameBoy written in C++. Only DMG compatible games work at this time. CGB support is planned but not in active development. The project is split into two modules, the emulator core and frontend.
 
 ## Compatibility
 
@@ -33,9 +33,9 @@ Below you will find the current status of various feature implementations and te
 
 ## Building
 
-You will need a C++ compiler that supports C++20 or later. The following insturctions are to install the dependencies for Angbe-Gui. The emulator core does not have any dependencies.
+You will need a C++ compiler that supports C++20 or later. The following insturctions are to install the dependencies for SunBoy's frontend. The emulator core does not have any dependencies.
 
-Angbe-Gui uses [Native File Dialog Extended](https://github.com/btzy/nativefiledialog-extended) as a submodule, please make sure the dependencies are installed before building Angbe-Gui.
+SunBoy uses [Native File Dialog Extended](https://github.com/btzy/nativefiledialog-extended) as a submodule, please make sure to clone with the submodule included.
 
 
 1. Download and setup [vcpkg](https://github.com/microsoft/vcpkg) and [cmake](https://cmake.org/).
@@ -59,4 +59,4 @@ Note: To use these dependencies as a static library change triplet to: `--triple
 
 ## License
 
-Angbe is open source and distributed under the MIT License. See LICENSE.md for details.
+SunBoy is open source and distributed under the MIT License. See LICENSE.txt for details.

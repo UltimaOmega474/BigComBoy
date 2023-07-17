@@ -3,7 +3,7 @@
 #include <string>
 #include <filesystem>
 
-namespace AngbeGui
+namespace SunBoy
 {
 	std::string get_current_directory();
 	std::string get_full_path(std::string file_location);

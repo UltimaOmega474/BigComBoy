@@ -9,27 +9,27 @@ if(DEFINED ENV{VCPKG_DEFAULT_TRIPLET} AND NOT VCPKG_TARGET_TRIPLET)
 endif()
 
 option(MSVC_USE_STATIC_CRT "Enable MultiThreaded Runtime Library for MSVC" ON)
+option(BUILD_SUNBOY_FRONTEND "Build Frontend" ON)
+project(SunBoy LANGUAGES CXX C)
 
-project(Angbe LANGUAGES CXX C)
-
-add_library(Angbe)
-set_target_properties(Angbe PROPERTIES
+add_library(SunBoy-Core)
+set_target_properties(SunBoy-Core PROPERTIES
 	CXX_STANDARD 20
 	RUNTIME_OUTPUT_DIRECTORY "$<1:${CMAKE_SOURCE_DIR}/bin>"
-	OUTPUT_NAME "Angbe"
+	OUTPUT_NAME "SunBoy-Core"
 )
 
 if(MSVC_USE_STATIC_CRT)
-	set_target_properties(Angbe PROPERTIES
+	set_target_properties(SunBoy-Core PROPERTIES
 		MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
 	)
 else()
-	set_target_properties(Angbe PROPERTIES
+	set_target_properties(SunBoy-Core PROPERTIES
 		MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
 	)
 endif()
 
-target_sources(Angbe PRIVATE
+target_sources(SunBoy-Core PRIVATE
 	src/gb/core.cpp
 	src/gb/sm83.cpp
 	src/gb/cartridge.cpp
@@ -43,11 +43,14 @@ find_package(imgui CONFIG)
 find_package(fmt CONFIG)
 find_package(SDL2 CONFIG)
 
-if(imgui_FOUND AND fmt_FOUND AND SDL2_FOUND)
+configure_file(LICENSE.txt ${CMAKE_SOURCE_DIR}/bin/LICENSE.txt COPYONLY)
+
+if(imgui_FOUND AND fmt_FOUND AND SDL2_FOUND AND BUILD_SUNBOY_FRONTEND)
+	message(STATUS "Frontend for SunBoy is enabled.")
 	add_subdirectory(extern/nativefiledialog-extended)
 
-	add_executable(Angbe-Gui src/frontend/main.cpp)
-	target_sources(Angbe-Gui PRIVATE
+	add_executable(SunBoy src/frontend/main.cpp)
+	target_sources(SunBoy PRIVATE
 		src/frontend/config.cpp
 		src/frontend/menu_bar.cpp
 		src/frontend/gui_constants.cpp
@@ -55,14 +58,14 @@ if(imgui_FOUND AND fmt_FOUND AND SDL2_FOUND)
 		src/frontend/input.cpp
 		src/frontend/palette_edit.cpp
 	)
-	set_target_properties(Angbe-Gui PROPERTIES
+	set_target_properties(SunBoy PROPERTIES
 		CXX_STANDARD 20
 		RUNTIME_OUTPUT_DIRECTORY "$<1:${CMAKE_SOURCE_DIR}/bin>"
-		OUTPUT_NAME "Angbe-Gui"
+		OUTPUT_NAME "SunBoy"
 	)
 
 	if(MSVC_USE_STATIC_CRT)
-		set_target_properties(Angbe-Gui PROPERTIES
+		set_target_properties(SunBoy PROPERTIES
 			MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
 		)
 
@@ -70,7 +73,7 @@ if(imgui_FOUND AND fmt_FOUND AND SDL2_FOUND)
 			MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
 		)
 	else()
-		set_target_properties(Angbe-Gui PROPERTIES
+		set_target_properties(SunBoy PROPERTIES
 			MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
 		)
 		set_target_properties(nfd PROPERTIES
@@ -78,10 +81,9 @@ if(imgui_FOUND AND fmt_FOUND AND SDL2_FOUND)
 		)
 	endif()
 
-	target_include_directories(Angbe-Gui PRIVATE src/)
-	target_link_libraries(Angbe-Gui PRIVATE Angbe SDL2::SDL2 SDL2::SDL2main imgui::imgui fmt::fmt nfd)
+	target_include_directories(SunBoy PRIVATE src/)
+	target_link_libraries(SunBoy PRIVATE SunBoy-Core SDL2::SDL2 SDL2::SDL2main imgui::imgui fmt::fmt nfd)
 
-	configure_file(fonts/Open_Sans/OpenSans-VariableFont_wdth,wght.ttf ${CMAKE_SOURCE_DIR}/bin/fonts/Open_Sans/OpenSans-VariableFont_wdth,wght.ttf COPYONLY)
 	configure_file(fonts/Open_Sans/OpenSans-SemiBold.ttf ${CMAKE_SOURCE_DIR}/bin/fonts/Open_Sans/OpenSans-SemiBold.ttf COPYONLY)
 	configure_file(fonts/Open_Sans/OFL.txt ${CMAKE_SOURCE_DIR}/bin/fonts/Open_Sans/OFL.txt COPYONLY)
 endif()

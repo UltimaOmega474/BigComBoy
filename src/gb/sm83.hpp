@@ -3,7 +3,7 @@
 #include <array>
 #include <ostream>
 
-namespace Angbe
+namespace SunBoy
 {
 	class Core;
 	enum Register

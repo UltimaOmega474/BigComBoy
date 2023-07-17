@@ -1,7 +1,7 @@
 #include "cartridge.hpp"
 
 #include <fstream>
-namespace Angbe
+namespace SunBoy
 {
 	Cartridge::Cartridge(CartHeader &&header)
 		: header(std::move(header))

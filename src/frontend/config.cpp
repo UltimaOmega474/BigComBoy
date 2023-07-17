@@ -1,6 +1,6 @@
 #include "config.hpp"
 
-namespace AngbeGui
+namespace SunBoy
 {
 	Configuration Configuration::current;
 

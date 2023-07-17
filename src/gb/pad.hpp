@@ -2,7 +2,7 @@
 #include <cinttypes>
 #include <vector>
 
-namespace Angbe
+namespace SunBoy
 {
 	enum class Button
 	{

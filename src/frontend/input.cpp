@@ -1,9 +1,9 @@
 #include "input.hpp"
 #include "state.hpp"
 
-namespace AngbeGui
+namespace SunBoy
 {
-	void KeyboardInput::update_state(Angbe::Gamepad &pad)
+	void KeyboardInput::update_state(SunBoy::Gamepad &pad)
 	{
 		auto keyboard = SDL_GetKeyboardState(nullptr);
 

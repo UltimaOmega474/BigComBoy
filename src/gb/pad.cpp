@@ -1,6 +1,6 @@
 #include "pad.hpp"
 
-namespace Angbe
+namespace SunBoy
 {
 	void Gamepad::set_pad_state(Button btn, bool pressed)
 	{

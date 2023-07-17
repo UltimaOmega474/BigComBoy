@@ -4,7 +4,7 @@
 #include <fstream>
 #include <sstream>
 
-namespace Angbe
+namespace SunBoy
 {
 	Core::Core()
 		: cpu(*this), timer(*this), ppu(*this)

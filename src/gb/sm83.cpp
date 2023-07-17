@@ -4,7 +4,7 @@
 #include <iostream>
 #include <exception>
 #include <iomanip>
-namespace Angbe
+namespace SunBoy
 {
 
 	SM83::SM83(Core &gbcore)

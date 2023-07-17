@@ -3,7 +3,7 @@
 #include "constants.hpp"
 #include <algorithm>
 
-namespace Angbe
+namespace SunBoy
 {
 	PPU::PPU(Core &memory)
 		: core(memory)

@@ -1,7 +1,7 @@
 #pragma once
 #include <cinttypes>
 
-namespace Angbe
+namespace SunBoy
 {
 	class Core;
 	class Timer

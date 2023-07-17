@@ -3,7 +3,7 @@
 #include <cinttypes>
 #include <array>
 
-namespace Angbe
+namespace SunBoy
 {
 	class Square
 	{

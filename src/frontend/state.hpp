@@ -8,7 +8,7 @@ struct SDL_Renderer;
 struct SDL_Texture;
 struct SDL_Window;
 
-namespace AngbeGui
+namespace SunBoy
 {
 	enum class Status
 	{
@@ -22,11 +22,11 @@ namespace AngbeGui
 		SDL_Texture *texture = nullptr;
 
 	public:
-		Angbe::Core core;
+		SunBoy::Core core;
 		KeyboardInput keyboard_input;
 		Status status = Status::Stopped;
 		bool paused = false;
-		std::shared_ptr<Angbe::Cartridge> cart;
+		std::shared_ptr<SunBoy::Cartridge> cart;
 
 		~EmulationState();
 

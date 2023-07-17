@@ -30,10 +30,10 @@ int main(int argc, char **argv)
 	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "vulkan");
 #endif
 
-	SDL_Window *window = SDL_CreateWindow("AngbeGui", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, Angbe::LCD_WIDTH * 3, Angbe::LCD_HEIGHT * 3 + AngbeGui::MENU_HEIGHT, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+	SDL_Window *window = SDL_CreateWindow("AngbeGui", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SunBoy::LCD_WIDTH * 3, SunBoy::LCD_HEIGHT * 3 + SunBoy::MENU_HEIGHT, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
 
-	SDL_SetWindowMinimumSize(window, Angbe::LCD_WIDTH, Angbe::LCD_HEIGHT + AngbeGui::MENU_HEIGHT);
+	SDL_SetWindowMinimumSize(window, SunBoy::LCD_WIDTH, SunBoy::LCD_HEIGHT + SunBoy::MENU_HEIGHT);
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 
 	auto ctx = ImGui::CreateContext();
@@ -42,20 +42,20 @@ int main(int argc, char **argv)
 	io.IniFilename = nullptr;
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
-	io.FontDefault = io.Fonts->AddFontFromFileTTF(AngbeGui::OPEN_SANS_SEMIBOLD_PATH.c_str(), AngbeGui::FONT_RENDER_SIZE);
-	io.FontGlobalScale = AngbeGui::FONT_SIZE / AngbeGui::FONT_RENDER_SIZE;
+	io.FontDefault = io.Fonts->AddFontFromFileTTF(SunBoy::OPEN_SANS_SEMIBOLD_PATH.c_str(), SunBoy::FONT_RENDER_SIZE);
+	io.FontGlobalScale = SunBoy::FONT_SIZE / SunBoy::FONT_RENDER_SIZE;
 
 	ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
 	ImGui_ImplSDLRenderer2_Init(renderer);
 
 	bool running = true;
 	constexpr std::chrono::nanoseconds max_step_delay = 33ms;
-	constexpr auto logic_rate = AngbeGui::set_update_frequency_hz(60);
+	constexpr auto logic_rate = SunBoy::set_update_frequency_hz(60);
 	auto accumulator = 0ns;
 	auto old_time = std::chrono::steady_clock::now();
 
-	AngbeGui::EmulationState::current_state().create_texture(renderer);
-	AngbeGui::MenuBar menu;
+	SunBoy::EmulationState::current_state().create_texture(renderer);
+	SunBoy::MenuBar menu;
 
 	while (running)
 	{
@@ -82,12 +82,12 @@ int main(int argc, char **argv)
 
 		accumulator += full_delta;
 
-		auto &state = AngbeGui::EmulationState::current_state();
+		auto &state = SunBoy::EmulationState::current_state();
 		state.keyboard_input.update_state(state.core.pad);
 
 		if (accumulator >= logic_rate)
 		{
-			if (state.status == AngbeGui::Status::Running)
+			if (state.status == SunBoy::Status::Running)
 				state.step_frame();
 
 			accumulator -= logic_rate;
@@ -95,7 +95,7 @@ int main(int argc, char **argv)
 
 		SDL_RenderClear(renderer);
 
-		if (state.status == AngbeGui::Status::Running)
+		if (state.status == SunBoy::Status::Running)
 			state.draw_frame(window, renderer);
 
 		ImGui_ImplSDLRenderer2_NewFrame();
