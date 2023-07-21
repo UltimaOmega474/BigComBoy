@@ -30,6 +30,17 @@ namespace SunBoy
 		core.ppu.color_table[0] = 0xedf8c8FF;
 	}
 
+	void EmulationState::change_filter_mode(bool use_linear_filter)
+	{
+		auto &config = Configuration::get();
+		config.linear_filtering = use_linear_filter;
+
+		if (config.linear_filtering)
+			SDL_SetTextureScaleMode(texture, SDL_ScaleModeLinear);
+		else
+			SDL_SetTextureScaleMode(texture, SDL_ScaleModeNearest);
+	}
+
 	bool EmulationState::try_play(std::string path)
 	{
 		cart = SunBoy::Cartridge::from_file(path);
@@ -42,6 +53,9 @@ namespace SunBoy
 			core.start(cart);
 			core.ppu.color_table = config.color_table;
 			status = Status::Running;
+
+			config.add_rom_path(std::move(path));
+
 			return true;
 		}
 		return false;

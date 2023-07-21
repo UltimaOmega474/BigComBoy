@@ -12,7 +12,7 @@
 #include <imgui_impl_sdlrenderer2.h>
 #include <nfd.hpp>
 #include <chrono>
-
+#include <iostream>
 int main(int argc, char **argv)
 {
 	using namespace std::chrono_literals;
@@ -51,12 +51,14 @@ int main(int argc, char **argv)
 	bool running = true;
 	constexpr std::chrono::nanoseconds max_step_delay = 33ms;
 	constexpr auto logic_rate = SunBoy::set_update_frequency_hz(60);
-	auto accumulator = 0ns;
+	auto accumulator = 0ns, sram_accumulator = 0ns;
 	auto old_time = std::chrono::steady_clock::now();
 
-	SunBoy::EmulationState::current_state().create_texture(renderer);
 	SunBoy::MenuBar menu;
+	auto &config = SunBoy::Configuration::get();
+	auto &state = SunBoy::EmulationState::current_state();
 
+	state.create_texture(renderer);
 	while (running)
 	{
 		SDL_Event event;
@@ -82,7 +84,6 @@ int main(int argc, char **argv)
 
 		accumulator += full_delta;
 
-		auto &state = SunBoy::EmulationState::current_state();
 		state.keyboard_input.update_state(state.core.pad);
 
 		if (accumulator >= logic_rate)
@@ -91,6 +92,23 @@ int main(int argc, char **argv)
 				state.step_frame();
 
 			accumulator -= logic_rate;
+		}
+
+		if (config.allow_sram_saving && state.cart)
+		{
+			sram_accumulator += full_delta;
+			auto target_rate_sram = std::chrono::seconds(config.sram_save_interval);
+			if (sram_accumulator > 1s)
+			{
+				fmt::print("saving: {}\n", state.cart->header.title);
+
+				state.cart->save_sram_to_file();
+				sram_accumulator -= target_rate_sram;
+			}
+		}
+		else
+		{
+			sram_accumulator = 0ns;
 		}
 
 		SDL_RenderClear(renderer);
@@ -108,7 +126,10 @@ int main(int argc, char **argv)
 		ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData());
 		SDL_RenderPresent(renderer);
 	}
+	if (state.cart)
+		state.cart->save_sram_to_file();
 
+	config.save_as_toml_file();
 	ImGui_ImplSDLRenderer2_Shutdown();
 	ImGui_ImplSDL2_Shutdown();
 	ImGui::DestroyContext();

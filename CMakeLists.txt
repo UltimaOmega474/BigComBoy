@@ -48,7 +48,7 @@ configure_file(LICENSE.txt ${CMAKE_SOURCE_DIR}/bin/LICENSE.txt COPYONLY)
 if(imgui_FOUND AND fmt_FOUND AND SDL2_FOUND AND BUILD_SUNBOY_FRONTEND)
 	message(STATUS "Frontend for SunBoy is enabled.")
 	add_subdirectory(extern/nativefiledialog-extended)
-
+	add_subdirectory(extern/tomlplusplus)
 	add_executable(SunBoy src/frontend/main.cpp)
 	target_sources(SunBoy PRIVATE
 		src/frontend/config.cpp
@@ -72,6 +72,9 @@ if(imgui_FOUND AND fmt_FOUND AND SDL2_FOUND AND BUILD_SUNBOY_FRONTEND)
 		set_target_properties(nfd PROPERTIES
 			MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
 		)
+		set_target_properties(tomlplusplus_tomlplusplus PROPERTIES
+			MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+		)
 	else()
 		set_target_properties(SunBoy PROPERTIES
 			MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
@@ -79,10 +82,13 @@ if(imgui_FOUND AND fmt_FOUND AND SDL2_FOUND AND BUILD_SUNBOY_FRONTEND)
 		set_target_properties(nfd PROPERTIES
 			MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
 		)
+		set_target_properties(tomlplusplus_tomlplusplus PROPERTIES
+			MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
+		)
 	endif()
 
-	target_include_directories(SunBoy PRIVATE src/)
-	target_link_libraries(SunBoy PRIVATE SunBoy-Core SDL2::SDL2 SDL2::SDL2main imgui::imgui fmt::fmt nfd)
+	target_include_directories(SunBoy PRIVATE src/ extern/tomlplusplus)
+	target_link_libraries(SunBoy PRIVATE SunBoy-Core SDL2::SDL2 SDL2::SDL2main imgui::imgui fmt::fmt nfd tomlplusplus::tomlplusplus)
 
 	configure_file(fonts/Open_Sans/OpenSans-SemiBold.ttf ${CMAKE_SOURCE_DIR}/bin/fonts/Open_Sans/OpenSans-SemiBold.ttf COPYONLY)
 	configure_file(fonts/Open_Sans/OFL.txt ${CMAKE_SOURCE_DIR}/bin/fonts/Open_Sans/OFL.txt COPYONLY)

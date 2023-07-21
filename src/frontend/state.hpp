@@ -31,7 +31,7 @@ namespace SunBoy
 		~EmulationState();
 
 		void create_texture(SDL_Renderer *renderer);
-
+		void change_filter_mode(bool use_linear_filter);
 		bool try_play(std::string path);
 		void reset();
 		void toggle_pause();
