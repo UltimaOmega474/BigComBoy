@@ -433,9 +433,6 @@ namespace SunBoy
 		envelope.envelope_sweep_pace = nr42 & 0b00000111;
 		envelope.envelope_direction = (nr42 & 0b00001000) >> 3;
 		envelope.initial_envelope_volume = (nr42 & 0b11110000) >> 4;
-
-		//	if (channel_on)
-		//		trigger();
 	}
 
 	uint8_t NoiseChannel::read_volume_envelope() const

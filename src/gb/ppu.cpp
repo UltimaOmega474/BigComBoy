@@ -51,7 +51,7 @@ namespace SunBoy
 
 	void PPU::step(uint32_t accumulated_cycles)
 	{
-		if (!check_lcdc(DisplayEnable))
+		if (!(lcd_control & LCDControlFlags::DisplayEnable))
 		{
 			mode = HBlank;
 			set_stat(ModeFlag, false);
@@ -234,22 +234,19 @@ namespace SunBoy
 		return false;
 	}
 
-	bool PPU::check_lcdc(uint8_t flags) const
-	{
-		return lcd_control & flags;
-	}
-
 	void PPU::render_scanline()
 	{
 		render_bg_layer();
-		render_window_layer();
-		render_sprite_layer();
+		if (render_flags & DisplayRenderFlags::Window)
+			render_window_layer();
+		if (render_flags & DisplayRenderFlags::Objects)
+			render_sprite_layer();
 	}
 
 	void PPU::render_bg_layer()
 	{
-		uint16_t tile_map_address = check_lcdc(BGTileMap) ? 0x9c00 : 0x9800;
-		uint16_t tile_data_address = check_lcdc(BGWindowTileData) ? 0x8000 : 0x8800;
+		uint16_t tile_map_address = (lcd_control & LCDControlFlags::BGTileMap) ? 0x9c00 : 0x9800;
+		uint16_t tile_data_address = (lcd_control & LCDControlFlags::BGWindowTileData) ? 0x8000 : 0x8800;
 
 		for (uint8_t i = 0; i < 160; ++i)
 		{
@@ -278,15 +275,15 @@ namespace SunBoy
 			size_t framebuffer_line_y = (line_y)*LCD_WIDTH;
 
 			uint32_t pixel_color;
-			if (!check_lcdc(BGEnable))
+			if (!(lcd_control & LCDControlFlags::BGEnable) || !(render_flags & DisplayRenderFlags::Background))
 			{
 				pixel_color = palette_index_to_color(background_palette, 0);
-				bg_color_table[(line_y * 160) + i] = 0;
+				bg_color_table[framebuffer_line_y + i] = 0;
 			}
 			else
 			{
 				pixel_color = palette_index_to_color(background_palette, pixel);
-				bg_color_table[(line_y * 160) + i] = pixel;
+				bg_color_table[framebuffer_line_y + i] = pixel;
 			}
 
 			framebuffer[framebuffer_line_y + framebuffer_line_x] = pixel_color;
@@ -295,11 +292,12 @@ namespace SunBoy
 
 	void PPU::render_window_layer()
 	{
-		uint16_t tile_map_address = check_lcdc(WindowTileMap) ? 0x9c00 : 0x9800;
-		uint16_t tile_data_address = check_lcdc(BGWindowTileData) ? 0x8000 : 0x8800;
+		uint16_t tile_map_address = (lcd_control & LCDControlFlags::WindowTileMap) ? 0x9c00 : 0x9800;
+		uint16_t tile_data_address = (lcd_control & LCDControlFlags::BGWindowTileData) ? 0x8000 : 0x8800;
 		uint8_t advance_by = 0;
-		if (check_lcdc(WindowEnable) && window_draw_flag)
-			for (uint8_t i = 0; i < 160; ++i)
+		if ((lcd_control & LCDControlFlags::WindowEnable) && window_draw_flag && (render_flags & DisplayRenderFlags::Window))
+		{
+			for (uint8_t i = 0; i < LCD_WIDTH; ++i)
 			{
 				if (line_y >= window_y && i >= (window_x - 7))
 				{
@@ -328,18 +326,19 @@ namespace SunBoy
 					size_t framebuffer_line_y = (line_y)*LCD_WIDTH;
 					advance_by = 1;
 
-					bg_color_table[(line_y * 160) + i] = pixel;
+					bg_color_table[framebuffer_line_y + i] = pixel;
 
 					framebuffer[framebuffer_line_y + framebuffer_line_x] = palette_index_to_color(background_palette, pixel);
 				}
 			}
+		}
 
 		window_line_y += advance_by;
 	}
 
 	void PPU::scan_oam()
 	{
-		uint8_t height = check_lcdc(LCDControl::SpriteSize) ? 16 : 8;
+		uint8_t height = (lcd_control & LCDControlFlags::SpriteSize) ? 16 : 8;
 
 		num_obj_on_scanline = 0;
 		objects_on_scanline.fill({});
@@ -369,48 +368,45 @@ namespace SunBoy
 
 	void PPU::render_sprite_layer()
 	{
-		if (!check_lcdc(SpriteEnable))
-			return;
+		uint8_t height = (lcd_control & LCDControlFlags::SpriteSize) ? 16 : 8;
 
-		uint8_t height = check_lcdc(LCDControl::SpriteSize) ? 16 : 8;
-
-		if (check_lcdc(SpriteEnable))
+		if ((lcd_control & LCDControlFlags::SpriteEnable) && (render_flags & DisplayRenderFlags::Objects))
 		{
 			for (auto i = 0; i < num_obj_on_scanline; ++i)
 			{
-				auto &sprite = objects_on_scanline[(num_obj_on_scanline - 1) - i];
-				sprite.y -= 16;
-				sprite.x -= 8;
+				auto &object = objects_on_scanline[(num_obj_on_scanline - 1) - i];
+				object.y -= 16;
+				object.x -= 8;
 
-				uint8_t palette = get_sprite_attrib(sprite, Palette) ? object_palette_1 : object_palette_0;
+				uint8_t palette = (object.attributes & ObjectAttributeFlags::Palette) ? object_palette_1 : object_palette_0;
 				uint16_t tile_index = 0;
 
 				if (height == 16)
 				{
-					sprite.tile &= ~1;
+					object.tile &= ~1;
 				}
 
-				if (get_sprite_attrib(sprite, FlipY))
+				if (object.attributes & ObjectAttributeFlags::FlipY)
 				{
-					tile_index = (0x8000 & 0x1FFF) + (sprite.tile * 16) + ((height - (line_y - sprite.y) - 1) * 2);
+					tile_index = (0x8000 & 0x1FFF) + (object.tile * 16) + ((height - (line_y - object.y) - 1) * 2);
 				}
 				else
 				{
-					tile_index = (0x8000 & 0x1FFF) + (sprite.tile * 16) + ((line_y - sprite.y) % height * 2);
+					tile_index = (0x8000 & 0x1FFF) + (object.tile * 16) + ((line_y - object.y) % height * 2);
 				}
 
 				for (auto x = 0; x < 8; ++x)
 				{
-					size_t framebuffer_line_x = (sprite.x + x);
+					size_t framebuffer_line_x = (object.x + x);
 					size_t framebuffer_line_y = (line_y)*LCD_WIDTH;
 
-					if ((sprite.x + x) >= 0 && (sprite.x + x) < 160)
+					if ((object.x + x) >= 0 && (object.x + x) < 160)
 					{
 						uint8_t low_byte = vram[tile_index];
 						uint8_t high_byte = vram[tile_index + 1];
 						uint8_t bit = 7 - (x % 8);
 
-						if (get_sprite_attrib(sprite, FlipX))
+						if (object.attributes & ObjectAttributeFlags::FlipX)
 							bit = x % 8;
 
 						uint8_t low_bit = (low_byte >> bit) & 0x01;
@@ -420,13 +416,13 @@ namespace SunBoy
 						if (pixel == 0)
 							continue;
 
-						if (!get_sprite_attrib(sprite, Priority))
+						if (!(object.attributes & ObjectAttributeFlags::Priority))
 						{
 							framebuffer[framebuffer_line_y + framebuffer_line_x] = palette_index_to_color(palette, pixel);
 						}
 						else
 						{
-							if (bg_color_table[(line_y * 160) + (sprite.x + x)] == 0)
+							if (bg_color_table[framebuffer_line_y + (object.x + x)] == 0)
 							{
 								framebuffer[framebuffer_line_y + framebuffer_line_x] = palette_index_to_color(palette, pixel);
 							}
@@ -435,11 +431,6 @@ namespace SunBoy
 				}
 			}
 		}
-	}
-
-	bool PPU::get_sprite_attrib(const Object &spr, uint8_t attrib)
-	{
-		return spr.attributes & attrib;
 	}
 
 	void PPU::check_ly_lyc(bool allow_interrupts)

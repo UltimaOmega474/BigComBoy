@@ -31,9 +31,16 @@ namespace SunBoy
 	void AudioSystem::operator()(SampleResult result)
 	{
 		constexpr float VOLUME_SCALE = 256.0f;
-
 		int32_t left_vol = (128 * result.left_channel.master_volume) / 7;
 		int32_t right_vol = (128 * result.right_channel.master_volume) / 7;
+		uint8_t volume_uint = Configuration::get().audio_master_volume;
+		float volume = static_cast<float>(volume_uint) / 100.0f;
+
+		if (volume_uint == 0)
+		{
+			samples.clear();
+			return;
+		}
 
 		float sample_left = 0;
 		float input = static_cast<float>(result.left_channel.pulse_1) / VOLUME_SCALE;
@@ -54,8 +61,6 @@ namespace SunBoy
 		SDL_MixAudioFormat(reinterpret_cast<Uint8 *>(&sample_right), reinterpret_cast<Uint8 *>(&input), AUDIO_F32SYS, sizeof(float), right_vol);
 		input = static_cast<float>(result.right_channel.noise) / VOLUME_SCALE;
 		SDL_MixAudioFormat(reinterpret_cast<Uint8 *>(&sample_right), reinterpret_cast<Uint8 *>(&input), AUDIO_F32SYS, sizeof(float), right_vol);
-
-		auto volume = Configuration::get().audio_master_volume;
 
 		if (samples.size() < obtained.samples)
 			samples.push_back({sample_left * volume, sample_right * volume});

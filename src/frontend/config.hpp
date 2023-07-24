@@ -14,9 +14,8 @@ namespace SunBoy
 	public:
 		bool keep_aspect_ratio = true, linear_filtering = false;
 		bool allow_sram_saving = true, skip_boot_rom = true;
-
+		uint8_t audio_master_volume = 70;
 		uint32_t sram_save_interval = 15, audio_latency_select = 1;
-		float audio_master_volume = 0.70f;
 
 		std::array<uint32_t, 4> color_table = SunBoy::LCD_GRAY_PALETTE;
 		std::deque<std::string> recent_rom_paths;

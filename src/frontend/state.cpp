@@ -1,7 +1,6 @@
 #include "state.hpp"
 #include "config.hpp"
 #include <SDL.h>
-#include <intrin.h>
 #include <cmath>
 namespace SunBoy
 {

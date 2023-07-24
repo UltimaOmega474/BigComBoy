@@ -3,6 +3,8 @@
 #include <toml.hpp>
 #include <fstream>
 #include <sstream>
+#include <algorithm>
+
 namespace SunBoy
 {
 	Configuration Configuration::current("settings.toml");
@@ -22,6 +24,7 @@ namespace SunBoy
 			sram_save_interval = parse_result["sram_save_interval"].value_or(sram_save_interval);
 			audio_latency_select = parse_result["audio_latency_select"].value_or(audio_latency_select);
 			audio_master_volume = parse_result["audio_master_volume"].value_or(audio_master_volume);
+			audio_master_volume = std::min<uint32_t>(audio_master_volume, 100);
 			auto ct = parse_result["color_table"].as_array();
 			if (ct)
 			{

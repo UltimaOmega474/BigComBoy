@@ -12,7 +12,7 @@ namespace SunBoy
 		DrawScanline
 	};
 
-	enum LCDControl
+	enum LCDControlFlags
 	{
 		DisplayEnable = 0x80,
 		WindowTileMap = 0x40,
@@ -34,12 +34,19 @@ namespace SunBoy
 		ModeFlag = 0x3
 	};
 
-	enum SpriteAttrib
+	enum ObjectAttributeFlags
 	{
 		Priority = 0x80,
 		FlipY = 0x40,
 		FlipX = 0x20,
 		Palette = 0x10
+	};
+
+	enum DisplayRenderFlags
+	{
+		Background = 0x1,
+		Window = 0x2,
+		Objects = 0x4,
 	};
 
 	struct Object
@@ -70,7 +77,7 @@ namespace SunBoy
 		uint8_t window_y = 0, window_x = 0;
 		uint8_t window_line_y = 0, background_palette = 0;
 		uint8_t object_palette_0 = 0, object_palette_1 = 0;
-
+		uint8_t render_flags = DisplayRenderFlags::Background | DisplayRenderFlags::Window | DisplayRenderFlags::Objects;
 		std::array<uint32_t, LCD_WIDTH * LCD_HEIGHT> framebuffer{};
 		std::array<uint32_t, LCD_WIDTH * LCD_HEIGHT> framebuffer_complete{};
 		std::array<uint32_t, 4> color_table = LCD_GRAY_PALETTE;
@@ -90,7 +97,6 @@ namespace SunBoy
 		bool check_stat(uint8_t flags) const;
 		void set_stat(uint8_t flags, bool value);
 		bool stat_any() const;
-		bool check_lcdc(uint8_t flags) const;
 
 	private:
 		void render_scanline();
@@ -98,8 +104,6 @@ namespace SunBoy
 		void render_window_layer();
 		void scan_oam();
 		void render_sprite_layer();
-
-		bool get_sprite_attrib(const Object &spr, uint8_t attrib);
 		void check_ly_lyc(bool allow_interrupts);
 
 		uint32_t palette_index_to_color(uint8_t palette, uint8_t bitIndex) const;

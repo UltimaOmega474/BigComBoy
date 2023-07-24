@@ -12,7 +12,6 @@ namespace SunBoy
 		if (!shown)
 			return;
 
-		//	ImGui::ShowMetricsWindow();
 		if (ImGui::BeginMainMenuBar())
 		{
 			draw_system_menu();
@@ -94,9 +93,12 @@ namespace SunBoy
 		{
 			TextColored(INACTIVE_ITEM_COLOR, "PPU Overrides");
 			Spacing();
-			MenuItem("Enable Background");
-			MenuItem("Enable Window");
-			MenuItem("Enable OAM");
+			if (MenuItem("Enable Background", nullptr, state.core.ppu.render_flags & DisplayRenderFlags::Background))
+				state.core.ppu.render_flags ^= DisplayRenderFlags::Background;
+			if (MenuItem("Enable Window", nullptr, state.core.ppu.render_flags & DisplayRenderFlags::Window))
+				state.core.ppu.render_flags ^= DisplayRenderFlags::Window;
+			if (MenuItem("Enable Objects", nullptr, state.core.ppu.render_flags & DisplayRenderFlags::Objects))
+				state.core.ppu.render_flags ^= DisplayRenderFlags::Objects;
 			Separator();
 			TextColored(INACTIVE_ITEM_COLOR, "Screen");
 			Spacing();
