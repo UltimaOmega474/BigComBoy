@@ -51,10 +51,12 @@ vcpkg install "imgui[core,sdl2-binding,sdl2-renderer-binding]" --triplet=x64-win
 vcpkg install fmt --triplet=x64-windows
 ```
 
-- Install SDL2
+- Install SDL2 and SDL2 Mixer
 
 ```bash
 vcpkg install sdl2 --triplet=x64-windows
+
+vcpkg install sdl2-mixer --triplet=x64-windows
 ```
 
 - Configure and Build the project. Binaries are written to the `bin/` folder in the source directory.
