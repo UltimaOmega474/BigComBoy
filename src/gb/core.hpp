@@ -54,9 +54,4 @@ namespace SunBoy
 		void write_uint16(uint16_t address, uint16_t value);
 	};
 
-	constexpr bool within_range(uint16_t address, uint16_t start, uint16_t end)
-	{
-		return ((address >= start) && (address <= end));
-	}
-
 }

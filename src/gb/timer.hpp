@@ -15,7 +15,7 @@ namespace SunBoy
 		uint8_t tma = 0;
 		uint8_t tac = 0;
 		uint32_t tac_rate = 0;
-
+		uint8_t apu_div = 0;
 		Timer(Core &core);
 
 		void set_tac(uint8_t rate);
@@ -24,6 +24,7 @@ namespace SunBoy
 		void update(uint32_t addCycles);
 
 		bool timer_enabled() const;
+		void change_div(uint8_t new_div);
 	};
 
 }

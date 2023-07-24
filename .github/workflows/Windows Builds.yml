@@ -19,6 +19,9 @@ jobs:
       - name: Install SDL2
         run: vcpkg install sdl2 --triplet=x64-windows-static
 
+      - name: Install SDL2 Mixer
+        run: vcpkg install sdl2-mixer --triplet=x64-windows-static
+
       - name: Install Imgui
         run: vcpkg install "imgui[core,sdl2-binding,sdl2-renderer-binding]" --triplet=x64-windows-static
 
@@ -49,5 +52,5 @@ jobs:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           automatic_release_tag: "nightly"
           prerelease: false
-          title: "Nightly Release - ${{ env.SHA }}"
+          title: "Experimental Release - ${{ env.SHA }}"
           files: SunBoy_Release.zip

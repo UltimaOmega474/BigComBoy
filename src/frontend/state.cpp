@@ -1,12 +1,21 @@
 #include "state.hpp"
 #include "config.hpp"
 #include <SDL.h>
+#include <intrin.h>
+#include <cmath>
 namespace SunBoy
 {
 	EmulationState EmulationState::current{};
 
-	EmulationState::~EmulationState()
+	void EmulationState::initialize(SDL_Renderer *renderer)
 	{
+		audio_system.open_device();
+		create_texture(renderer);
+	}
+
+	void EmulationState::close()
+	{
+		audio_system.close_device();
 		if (texture)
 		{
 			SDL_DestroyTexture(texture);
@@ -41,7 +50,7 @@ namespace SunBoy
 			SDL_SetTextureScaleMode(texture, SDL_ScaleModeNearest);
 	}
 
-	bool EmulationState::try_play(std::string path)
+	bool EmulationState::try_play(std::string_view path)
 	{
 		cart = SunBoy::Cartridge::from_file(path);
 		auto &config = Configuration::get();
@@ -53,8 +62,7 @@ namespace SunBoy
 			core.start(cart);
 			core.ppu.color_table = config.color_table;
 			status = Status::Running;
-
-			config.add_rom_path(std::move(path));
+			audio_system.prep_for_playback(core.apu);
 
 			return true;
 		}
@@ -72,6 +80,7 @@ namespace SunBoy
 			core.start(cart);
 			core.ppu.color_table = config.color_table;
 			status = Status::Running;
+			audio_system.prep_for_playback(core.apu);
 		}
 	}
 
@@ -91,7 +100,7 @@ namespace SunBoy
 	{
 		if (status == Status::Running && texture)
 		{
-			const auto &framebuffer = core.ppu.framebuffer;
+			const auto &framebuffer = core.ppu.framebuffer_complete;
 			SDL_UpdateTexture(texture, nullptr, framebuffer.data(), SunBoy::LCD_WIDTH * sizeof(uint32_t));
 
 			int w = 0, h = 0;

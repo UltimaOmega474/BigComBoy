@@ -12,6 +12,7 @@ namespace SunBoy
 		if (!shown)
 			return;
 
+		//	ImGui::ShowMetricsWindow();
 		if (ImGui::BeginMainMenuBar())
 		{
 			draw_system_menu();
@@ -25,6 +26,7 @@ namespace SunBoy
 		using namespace ImGui;
 		auto &config = Configuration::get();
 		auto &state = EmulationState::current_state();
+		std::string successful_rom_loaded;
 
 		if (BeginMenu("System"))
 		{
@@ -33,7 +35,10 @@ namespace SunBoy
 				NFD::UniquePath out_path;
 
 				if (NFD::OpenDialog(out_path) == nfdresult_t::NFD_OKAY)
-					state.try_play(out_path.get());
+				{
+					if (state.try_play(out_path.get()))
+						successful_rom_loaded = out_path.get();
+				}
 			}
 
 			if (BeginMenu("Load Recent Cartridge", !config.recent_rom_paths.empty()))
@@ -42,14 +47,17 @@ namespace SunBoy
 				{
 					if (MenuItem(path.c_str()))
 					{
-						state.try_play(path);
+						if (state.try_play(path))
+							successful_rom_loaded = path;
 					}
 				}
-
 				EndMenu();
 			}
 			EndMenu();
 		}
+
+		if (!successful_rom_loaded.empty())
+			config.add_rom_path(std::move(successful_rom_loaded));
 	}
 	void MenuBar::emulation_menu()
 	{
@@ -68,7 +76,12 @@ namespace SunBoy
 				state.toggle_pause();
 
 			if (MenuItem("Stop"))
+			{
 				state.status = Status::Stopped;
+				state.cart->save_sram_to_file();
+				state.cart.reset();
+			}
+
 			EndMenu();
 		}
 	}

@@ -17,7 +17,7 @@ int main(int argc, char **argv)
 {
 	using namespace std::chrono_literals;
 
-	if (SDL_Init(SDL_INIT_VIDEO) != 0)
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0)
 	{
 		fmt::print("Unable to initialize SDL2 Video\n");
 		return 0;
@@ -31,7 +31,7 @@ int main(int argc, char **argv)
 #endif
 
 	SDL_Window *window = SDL_CreateWindow("SunBoy", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SunBoy::LCD_WIDTH * 3, SunBoy::LCD_HEIGHT * 3 + SunBoy::MENU_HEIGHT, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
+	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
 	SDL_SetWindowMinimumSize(window, SunBoy::LCD_WIDTH, SunBoy::LCD_HEIGHT + SunBoy::MENU_HEIGHT);
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -58,7 +58,8 @@ int main(int argc, char **argv)
 	auto &config = SunBoy::Configuration::get();
 	auto &state = SunBoy::EmulationState::current_state();
 
-	state.create_texture(renderer);
+	state.initialize(renderer);
+
 	while (running)
 	{
 		SDL_Event event;
@@ -98,10 +99,8 @@ int main(int argc, char **argv)
 		{
 			sram_accumulator += full_delta;
 			auto target_rate_sram = std::chrono::seconds(config.sram_save_interval);
-			if (sram_accumulator > 1s)
+			if (sram_accumulator > target_rate_sram)
 			{
-				fmt::print("saving: {}\n", state.cart->header.title);
-
 				state.cart->save_sram_to_file();
 				sram_accumulator -= target_rate_sram;
 			}
@@ -130,6 +129,8 @@ int main(int argc, char **argv)
 		state.cart->save_sram_to_file();
 
 	config.save_as_toml_file();
+
+	state.close();
 	ImGui_ImplSDLRenderer2_Shutdown();
 	ImGui_ImplSDL2_Shutdown();
 	ImGui::DestroyContext();

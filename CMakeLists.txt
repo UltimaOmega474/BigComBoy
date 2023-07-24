@@ -42,10 +42,10 @@ target_sources(SunBoy-Core PRIVATE
 find_package(imgui CONFIG)
 find_package(fmt CONFIG)
 find_package(SDL2 CONFIG)
-
+find_package(SDL2_mixer CONFIG)
 configure_file(LICENSE.txt ${CMAKE_SOURCE_DIR}/bin/LICENSE.txt COPYONLY)
 
-if(imgui_FOUND AND fmt_FOUND AND SDL2_FOUND AND BUILD_SUNBOY_FRONTEND)
+if(imgui_FOUND AND fmt_FOUND AND SDL2_FOUND AND SDL2_mixer_FOUND AND BUILD_SUNBOY_FRONTEND)
 	message(STATUS "Frontend for SunBoy is enabled.")
 	add_subdirectory(extern/nativefiledialog-extended)
 	add_subdirectory(extern/tomlplusplus)
@@ -57,6 +57,7 @@ if(imgui_FOUND AND fmt_FOUND AND SDL2_FOUND AND BUILD_SUNBOY_FRONTEND)
 		src/frontend/state.cpp
 		src/frontend/input.cpp
 		src/frontend/palette_edit.cpp
+		src/frontend/audio.cpp
 	)
 	set_target_properties(SunBoy PROPERTIES
 		CXX_STANDARD 20
@@ -89,7 +90,7 @@ if(imgui_FOUND AND fmt_FOUND AND SDL2_FOUND AND BUILD_SUNBOY_FRONTEND)
 
 	target_include_directories(SunBoy PRIVATE src/ extern/tomlplusplus)
 	target_link_libraries(SunBoy PRIVATE SunBoy-Core SDL2::SDL2 SDL2::SDL2main imgui::imgui fmt::fmt nfd tomlplusplus::tomlplusplus)
-
+	target_link_libraries(SunBoy PRIVATE $<IF:$<TARGET_EXISTS:SDL2_mixer::SDL2_mixer>,SDL2_mixer::SDL2_mixer,SDL2_mixer::SDL2_mixer-static>)
 	configure_file(fonts/Open_Sans/OpenSans-SemiBold.ttf ${CMAKE_SOURCE_DIR}/bin/fonts/Open_Sans/OpenSans-SemiBold.ttf COPYONLY)
 	configure_file(fonts/Open_Sans/OFL.txt ${CMAKE_SOURCE_DIR}/bin/fonts/Open_Sans/OFL.txt COPYONLY)
 endif()

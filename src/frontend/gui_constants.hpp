@@ -2,7 +2,7 @@
 #include <imgui.h>
 #include <string>
 #include <filesystem>
-
+#include <array>
 namespace SunBoy
 {
 	std::string get_current_directory();
@@ -12,7 +12,7 @@ namespace SunBoy
 	constexpr float FONT_SIZE = 19.0f;
 	constexpr float FONT_RENDER_SIZE = 22.0f;
 	constexpr int32_t MENU_HEIGHT = 25;
-
+	constexpr std::array<float, 5> AUDIO_LATENCY_TABLE{20.0f, 40.0f, 60.0f, 80.0f, 120.0f};
 	constexpr std::chrono::nanoseconds set_update_frequency_hz(size_t hz)
 	{
 		using namespace std::chrono_literals;

@@ -19,25 +19,28 @@ namespace SunBoy
 
 	void Timer::reset_div()
 	{
-		div_cycles = 0;
-		div = 0;
+		change_div(0);
 	}
 
 	uint8_t Timer::read_div()
 	{
-		return (div_cycles >> 8) & 0xFF;
+		return div;
 	}
 
 	void Timer::update(uint32_t addCycles)
 	{
-
-		div_cycles += addCycles;
-
-		if (div_cycles == 256)
+		if (core.cpu.stopped)
 		{
-			// not sure if this was supposed to be like that
-			++div;
-			div_cycles = 0;
+			change_div(0);
+		}
+		else
+		{
+			div_cycles += addCycles;
+		}
+
+		if (div_cycles >= 256)
+		{
+			change_div(div + 1);
 		}
 
 		if (timer_enabled())
@@ -60,5 +63,20 @@ namespace SunBoy
 	bool Timer::timer_enabled() const
 	{
 		return tac & 0b100;
+	}
+
+	void Timer::change_div(uint8_t new_div)
+	{
+		if ((div & 0b10000) && ((new_div & 0b10000) == 0))
+		{
+			apu_div++;
+			core.apu.step_counters(apu_div);
+		}
+
+		if (apu_div == 8)
+			apu_div = 0;
+
+		div = new_div;
+		div_cycles = 0;
 	}
 }

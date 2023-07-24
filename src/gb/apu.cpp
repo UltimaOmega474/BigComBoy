@@ -1,331 +1,644 @@
 #include "apu.hpp"
-
+#include "timer.hpp"
+#include "constants.hpp"
+#include <cmath>
+#include <array>
 namespace SunBoy
 {
-	void Square::step()
+	void LengthCounter::step_length(bool &channel_on)
 	{
-		frequency_timer--;
-		if (frequency_timer == 0)
+		if (!channel_on || !sound_length_enable)
+			return;
+
+		if (length_counter == (is_wave ? 256 : 64))
 		{
-			frequency_timer = (2048 - frequency) * 4;
-			duty_position = (duty_position + 1) & 0x7;
-		}
-	}
-
-	uint16_t Square::sample(uint8_t side) const
-	{
-		constexpr uint8_t duty_table[4][8]{
-			{0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 1, 1, 1},
-			{0, 1, 1, 1, 1, 1, 1, 0}};
-		auto volume = (duty_table[duty_select][duty_position] * volume_out);
-
-		if (side == 0 && stereo_left_enabled)
-		{
-
-			return volume;
-		}
-		else if (side == 1 && stereo_right_enabled)
-		{
-			return volume;
-		}
-
-		return 0;
-	}
-
-	void Square::length_step()
-	{
-
-		if (length_enabled && length_load > 0)
-		{
-			length_load--;
-			if (length_load == 0)
-			{
-				enabled = false;
-			}
-		}
-	}
-
-	void Square::envelope_step()
-	{
-		if (envelope_period != 0)
-		{
-			if (envelope_timer > 0)
-				envelope_timer--;
-
-			if (envelope_timer == 0)
-			{
-				envelope_timer = envelope_period;
-
-				if (volume_out < 0xF && envelope_direction)
-				{
-					volume_out++;
-				}
-				else if (volume_out > 0 && !envelope_direction)
-				{
-					volume_out--;
-				}
-			}
-		}
-	}
-
-	void Square::write_NRX0(uint8_t value)
-	{
-	}
-
-	void Square::write_NRX1(uint8_t value)
-	{
-		duty_select = (value >> 6) & 0x3;
-
-		length_load = 64 - (value & 0x3F);
-	}
-
-	void Square::write_NRX2(uint8_t value)
-	{
-		volume = (value >> 4) & 0xF;
-		envelope_direction = (value >> 3) & 0x01;
-		envelope_period = value & 0x7;
-	}
-
-	void Square::write_NRX3(uint8_t value)
-	{
-		frequency = (frequency & 0x700) | value;
-	}
-
-	void Square::write_NRX4(uint8_t value)
-	{
-		uint16_t freq_msb = value & 0b111;
-		freq_msb <<= 8;
-		frequency &= 0xFF;
-		frequency = frequency | freq_msb;
-		enabled = (value & 0x80) >> 7;
-
-		length_enabled = (value & 0x40) >> 6;
-
-		if (enabled)
-		{
-			trigger_channel();
-		}
-	}
-
-	void Square::trigger_channel()
-	{
-		if (length_load == 0)
-			length_load = 64;
-		frequency_timer = frequency;
-		envelope_timer = envelope_period;
-		volume_out = volume;
-		envelope_enable = true;
-	}
-
-	uint8_t Square::read_NRX0() const
-	{
-		return 0;
-	}
-
-	uint8_t Square::read_NRX1() const
-	{
-		uint8_t result = 0;
-		result |= length_load & 0x1F;
-		result |= (duty_select & 0x3) << 6;
-		return result;
-	}
-
-	uint8_t Square::read_NRX2() const
-	{
-		uint8_t result = 0;
-		result |= envelope_period & 0x7;
-		result |= (envelope_direction & 0x1) << 3;
-		result |= (volume & 0xF) << 4;
-
-		return result;
-	}
-
-	uint8_t Square::read_NRX3() const
-	{
-		uint8_t result = 0;
-		result |= frequency & 0xFF;
-		return result;
-	}
-
-	uint8_t Square::read_NRX4() const
-	{
-		uint8_t result = 0;
-		result |= (frequency & 0x700) >> 8;
-		result |= enabled >> 7;
-		result |= length_enabled >> 6;
-		return result;
-	}
-
-	void SweepSquare::trigger_channel()
-	{
-		Square::trigger_channel();
-		frequency_shadow = frequency;
-		sweep_timer = sweep_period;
-		sweep_enabled = sweep_period || sweep_shift ? true : false;
-		if (sweep_shift)
-			calc_frequency();
-	}
-
-	void SweepSquare::write_NRX0(uint8_t value)
-	{
-		Square::write_NRX0(value);
-		sweep_period = (value >> 4) & 0x07;
-		sweep_direction = (value >> 3) & 0x1;
-		sweep_shift = (value & 0x7);
-	}
-
-	void SweepSquare::write_NRX4(uint8_t value)
-	{
-		Square::write_NRX4(value);
-	}
-
-	void SweepSquare::sweep_step()
-	{
-		if (sweep_timer > 0)
-		{
-			sweep_timer--;
-		}
-
-		if (sweep_timer == 0)
-		{
-			if (sweep_period > 0)
-			{
-				sweep_timer = sweep_period;
-			}
-			else
-			{
-				sweep_timer = 8;
-			}
-
-			if (sweep_enabled && sweep_period > 0)
-			{
-				auto nFreq = calc_frequency();
-
-				if (nFreq <= 2047 && sweep_shift > 0)
-				{
-					frequency = nFreq;
-					frequency_shadow = nFreq;
-					calc_frequency();
-				}
-			}
-		}
-	}
-
-	uint16_t SweepSquare::calc_frequency()
-	{
-		uint16_t nFreq = frequency_shadow >> sweep_shift;
-
-		if (sweep_direction)
-		{
-			nFreq = frequency_shadow - nFreq;
+			channel_on = false;
 		}
 		else
 		{
-			nFreq = frequency_shadow + nFreq;
+			length_counter++;
 		}
-
-		if (nFreq > 2048)
-			enabled = false;
-
-		return nFreq;
 	}
 
-	void APU::write_power(uint8_t value)
+	void EnvelopeCounter::step_envelope_sweep(uint8_t &volume_output)
 	{
-		power = value >> 7;
-		if (!power)
+		if (envelope_sweep_pace != 0 && envelope_enabled)
 		{
-			square_2 = SweepSquare();
-			square_1 = Square();
+			if (envelope_counter == 0)
+			{
+				uint8_t new_volume = volume_output;
+				if (envelope_direction == 0)
+				{
+					new_volume--;
+				}
+				else
+				{
+					new_volume++;
+				}
+
+				if (within_range(new_volume, 0, 15))
+				{
+					volume_output = new_volume;
+					envelope_counter = envelope_sweep_pace;
+				}
+				else
+				{
+					envelope_enabled = false;
+				}
+			}
+
+			envelope_counter--;
 		}
 	}
 
-	uint8_t APU::read_power() const
+	void PulseChannel::step_frequency_sweep()
 	{
-		return power << 7;
+		if (!channel_on)
+			return;
+
+		if (sweep_pace_counter > 0)
+			sweep_pace_counter--;
+
+		if (sweep_pace_counter == 0)
+		{
+			if (sweep_pace > 0)
+			{
+				sweep_pace_counter = sweep_pace;
+			}
+			else
+			{
+				sweep_pace_counter = 8;
+			}
+
+			if (sweep_enabled && sweep_pace > 0)
+			{
+				auto nf = calculate_period();
+
+				if (nf <= 2047 && sweep_slope > 0)
+				{
+					update_split_period(nf);
+					period_shadow = nf;
+					calculate_period();
+				}
+			}
+		}
 	}
 
-	void APU::write_NR50(uint8_t value)
+	void PulseChannel::step_frequency()
 	{
-		stereo_right_volume = value & 0b0111;
+		if (!channel_on)
+			return;
+		if (period_counter == 0)
+		{
+			period_counter = (0x800 - get_combined_period()) * 4;
+			duty_position = (duty_position + 1) & 0x7;
+		}
+		else
+		{
+			period_counter--;
+		}
+	}
+
+	uint8_t PulseChannel::sample(uint8_t side)
+	{
+		auto volume = (DUTY_TABLE[wave_duty][duty_position] * volume_output);
+
+		if (!channel_on)
+			return 0;
+
+		if (side == 0 && left_out_enabled)
+		{
+
+			return volume;
+		}
+		else if (side == 1 && right_out_enabled)
+		{
+			return volume;
+		}
+
+		return 0;
+	}
+
+	void PulseChannel::trigger()
+	{
+		channel_on = true;
+
+		if (length.length_counter == 64)
+			length.length_counter = 0;
+		uint16_t old_period = get_combined_period();
+
+		period_counter = (0x800 - old_period) * 4;
+
+		period_shadow = get_combined_period();
+		sweep_pace_counter = sweep_pace;
+		sweep_enabled = get_combined_period() || sweep_slope ? true : false;
+
+		if (sweep_slope)
+			calculate_period();
+
+		envelope.envelope_counter = envelope.envelope_sweep_pace;
+		volume_output = envelope.initial_envelope_volume;
+		envelope.envelope_enabled = true;
+		// turn DAC off
+		if (envelope.initial_envelope_volume == 0)
+			channel_on = false;
+	}
+
+	void PulseChannel::write_sweep(uint8_t nr10)
+	{
+		if (!has_sweep)
+			return;
+
+		sweep_slope = nr10 & 0b111;
+		sweep_direction = (nr10 & 0b1000) >> 3;
+		sweep_pace = (nr10 & 0b01110000) >> 4;
+	}
+
+	void PulseChannel::write_length_timer(uint8_t nr11)
+	{
+		length.initial_length_time = nr11 & 0b00111111;
+		wave_duty = (nr11 & 0b11000000) >> 6;
+
+		length.length_counter = length.initial_length_time;
+	}
+
+	void PulseChannel::write_volume_envelope(uint8_t nr12)
+	{
+		envelope.envelope_sweep_pace = nr12 & 0b00000111;
+		envelope.envelope_direction = (nr12 & 0b00001000) >> 3;
+		envelope.initial_envelope_volume = (nr12 & 0b11110000) >> 4;
+
+		// if channel is on, trigger again
+		if (channel_on)
+			trigger();
+	}
+
+	void PulseChannel::write_period_low_bits(uint8_t nr13)
+	{
+		period_low = nr13;
+	}
+
+	void PulseChannel::write_control_period(uint8_t nr14)
+	{
+		period_high = nr14 & 0b00000111;
+		length.sound_length_enable = (nr14 & 0b01000000) >> 6;
+		trigger_channel = (nr14 & 0b10000000) >> 7;
+
+		// trigger the channel if the bit is 1
+		if (trigger_channel)
+			trigger();
+	}
+
+	uint8_t PulseChannel::read_sweep() const
+	{
+		if (!has_sweep)
+			return 0xFF;
+
+		uint8_t nr10 = 0;
+		nr10 |= sweep_slope;
+		nr10 |= sweep_direction << 3;
+		nr10 |= sweep_pace << 4;
+
+		return nr10;
+	}
+
+	uint8_t PulseChannel::read_length_timer() const
+	{
+		uint8_t nr11 = wave_duty << 6;
+
+		return nr11;
+	}
+
+	uint8_t PulseChannel::read_volume_envelope() const
+	{
+		uint8_t nr12 = 0;
+		nr12 |= envelope.envelope_sweep_pace;
+		nr12 |= envelope.envelope_direction << 3;
+		nr12 |= envelope.initial_envelope_volume << 4;
+		return nr12;
+	}
+
+	uint8_t PulseChannel::read_control_period() const
+	{
+		uint8_t nr14 = length.sound_length_enable << 6;
+		return nr14;
+	}
+
+	uint16_t PulseChannel::get_combined_period() const
+	{
+		return (period_high << 8) | period_low;
+	}
+
+	void PulseChannel::update_split_period(uint16_t value)
+	{
+		period_low = value & 0xFF;
+		period_high = (value & 0b11100000000) >> 8;
+	}
+
+	uint16_t PulseChannel::calculate_period()
+	{
+		uint16_t new_period = period_shadow >> sweep_slope;
+
+		if (sweep_direction)
+		{
+			new_period = period_shadow - new_period;
+		}
+		else
+		{
+			new_period = period_shadow + new_period;
+		}
+
+		if (new_period > 2048)
+			channel_on = false;
+
+		return new_period;
+	}
+
+	void WaveChannel::step()
+	{
+		if (channel_on && dac_enabled)
+		{
+			if (period_counter <= 0)
+			{
+				period_counter = (0x800 - get_combined_period()) * 2;
+
+				position_counter = (position_counter + 1) % 32;
+				buffer = wave_table[position_counter / 2];
+
+				if ((position_counter & 1) == 0)
+					buffer >>= 4;
+			}
+			else
+			{
+				period_counter--;
+			}
+		}
+	}
+
+	uint8_t WaveChannel::sample(uint8_t side)
+	{
+		if (!channel_on || !dac_enabled)
+			return 0;
+
+		uint8_t volume = (buffer & 0xF) >> WAVE_VOLUME[output_level];
+
+		if (side == 0 && left_out_enabled)
+		{
+			return volume;
+		}
+		else if (side == 1 && right_out_enabled)
+		{
+			return volume;
+		}
+
+		return 0;
+	}
+
+	void WaveChannel::trigger()
+	{
+		channel_on = true;
+
+		if (length.length_counter == (length.is_wave ? 256 : 64))
+			length.length_counter = 0;
+
+		position_counter = 0;
+
+		period_counter = (0x800 - get_combined_period()) * 2;
+	}
+
+	void WaveChannel::write_dac_enable(uint8_t nr30)
+	{
+		dac_enabled = (nr30 & 0b10000000) >> 7;
+	}
+
+	void WaveChannel::write_length_timer(uint8_t nr31)
+	{
+		length.initial_length_time = nr31;
+		length.length_counter = length.initial_length_time;
+	}
+
+	void WaveChannel::write_output_level(uint8_t nr32)
+	{
+		output_level = (nr32 & 0b01100000) >> 5;
+	}
+
+	void WaveChannel::write_period_low_bits(uint8_t nr33)
+	{
+		period_low = nr33;
+	}
+
+	void WaveChannel::write_control_period(uint8_t nr34)
+	{
+		period_high = nr34 & 0b00000111;
+		length.sound_length_enable = (nr34 & 0b01000000) >> 6;
+		trigger_channel = (nr34 & 0b10000000) >> 7;
+
+		// trigger the channel if the bit is 1
+		if (trigger_channel)
+			trigger();
+	}
+
+	uint8_t WaveChannel::read_dac_enable() const
+	{
+		return dac_enabled << 7;
+	}
+
+	uint8_t WaveChannel::read_output_level() const
+	{
+		return output_level << 5;
+	}
+
+	uint8_t WaveChannel::read_control_period() const
+	{
+		uint8_t nr34 = length.sound_length_enable << 6;
+		return nr34;
+	}
+
+	uint16_t WaveChannel::get_combined_period() const
+	{
+		return (period_high << 8) | period_low;
+	}
+
+	void NoiseChannel::step()
+	{
+		if (!channel_on)
+			return;
+
+		if (period_counter == 0)
+		{
+			period_counter = (NOISE_DIV[clock_divider] << clock_shift) * 4;
+
+			uint16_t _xor = ((LFSR & 1) ^ ((LFSR & 2) >> 1));
+			LFSR |= _xor << 15;
+
+			if (LFSR_width == 1)
+			{
+				// clear first
+				LFSR &= ~(0x80);
+				LFSR |= _xor << 7;
+			}
+			LFSR >>= 1;
+		}
+		else
+		{
+			period_counter--;
+		}
+	}
+
+	uint8_t NoiseChannel::sample(uint8_t side)
+	{
+		if (!channel_on)
+			return 0;
+
+		auto volume = (LFSR & 1) * volume_output;
+
+		if (side == 0 && left_out_enabled)
+		{
+
+			return volume;
+		}
+		else if (side == 1 && right_out_enabled)
+		{
+			return volume;
+		}
+
+		return 0;
+	}
+
+	void NoiseChannel::trigger()
+	{
+		channel_on = true;
+
+		if (length.length_counter == 64)
+			length.length_counter = 0;
+
+		period_counter = (NOISE_DIV[clock_divider] << clock_shift) * 4;
+		LFSR = 0x7FFF;
+
+		envelope.envelope_counter = envelope.envelope_sweep_pace;
+		volume_output = envelope.initial_envelope_volume;
+		envelope.envelope_enabled = true;
+		// turn DAC off
+		if (envelope.initial_envelope_volume == 0)
+			channel_on = false;
+	}
+
+	void NoiseChannel::write_length_timer(uint8_t nr41)
+	{
+		length.length_counter = length.initial_length_time = nr41 & 0b00111111;
+	}
+
+	void NoiseChannel::write_volume_envelope(uint8_t nr42)
+	{
+		envelope.envelope_sweep_pace = nr42 & 0b00000111;
+		envelope.envelope_direction = (nr42 & 0b00001000) >> 3;
+		envelope.initial_envelope_volume = (nr42 & 0b11110000) >> 4;
+
+		//	if (channel_on)
+		//		trigger();
+	}
+
+	uint8_t NoiseChannel::read_volume_envelope() const
+	{
+		uint8_t nr42 = 0;
+		nr42 |= envelope.envelope_sweep_pace;
+		nr42 |= envelope.envelope_direction << 3;
+		nr42 |= envelope.initial_envelope_volume << 4;
+		return nr42;
+	}
+
+	void NoiseChannel::write_frequency_randomness(uint8_t nr43)
+	{
+		clock_divider = nr43 & 0b00000111;
+		LFSR_width = (nr43 & 0b00001000) >> 3;
+		clock_shift = (nr43 & 0b11110000) >> 4;
+	}
+
+	void NoiseChannel::write_control(uint8_t nr44)
+	{
+		length.sound_length_enable = (nr44 & 0b01000000) >> 6;
+		trigger_channel = (nr44 & 0b10000000) >> 7;
+
+		// triggers channel if 1 for bit7
+		if (trigger_channel)
+			trigger();
+	}
+
+	uint8_t NoiseChannel::read_frequency_randomness() const
+	{
+		uint8_t nr43 = 0;
+		nr43 |= clock_divider;
+		nr43 |= LFSR_width << 3;
+		nr43 |= clock_shift << 4;
+		return nr43;
+	}
+
+	uint8_t NoiseChannel::read_control() const
+	{
+		return length.sound_length_enable << 6;
+	}
+
+	void APU::reset()
+	{
+		stereo_left_volume = 0;
+		stereo_right_volume = 0;
+		mix_vin_left = false;
+		mix_vin_right = false;
+		sample_counter = 0;
+		power = false;
+
+		pulse_1 = PulseChannel(true);
+		pulse_2 = PulseChannel(false);
+		wave = WaveChannel();
+		noise = NoiseChannel();
+	}
+
+	void APU::write_sound_power(uint8_t value)
+	{
+		power = (value & 0b10000000) > 0;
+		if (power == 0)
+		{
+			pulse_1 = PulseChannel(true);
+			pulse_2 = PulseChannel(false);
+			wave = WaveChannel();
+			noise = NoiseChannel();
+		}
+	}
+
+	uint8_t APU::read_sound_power() const
+	{
+		uint8_t nr52 = 0;
+		nr52 |= power ? 0b10000000 : 0;
+		nr52 |= pulse_1.channel_on ? 0b00000001 : 0;
+		nr52 |= pulse_2.channel_on ? 0b00000010 : 0;
+		nr52 |= wave.channel_on ? 0b00000100 : 0;
+		nr52 |= noise.channel_on ? 0b00001000 : 0;
+
+		return nr52;
+	}
+
+	void APU::write_master_volume(uint8_t value)
+	{
+		stereo_right_volume = value & 0b00000111;
 		stereo_left_volume = (value & 0b01110000) >> 4;
+
+		mix_vin_left = (value & 0b10000000) > 0;
+		mix_vin_right = (value & 0b00001000) > 0;
 	}
 
-	void APU::write_NR51(uint8_t value)
+	void APU::write_channel_pan(uint8_t value)
 	{
-		square_2.stereo_left_enabled = (value & 0b00010000) >> 4;
-		square_2.stereo_right_enabled = value & 0b00000001;
+		pulse_1.left_out_enabled = (value & 0b00010000) > 0;
+		pulse_1.right_out_enabled = value & 0b00000001;
 
-		square_1.stereo_left_enabled = (value & 0b00100000) >> 4;
-		square_1.stereo_right_enabled = value & 0b00000010;
+		pulse_2.left_out_enabled = (value & 0b00100000) > 0;
+		pulse_2.right_out_enabled = value & 0b00000010;
+
+		wave.left_out_enabled = (value & 0b01000000) > 0;
+		wave.right_out_enabled = value & 0b00000100;
+
+		noise.left_out_enabled = (value & 0b10000000) > 0;
+		noise.right_out_enabled = value & 0b00001000;
 	}
 
-	void APU::step(uint32_t cpuCycles)
+	uint8_t APU::read_master_volume() const
 	{
-		while (cpuCycles && power)
+		uint8_t nr50 = 0;
+		nr50 |= stereo_right_volume & 0b00000111;
+		nr50 |= (stereo_left_volume & 0b01110000) << 4;
+		nr50 |= mix_vin_right ? 0b00001000 : 0;
+		nr50 |= mix_vin_left ? 0b10000000 : 0;
+		return nr50;
+	}
+
+	uint8_t APU::read_channel_pan() const
+	{
+		uint8_t nr51 = 0;
+		nr51 |= static_cast<uint8_t>(pulse_1.left_out_enabled) << 4;
+		nr51 |= static_cast<uint8_t>(pulse_1.right_out_enabled);
+
+		nr51 |= static_cast<uint8_t>(pulse_2.left_out_enabled) << 5;
+		nr51 |= static_cast<uint8_t>(pulse_2.right_out_enabled) << 1;
+
+		nr51 |= static_cast<uint8_t>(wave.left_out_enabled) << 6;
+		nr51 |= static_cast<uint8_t>(wave.right_out_enabled) << 2;
+
+		nr51 |= static_cast<uint8_t>(noise.left_out_enabled) << 7;
+		nr51 |= static_cast<uint8_t>(noise.right_out_enabled) << 3;
+		return nr51;
+	}
+
+	void APU::step(uint32_t cycles)
+	{
+		for (auto i = 0; i < cycles; ++i)
 		{
-			sequencer_count--;
-			if (sequencer_count <= 0)
+			pulse_1.step_frequency();
+			pulse_2.step_frequency();
+			wave.step();
+			noise.step();
+
+			if (sample_counter <= 0 && sample_rate > 0)
 			{
-				sequencer_count = 8192;
-				switch (frame_sequence)
+				sample_counter = sample_rate;
+
+				if (samples_ready_func)
 				{
-				case 0:
-					// length
-					square_2.length_step();
-					square_1.length_step();
+					SampleResult result;
+					result.left_channel.master_volume = stereo_left_volume;
+					result.left_channel.pulse_1 = pulse_1.sample(0);
+					result.left_channel.pulse_2 = pulse_2.sample(0);
+					result.left_channel.wave = wave.sample(0);
+					result.left_channel.noise = noise.sample(0);
 
-					break;
-				case 2:
-					// length & sweep
-					square_2.length_step();
-					square_1.length_step();
-
-					square_2.sweep_step();
-					break;
-				case 4:
-					// length
-					square_2.length_step();
-					square_1.length_step();
-
-					break;
-				case 6:
-					// length & sweep
-					square_2.length_step();
-					square_1.length_step();
-
-					square_2.sweep_step();
-					break;
-				case 7:
-					// volume env
-					square_2.envelope_step();
-					square_1.envelope_step();
-
-					break;
-				default:
-					break;
-				}
-
-				frame_sequence++;
-				if (frame_sequence == 8)
-				{
-					frame_sequence = 0;
+					result.right_channel.master_volume = stereo_right_volume;
+					result.right_channel.pulse_1 = pulse_1.sample(1);
+					result.right_channel.pulse_2 = pulse_2.sample(1);
+					result.right_channel.wave = wave.sample(1);
+					result.right_channel.noise = noise.sample(1);
+					samples_ready_func(result);
 				}
 			}
 
-			square_2.step();
-			square_1.step();
-			if (sample_counter == 0)
-			{
-				float buffer1 = 0, buffer2 = 0;
-				sample_counter = output_sample_rate;
-				// Implementation for audio generation temporarily removed
-			}
+			sample_counter--;
+		}
+	}
+	void APU::step_counters(uint8_t apu_div)
+	{
+		switch (apu_div)
+		{
+		case 0:
+		case 4:
+		{
+			pulse_1.length.step_length(pulse_1.channel_on);
+			pulse_2.length.step_length(pulse_2.channel_on);
+			if (wave.dac_enabled)
+				wave.length.step_length(wave.channel_on);
+			noise.length.step_length(noise.channel_on);
+			break;
+		}
 
-			--sample_counter;
-			--cpuCycles;
+		case 2:
+		case 6:
+		{
+			pulse_1.step_frequency_sweep();
+			pulse_1.length.step_length(pulse_1.channel_on);
+			pulse_2.length.step_length(pulse_2.channel_on);
+			if (wave.dac_enabled)
+				wave.length.step_length(wave.channel_on);
+			noise.length.step_length(noise.channel_on);
+			break;
+		}
+
+		case 7:
+		{
+			if (pulse_1.channel_on)
+				pulse_1.envelope.step_envelope_sweep(pulse_1.volume_output);
+			if (pulse_2.channel_on)
+				pulse_2.envelope.step_envelope_sweep(pulse_2.volume_output);
+			if (noise.channel_on)
+				noise.envelope.step_envelope_sweep(noise.volume_output);
+			break;
+		}
 		}
 	}
 

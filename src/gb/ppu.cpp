@@ -108,7 +108,7 @@ namespace SunBoy
 
 				if (line_y > 153)
 				{
-
+					framebuffer_complete = framebuffer;
 					mode = PPUState::OAMSearch;
 					if (check_stat(EnableOAMInt) && allow_interrupt)
 						core.request_interrupt(INT_LCD_STAT_BIT);

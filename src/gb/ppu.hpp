@@ -72,6 +72,7 @@ namespace SunBoy
 		uint8_t object_palette_0 = 0, object_palette_1 = 0;
 
 		std::array<uint32_t, LCD_WIDTH * LCD_HEIGHT> framebuffer{};
+		std::array<uint32_t, LCD_WIDTH * LCD_HEIGHT> framebuffer_complete{};
 		std::array<uint32_t, 4> color_table = LCD_GRAY_PALETTE;
 
 		PPU(Core &core);

@@ -2,76 +2,184 @@
 #include "constants.hpp"
 #include <cinttypes>
 #include <array>
-
+#include <functional>
 namespace SunBoy
 {
-	class Square
+	class Timer;
+
+	class LengthCounter
 	{
 	public:
-		bool envelope_enable = false;
-		uint8_t enabled = 0, stereo_left_enabled = 0, stereo_right_enabled = 0;
-		uint8_t duty_select = 0, duty_length = 0, duty_position = 0;
-		uint8_t length_enabled = 0, length_load = 0, volume = 0;
-		uint8_t envelope_direction = 0, envelope_period = 0, envelope_timer = 0;
-		uint16_t frequency = 0, frequency_shadow = 0, frequency_timer = 0;
-		uint16_t volume_out = 0;
+		bool is_wave = false;
+		uint8_t initial_length_time = 0; // (Write Only)
+		uint8_t sound_length_enable = 0; // (Read/Write) (1=Stop output when length in NR11 expires)
+		uint16_t length_counter = 0;
 
-		void step();
-		void length_step();
-		void envelope_step();
+		LengthCounter(bool wave) : is_wave(wave) {}
 
-		virtual void trigger_channel();
-
-		uint16_t sample(uint8_t side) const;
-
-		virtual void write_NRX0(uint8_t value);
-		void write_NRX1(uint8_t value);
-		void write_NRX2(uint8_t value);
-		void write_NRX3(uint8_t value);
-		virtual void write_NRX4(uint8_t value);
-
-		virtual uint8_t read_NRX0() const;
-		uint8_t read_NRX1() const;
-		uint8_t read_NRX2() const;
-		uint8_t read_NRX3() const;
-		virtual uint8_t read_NRX4() const;
+		void step_length(bool &channel_on);
 	};
 
-	class SweepSquare : public Square
+	class EnvelopeCounter
 	{
 	public:
-		uint8_t sweep_enabled = 0;
-		uint8_t sweep_period = 0, sweep_direction = 0;
-		uint8_t sweep_shift = 0, sweep_timer = 0;
+		bool envelope_enabled = false;
+		uint8_t envelope_counter = 0;
+		uint8_t envelope_sweep_pace = 0;	 // (0=No Sweep)
+		uint8_t envelope_direction = 0;		 // (0=Decrease, 1=Increase)
+		uint8_t initial_envelope_volume = 0; // (0-F) (0=No Sound)
 
-		void trigger_channel() override;
-		void write_NRX0(uint8_t value) override;
-		void write_NRX4(uint8_t value) override;
+		void step_envelope_sweep(uint8_t &volume_output);
+	};
 
-		void sweep_step();
-		uint16_t calc_frequency();
+	class PulseChannel
+	{
+	public:
+		bool channel_on = false;
+		bool has_sweep, sweep_enabled = false;
+		bool left_out_enabled = true, right_out_enabled = true;
+		uint8_t sweep_slope = 0;	 // (Read/Write)
+		uint8_t sweep_direction = 0; // 0: Addition (period increases) 1: Subtraction (period decreases)
+		uint8_t sweep_pace = 0;
+		uint8_t wave_duty = 0; // (Read/Write)
+		uint8_t duty_position = 0;
+		uint8_t period_low = 0;		 // (Write Only)
+		uint8_t period_high = 0;	 // (Write Only)
+		uint8_t trigger_channel = 0; // (Write Only) (1=Restart channel)
+		uint8_t volume_output = 0;
+
+		uint16_t sweep_pace_counter = 0;
+		uint16_t period_shadow = 0;
+		uint16_t period_counter = 0;
+
+		LengthCounter length{false};
+		EnvelopeCounter envelope;
+
+		PulseChannel(bool has_sweep)
+			: has_sweep(has_sweep)
+		{
+		}
+
+		void step_frequency_sweep();
+		void step_frequency();
+		uint8_t sample(uint8_t side);
+		void trigger();
+
+		void write_sweep(uint8_t nr10);
+		void write_length_timer(uint8_t nr11);
+		void write_volume_envelope(uint8_t nr12);
+		void write_period_low_bits(uint8_t nr13);
+		void write_control_period(uint8_t nr14);
+
+		uint8_t read_sweep() const;
+		uint8_t read_length_timer() const;
+		uint8_t read_volume_envelope() const;
+		uint8_t read_control_period() const;
+
+		uint16_t get_combined_period() const;
+		void update_split_period(uint16_t value);
+		uint16_t calculate_period();
+	};
+
+	class WaveChannel
+	{
+	public:
+		bool channel_on = false;
+		bool left_out_enabled = true, right_out_enabled = true;
+		uint8_t dac_enabled = 0; // (0=Off, 1=On)
+		uint8_t output_level = 0;
+		uint8_t period_low = 0;		 // (Write Only)
+		uint8_t period_high = 0;	 // (Write Only)
+		uint8_t trigger_channel = 0; // (Write Only)
+		std::array<uint8_t, 16> wave_table{};
+		uint16_t position_counter = 0;
+		uint16_t period_counter = 0;
+
+		LengthCounter length{true};
+
+		uint8_t buffer = 0;
+		void step();
+		uint8_t sample(uint8_t side);
+		void trigger();
+		void write_dac_enable(uint8_t nr30);
+		void write_length_timer(uint8_t nr31);
+		void write_output_level(uint8_t nr32);
+		void write_period_low_bits(uint8_t nr33);
+		void write_control_period(uint8_t nr34);
+
+		uint8_t read_dac_enable() const;
+		uint8_t read_output_level() const;
+		uint8_t read_control_period() const;
+		uint16_t get_combined_period() const;
+	};
+
+	class NoiseChannel
+	{
+	public:
+		bool channel_on = false;
+		bool left_out_enabled = true, right_out_enabled = true;
+		uint8_t clock_divider = 0;	 // (r)
+		uint8_t LFSR_width = 0;		 // (0=15 bits, 1=7 bits)
+		uint8_t clock_shift = 0;	 // (s)
+		uint8_t trigger_channel = 0; // (Write Only)
+		uint8_t volume_output = 0;
+		uint16_t LFSR = 0;
+		uint16_t period_counter = 0;
+
+		LengthCounter length{false};
+		EnvelopeCounter envelope;
+
+		void step();
+		uint8_t sample(uint8_t side);
+		void trigger();
+		void write_length_timer(uint8_t nr41);
+		void write_volume_envelope(uint8_t nr42);
+		void write_frequency_randomness(uint8_t nr43);
+		void write_control(uint8_t nr44);
+
+		uint8_t read_volume_envelope() const;
+		uint8_t read_frequency_randomness() const;
+		uint8_t read_control() const;
+	};
+
+	struct SampleResult
+	{
+		struct
+		{
+			uint8_t master_volume = 0, vin = 0;
+			uint8_t pulse_1 = 0, pulse_2 = 0;
+			uint8_t wave = 0, noise = 0;
+		} left_channel;
+		struct
+		{
+			uint8_t master_volume = 0, vin = 0;
+			uint8_t pulse_1 = 0, pulse_2 = 0;
+			uint8_t wave = 0, noise = 0;
+		} right_channel;
 	};
 
 	class APU
 	{
-		uint8_t power = 0;
-		uint8_t stereo_left_volume = 0, stereo_right_volume = 0;
-		uint16_t frame_sequence = 0, sequencer_count = 0, sample_counter = 0;
-		uint16_t buffer_index = 0;
-		uint16_t output_sample_rate = 0;
-
-		std::array<float, 2048> samples_buffer{};
-
 	public:
-		Square square_1;
-		SweepSquare square_2;
+		bool mix_vin_left = false, mix_vin_right = false;
+		bool power = 0; // (0: turn the APU off) (Read/Write)
+		uint8_t stereo_left_volume = 0, stereo_right_volume = 0;
+		int32_t sample_counter = 0, sample_rate = 0;
 
-		void write_power(uint8_t value);
-		uint8_t read_power() const;
+		PulseChannel pulse_1{true};
+		PulseChannel pulse_2{false};
+		WaveChannel wave;
+		NoiseChannel noise;
+		std::function<void(SampleResult result)> samples_ready_func = nullptr;
 
-		void write_NR50(uint8_t value);
-		void write_NR51(uint8_t value);
-
-		void step(uint32_t cpuCycles);
+		void reset();
+		void write_sound_power(uint8_t value);
+		uint8_t read_sound_power() const;
+		void write_master_volume(uint8_t value);
+		void write_channel_pan(uint8_t value);
+		uint8_t read_master_volume() const;
+		uint8_t read_channel_pan() const;
+		void step(uint32_t cycles);
+		void step_counters(uint8_t apu_div);
 	};
 }

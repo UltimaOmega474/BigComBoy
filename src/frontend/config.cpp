@@ -20,7 +20,8 @@ namespace SunBoy
 			linear_filtering = parse_result["linear_filtering"].value_or(linear_filtering);
 			allow_sram_saving = parse_result["allow_sram_saving"].value_or(allow_sram_saving);
 			sram_save_interval = parse_result["sram_save_interval"].value_or(sram_save_interval);
-
+			audio_latency_select = parse_result["audio_latency_select"].value_or(audio_latency_select);
+			audio_master_volume = parse_result["audio_master_volume"].value_or(audio_master_volume);
 			auto ct = parse_result["color_table"].as_array();
 			if (ct)
 			{
@@ -33,9 +34,9 @@ namespace SunBoy
 			auto recent = parse_result["recent_rom_paths"].as_array();
 			if (recent)
 			{
-				for (auto i = 0; i < recent->size(); ++i)
+				for (auto i = recent->size(); i > 0; --i)
 				{
-					add_rom_path((*recent)[i].value_or(""));
+					add_rom_path((*recent)[i - 1].value_or(""));
 				}
 			}
 		}
@@ -58,8 +59,11 @@ namespace SunBoy
 
 	void Configuration::add_rom_path(std::string path)
 	{
-		if (std::find(recent_rom_paths.begin(), recent_rom_paths.end(), path) != recent_rom_paths.end())
-			return;
+		auto it = std::find(recent_rom_paths.begin(), recent_rom_paths.end(), path);
+		if (it != recent_rom_paths.end())
+		{
+			recent_rom_paths.erase(it);
+		}
 
 		recent_rom_paths.push_front(std::move(path));
 		if (recent_rom_paths.size() > 7)
@@ -75,6 +79,8 @@ namespace SunBoy
 			{"linear_filtering", linear_filtering},
 			{"allow_sram_saving", allow_sram_saving},
 			{"sram_save_interval", sram_save_interval},
+			{"audio_latency_select", audio_latency_select},
+			{"audio_master_volume", audio_master_volume},
 			{"color_table", toml::array{
 								color_table[0],
 								color_table[1],

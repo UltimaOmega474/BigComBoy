@@ -15,6 +15,7 @@ namespace SunBoy
 	{
 		this->cart = cart;
 		ppu.reset(true);
+		apu.reset();
 		if (settings.skip_boot_rom)
 		{
 			boot_rom_enabled = false;
@@ -126,8 +127,11 @@ namespace SunBoy
 		{
 			switch (address & 0xFF)
 			{
+				// input register
 			case 0x00:
 				return pad.get_pad_state();
+
+			// timer registers
 			case 0x04:
 				return timer.read_div();
 			case 0x05:
@@ -139,40 +143,87 @@ namespace SunBoy
 			case 0x0F:
 				return cpu.interrupt_flag;
 
+			// pulse 1
 			case 0x10:
-				return apu.square_2.read_NRX0();
+				return apu.pulse_1.read_sweep();
 			case 0x11:
-				return apu.square_2.read_NRX1();
+				return apu.pulse_1.read_length_timer();
 			case 0x12:
-				return apu.square_2.read_NRX2();
+				return apu.pulse_1.read_volume_envelope();
 			case 0x13:
-				return apu.square_2.read_NRX3();
+				return 0xFF;
 			case 0x14:
-				return apu.square_2.read_NRX4();
+				return apu.pulse_1.read_control_period();
 
+			// pulse 2
 			case 0x15:
-				return apu.square_1.read_NRX0();
+				return apu.pulse_2.read_sweep();
 			case 0x16:
-				return apu.square_1.read_NRX1();
+				return apu.pulse_2.read_length_timer();
 			case 0x17:
-				return apu.square_1.read_NRX2();
+				return apu.pulse_2.read_volume_envelope();
 			case 0x18:
-				return apu.square_1.read_NRX3();
+				return 0xFF;
 			case 0x19:
-				return apu.square_1.read_NRX4();
+				return apu.pulse_2.read_control_period();
 
+			// wave channel
+			case 0x1A:
+				return apu.wave.read_dac_enable();
+			case 0x1B:
+				return 0xFF;
+			case 0x1C:
+				return apu.wave.read_output_level();
+			case 0x1D:
+				return 0xFF;
+			case 0x1E:
+				return apu.wave.read_control_period();
+
+			// noise channel
+			case 0x1F:
+				return 0xFF;
+			case 0x20:
+				return 0xFF;
+			case 0x21:
+				return apu.noise.read_volume_envelope();
+			case 0x22:
+				return apu.noise.read_frequency_randomness();
+			case 0x23:
+				return apu.noise.read_control();
+			case 0x24:
+				return 0xFF;
+
+			case 0x25:
+				return apu.read_channel_pan();
 			case 0x26:
-				return apu.read_power();
+				return apu.read_sound_power();
+			case 0x30:
+			case 0x31:
+			case 0x32:
+			case 0x33:
+			case 0x34:
+			case 0x35:
+			case 0x36:
+			case 0x37:
+			case 0x38:
+			case 0x39:
+			case 0x3A:
+			case 0x3B:
+			case 0x3C:
+			case 0x3D:
+			case 0x3E:
+			case 0x3F:
+				return apu.wave.wave_table[(address & 0xFF) - 0x30];
+
+			// ppu registers
 			case 0x40:
 				return ppu.lcd_control;
 			case 0x41:
 				return ppu.status;
-
 			case 0x42:
 				return ppu.screen_scroll_y;
 			case 0x43:
 				return ppu.screen_scroll_x;
-
 			case 0x44:
 				return ppu.line_y;
 			case 0x45:
@@ -185,11 +236,11 @@ namespace SunBoy
 				return ppu.object_palette_0;
 			case 0x49:
 				return ppu.object_palette_1;
-
 			case 0x4A:
 				return ppu.window_y;
 			case 0x4B:
 				return ppu.window_x;
+
 			case 0x50:
 				return boot_rom_enabled;
 			}
@@ -258,10 +309,6 @@ namespace SunBoy
 				pad.select_button_mode(value);
 				return;
 
-			case 0x01:
-			case 0x02:
-				return;
-
 			case 0x04:
 				timer.reset_div();
 				return;
@@ -279,45 +326,93 @@ namespace SunBoy
 				return;
 
 			case 0x10:
-				apu.square_2.write_NRX0(value);
+				apu.pulse_1.write_sweep(value);
 				return;
 			case 0x11:
-				apu.square_2.write_NRX1(value);
+				apu.pulse_1.write_length_timer(value);
 				return;
 			case 0x12:
-				apu.square_2.write_NRX2(value);
+				apu.pulse_1.write_volume_envelope(value);
 				return;
 			case 0x13:
-				apu.square_2.write_NRX3(value);
+				apu.pulse_1.write_period_low_bits(value);
 				return;
 			case 0x14:
-				apu.square_2.write_NRX4(value);
+				apu.pulse_1.write_control_period(value);
 				return;
 
 			case 0x15:
-				apu.square_1.write_NRX0(value);
+				apu.pulse_2.write_sweep(value);
 				return;
 			case 0x16:
-				apu.square_1.write_NRX1(value);
+				apu.pulse_2.write_length_timer(value);
 				return;
 			case 0x17:
-				apu.square_1.write_NRX2(value);
+				apu.pulse_2.write_volume_envelope(value);
 				return;
 			case 0x18:
-				apu.square_1.write_NRX3(value);
+				apu.pulse_2.write_period_low_bits(value);
 				return;
 			case 0x19:
-				apu.square_1.write_NRX4(value);
+				apu.pulse_2.write_control_period(value);
+				return;
+
+			case 0x1A:
+				apu.wave.write_dac_enable(value);
+				return;
+			case 0x1B:
+				apu.wave.write_length_timer(value);
+				return;
+			case 0x1C:
+				apu.wave.write_output_level(value);
+				return;
+			case 0x1D:
+				apu.wave.write_period_low_bits(value);
+				return;
+			case 0x1E:
+				apu.wave.write_control_period(value);
+				return;
+
+			case 0x20:
+				apu.noise.write_length_timer(value);
+				return;
+			case 0x21:
+				apu.noise.write_volume_envelope(value);
+				return;
+			case 0x22:
+				apu.noise.write_frequency_randomness(value);
+				return;
+			case 0x23:
+				apu.noise.write_control(value);
 				return;
 
 			case 0x24:
-				apu.write_NR50(value);
+				apu.write_master_volume(value);
 				return;
 			case 0x25:
-				apu.write_NR51(value);
+				apu.write_channel_pan(value);
 				return;
 			case 0x26:
-				apu.write_power(value);
+				apu.write_sound_power(value);
+				return;
+
+			case 0x30:
+			case 0x31:
+			case 0x32:
+			case 0x33:
+			case 0x34:
+			case 0x35:
+			case 0x36:
+			case 0x37:
+			case 0x38:
+			case 0x39:
+			case 0x3A:
+			case 0x3B:
+			case 0x3C:
+			case 0x3D:
+			case 0x3E:
+			case 0x3F:
+				apu.wave.wave_table[(address & 0xFF) - 0x30] = value;
 				return;
 
 			case 0x40:

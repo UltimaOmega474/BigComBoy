@@ -20,6 +20,13 @@ namespace SunBoy
 	constexpr auto WITHOUT_CARRY = false;
 	constexpr auto DONT_SET_IME = false;
 	constexpr auto SET_IME = true;
+	constexpr std::array<uint16_t, 8> NOISE_DIV{2, 4, 8, 12, 16, 20, 24, 28};
+	constexpr std::array<uint8_t, 4> WAVE_VOLUME{4, 0, 1, 2};
+	constexpr std::array<std::array<uint8_t, 8>, 4> DUTY_TABLE{
+		std::array<uint8_t, 8>{0, 0, 0, 0, 0, 0, 0, 1},
+		std::array<uint8_t, 8>{1, 0, 0, 0, 0, 0, 0, 1},
+		std::array<uint8_t, 8>{1, 0, 0, 0, 0, 1, 1, 1},
+		std::array<uint8_t, 8>{0, 1, 1, 1, 1, 1, 1, 0}};
 
 	constexpr std::array<uint32_t, 4> LCD_GRAY_PALETTE{
 		0xFFFFFFFF,
@@ -27,4 +34,9 @@ namespace SunBoy
 		0x555555FF,
 		0x000000FF,
 	};
+
+	constexpr bool within_range(uint16_t address, uint16_t start, uint16_t end)
+	{
+		return ((address >= start) && (address <= end));
+	}
 }
