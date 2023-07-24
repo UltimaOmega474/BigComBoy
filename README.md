@@ -8,7 +8,7 @@ Below you will find the current status of various feature implementations and te
 
 - [x] PPU - Scanline rendering
 - [ ] PPU - Pixel FIFO
-- [ ] APU
+- [x] APU
 - [x] Keyboard Input Support
 - [ ] Controller Input Support
 - [x] MBC1
