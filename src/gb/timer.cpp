@@ -9,6 +9,17 @@ namespace SunBoy
 		set_tac(0);
 	}
 
+	void Timer::reset()
+	{
+		div_cycles = 0;
+		tima_cycles = 0;
+		div = 0;
+		tima = 0;
+		tma = 0;
+		set_tac(0);
+		apu_div = 0;
+	}
+
 	void Timer::set_tac(uint8_t rate)
 	{
 		constexpr uint32_t tac_table[4] = {1024, 16, 64, 256};

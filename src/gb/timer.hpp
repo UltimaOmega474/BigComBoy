@@ -17,7 +17,7 @@ namespace SunBoy
 		uint32_t tac_rate = 0;
 		uint8_t apu_div = 0;
 		Timer(Core &core);
-
+		void reset();
 		void set_tac(uint8_t rate);
 		void reset_div();
 		uint8_t read_div();

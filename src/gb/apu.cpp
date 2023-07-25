@@ -481,7 +481,7 @@ namespace SunBoy
 		stereo_right_volume = 0;
 		mix_vin_left = false;
 		mix_vin_right = false;
-		sample_counter = 0;
+		sample_counter = sample_rate = 0;
 		power = false;
 
 		pulse_1 = PulseChannel(true);

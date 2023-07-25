@@ -13,9 +13,8 @@ namespace SunBoy
 
 	void Core::start(std::shared_ptr<Cartridge> cart)
 	{
+		reset();
 		this->cart = cart;
-		ppu.reset(true);
-		apu.reset();
 		if (settings.skip_boot_rom)
 		{
 			boot_rom_enabled = false;
@@ -28,6 +27,19 @@ namespace SunBoy
 			cpu.reset(0x0);
 			load_boot_rom_from_file();
 		}
+	}
+
+	void Core::reset()
+	{
+		boot_rom_enabled = true;
+		cpu.reset(0);
+		apu.reset();
+		ppu.reset(true);
+		timer.reset();
+		pad.reset();
+		cart.reset();
+		wram.fill(0);
+		hram.fill(0);
 	}
 
 	void Core::run_for_frames(uint32_t frames)

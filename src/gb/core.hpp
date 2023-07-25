@@ -37,7 +37,7 @@ namespace SunBoy
 		Core();
 
 		void start(std::shared_ptr<Cartridge> cart);
-
+		void reset();
 		void run_for_frames(uint32_t frames);
 		void run_for_cycles(uint32_t cycles, std::ostream &log_stream);
 		void tick_subcomponents(uint8_t cycles);

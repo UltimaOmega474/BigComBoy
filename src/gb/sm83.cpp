@@ -619,6 +619,10 @@ namespace SunBoy
 	void SM83::reset(uint16_t new_pc)
 	{
 		master_interrupt_enable = false;
+		halted = false;
+		stopped = false;
+		interrupt_enable = 0;
+		interrupt_flag = 0;
 		registers.fill(0);
 		pc = new_pc;
 		sp = 0xFFFE;

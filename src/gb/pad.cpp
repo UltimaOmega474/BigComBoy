@@ -2,6 +2,12 @@
 
 namespace SunBoy
 {
+	void Gamepad::reset()
+	{
+		dpad = action = 0xFF;
+		mode = 0;
+	}
+
 	void Gamepad::set_pad_state(Button btn, bool pressed)
 	{
 		if (pressed)
