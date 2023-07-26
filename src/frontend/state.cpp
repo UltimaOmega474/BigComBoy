@@ -4,7 +4,16 @@
 #include <cmath>
 namespace SunBoy
 {
-	EmulationState EmulationState::current{};
+	EmulationState::EmulationState(SDL_Window *window)
+		: window(window)
+	{
+	}
+
+	EmulationState::~EmulationState()
+	{
+		window = nullptr;
+		close();
+	}
 
 	void EmulationState::initialize(SDL_Renderer *renderer)
 	{
@@ -89,6 +98,12 @@ namespace SunBoy
 			paused = !paused;
 	}
 
+	void EmulationState::poll_input()
+	{
+		core.pad.reset();
+		keyboard_input.update_state(core.pad);
+	}
+
 	void EmulationState::step_frame()
 	{
 		if (status == Status::Running && !paused)
@@ -131,10 +146,5 @@ namespace SunBoy
 				SDL_RenderCopy(renderer, texture, nullptr, &rect);
 			}
 		}
-	}
-
-	EmulationState &EmulationState::current_state()
-	{
-		return current;
 	}
 }

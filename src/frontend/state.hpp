@@ -17,16 +17,24 @@ namespace SunBoy
 
 	class EmulationState
 	{
-		static EmulationState current;
 		SDL_Texture *texture = nullptr;
+		SDL_Window *window = nullptr;
 
 	public:
-		SunBoy::Core core;
-		KeyboardInput keyboard_input;
-		AudioSystem audio_system;
 		Status status = Status::Stopped;
 		bool paused = false;
+		SunBoy::Core core;
+		KeyboardHandler keyboard_input;
+		AudioSystem audio_system;
 		std::shared_ptr<SunBoy::Cartridge> cart;
+
+		EmulationState() = default;
+		EmulationState(SDL_Window *window);
+		EmulationState(const EmulationState &) = delete;
+		EmulationState(EmulationState &&) = delete;
+		~EmulationState();
+		EmulationState &operator=(const EmulationState &) = delete;
+		EmulationState &operator=(EmulationState &&) = delete;
 
 		void initialize(SDL_Renderer *renderer);
 		void close();
@@ -35,9 +43,8 @@ namespace SunBoy
 		bool try_play(std::string_view path);
 		void reset();
 		void toggle_pause();
+		void poll_input();
 		void step_frame();
 		void draw_frame(SDL_Window *window, SDL_Renderer *renderer);
-		void init_audio();
-		static EmulationState &current_state();
 	};
 }

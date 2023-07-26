@@ -3,24 +3,56 @@
 #include <SDL.h>
 #include <vector>
 #include <tuple>
+#include <cinttypes>
 
 namespace SunBoy
 {
-	class KeyboardInput
+	struct KeyboardMapping
+	{
+		SDL_Scancode left = SDL_SCANCODE_LEFT, right = SDL_SCANCODE_RIGHT;
+		SDL_Scancode up = SDL_SCANCODE_UP, down = SDL_SCANCODE_DOWN;
+		SDL_Scancode a = SDL_SCANCODE_Z, b = SDL_SCANCODE_X;
+		SDL_Scancode select = SDL_SCANCODE_RSHIFT, start = SDL_SCANCODE_RETURN;
+	};
+
+	struct GamepadMapping
+	{
+		int32_t controller_id = -1;
+		SDL_GameController *controller = nullptr;
+
+		SDL_GameControllerButton left = SDL_CONTROLLER_BUTTON_DPAD_LEFT, right = SDL_CONTROLLER_BUTTON_DPAD_RIGHT;
+		SDL_GameControllerButton up = SDL_CONTROLLER_BUTTON_DPAD_UP, down = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
+		SDL_GameControllerButton a = SDL_CONTROLLER_BUTTON_A, b = SDL_CONTROLLER_BUTTON_B;
+		SDL_GameControllerButton select = SDL_CONTROLLER_BUTTON_BACK, start = SDL_CONTROLLER_BUTTON_START;
+	};
+
+	class ControllerHandler
+	{
+		int32_t controller_id = -1;
+		SDL_GameController *controller = nullptr;
+
+	public:
+		std::vector<GamepadMapping> gamepad_maps{};
+		ControllerHandler() = default;
+		ControllerHandler(const ControllerHandler &) = delete;
+		ControllerHandler(ControllerHandler &&other);
+		~ControllerHandler();
+		ControllerHandler &operator=(const ControllerHandler &) = delete;
+		ControllerHandler &operator=(ControllerHandler &&);
+
+		bool open(int32_t id);
+		bool open_with_existing_id();
+		void close();
+		int32_t get_id() const;
+		void update_state(Gamepad &pad);
+	};
+
+	class KeyboardHandler
 	{
 	public:
-		std::vector<std::tuple<SunBoy::Button, SDL_Scancode>> key_map{
-			std::make_tuple(SunBoy::Button::Left, SDL_SCANCODE_LEFT),
-			std::make_tuple(SunBoy::Button::Right, SDL_SCANCODE_RIGHT),
-			std::make_tuple(SunBoy::Button::Up, SDL_SCANCODE_UP),
-			std::make_tuple(SunBoy::Button::Down, SDL_SCANCODE_DOWN),
+		std::vector<KeyboardMapping> keyboard_maps{KeyboardMapping()};
 
-			std::make_tuple(SunBoy::Button::A, SDL_SCANCODE_Z),
-			std::make_tuple(SunBoy::Button::B, SDL_SCANCODE_X),
-			std::make_tuple(SunBoy::Button::Select, SDL_SCANCODE_SPACE),
-			std::make_tuple(SunBoy::Button::Start, SDL_SCANCODE_RETURN),
-		};
-
-		void update_state(SunBoy::Gamepad &pad);
+		void update_state(Gamepad &pad);
 	};
+
 }

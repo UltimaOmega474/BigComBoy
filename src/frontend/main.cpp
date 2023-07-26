@@ -17,7 +17,7 @@ int main(int argc, char **argv)
 {
 	using namespace std::chrono_literals;
 
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0)
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER | SDL_INIT_JOYSTICK) != 0)
 	{
 		fmt::print("Unable to initialize SDL2 Video\n");
 		return 0;
@@ -56,7 +56,7 @@ int main(int argc, char **argv)
 
 	SunBoy::MenuBar menu;
 	auto &config = SunBoy::Configuration::get();
-	auto &state = SunBoy::EmulationState::current_state();
+	SunBoy::EmulationState state{window};
 
 	state.initialize(renderer);
 
@@ -85,7 +85,7 @@ int main(int argc, char **argv)
 
 		accumulator += full_delta;
 
-		state.keyboard_input.update_state(state.core.pad);
+		state.poll_input();
 
 		if (accumulator >= logic_rate)
 		{
@@ -118,7 +118,7 @@ int main(int argc, char **argv)
 		ImGui_ImplSDLRenderer2_NewFrame();
 		ImGui_ImplSDL2_NewFrame();
 		ImGui::NewFrame();
-		menu.draw();
+		menu.draw(state);
 		ImGui::Render();
 		SDL_RenderSetScale(renderer, io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y);
 

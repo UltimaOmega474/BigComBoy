@@ -7,24 +7,23 @@
 
 namespace SunBoy
 {
-	void MenuBar::draw()
+	void MenuBar::draw(EmulationState &state)
 	{
 		if (!shown)
 			return;
 
 		if (ImGui::BeginMainMenuBar())
 		{
-			draw_system_menu();
-			emulation_menu();
-			view_menu();
+			draw_system_menu(state);
+			emulation_menu(state);
+			view_menu(state);
 			ImGui::EndMainMenuBar();
 		}
 	}
-	void MenuBar::draw_system_menu()
+	void MenuBar::draw_system_menu(EmulationState &state)
 	{
 		using namespace ImGui;
-		auto &config = Configuration::get();
-		auto &state = EmulationState::current_state();
+		auto &config = SunBoy::Configuration::get();
 		std::string successful_rom_loaded;
 
 		if (BeginMenu("System"))
@@ -58,11 +57,10 @@ namespace SunBoy
 		if (!successful_rom_loaded.empty())
 			config.add_rom_path(std::move(successful_rom_loaded));
 	}
-	void MenuBar::emulation_menu()
+	void MenuBar::emulation_menu(EmulationState &state)
 	{
 		using namespace ImGui;
-		auto &config = Configuration::get();
-		auto &state = EmulationState::current_state();
+		auto &config = SunBoy::Configuration::get();
 		if (BeginMenu("Emulation"))
 		{
 			if (MenuItem("Use Boot Rom", nullptr, !config.skip_boot_rom))
@@ -84,11 +82,10 @@ namespace SunBoy
 			EndMenu();
 		}
 	}
-	void MenuBar::view_menu()
+	void MenuBar::view_menu(EmulationState &state)
 	{
 		using namespace ImGui;
-		auto &config = Configuration::get();
-		auto &state = EmulationState::current_state();
+		auto &config = SunBoy::Configuration::get();
 		if (BeginMenu("View"))
 		{
 			TextColored(INACTIVE_ITEM_COLOR, "PPU Overrides");

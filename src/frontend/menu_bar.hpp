@@ -2,14 +2,15 @@
 
 namespace SunBoy
 {
+	class EmulationState;
 	class MenuBar
 	{
 	public:
 		bool shown = true;
-		void draw();
+		void draw(EmulationState &state);
 
-		void draw_system_menu();
-		void emulation_menu();
-		void view_menu();
+		void draw_system_menu(EmulationState &state);
+		void emulation_menu(EmulationState &state);
+		void view_menu(EmulationState &state);
 	};
 }
