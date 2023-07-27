@@ -41,7 +41,6 @@ int main(int argc, char **argv)
 	ImGuiIO &io = ImGui::GetIO();
 	io.IniFilename = nullptr;
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
-	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
 	io.FontDefault = io.Fonts->AddFontFromFileTTF(SunBoy::OPEN_SANS_SEMIBOLD_PATH.c_str(), SunBoy::FONT_RENDER_SIZE);
 	io.FontGlobalScale = SunBoy::FONT_SIZE / SunBoy::FONT_RENDER_SIZE;
 
@@ -67,12 +66,31 @@ int main(int argc, char **argv)
 		{
 			ImGui_ImplSDL2_ProcessEvent(&event);
 
-			if (event.type == SDL_QUIT ||
-				event.type == SDL_WINDOWEVENT &&
-					event.window.event == SDL_WINDOWEVENT_CLOSE &&
-					event.window.windowID == SDL_GetWindowID(window))
+			switch (event.type)
+			{
+			case SDL_EventType::SDL_CONTROLLERDEVICEADDED:
+			case SDL_EventType::SDL_CONTROLLERDEVICEREMOVED:
+			{
+				state.controllers.close();
+				state.controllers.open();
+				break;
+			}
+
+			case SDL_QUIT:
 			{
 				running = false;
+				break;
+			}
+			case SDL_WINDOWEVENT:
+			{
+				if (event.window.event == SDL_WINDOWEVENT_CLOSE &&
+					event.window.windowID == SDL_GetWindowID(window))
+				{
+					running = false;
+				}
+
+				break;
+			}
 			}
 		}
 

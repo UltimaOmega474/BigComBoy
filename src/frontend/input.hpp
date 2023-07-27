@@ -4,54 +4,48 @@
 #include <vector>
 #include <tuple>
 #include <cinttypes>
-
+#include <string>
+#include <string_view>
 namespace SunBoy
 {
 	struct KeyboardMapping
 	{
-		SDL_Scancode left = SDL_SCANCODE_LEFT, right = SDL_SCANCODE_RIGHT;
-		SDL_Scancode up = SDL_SCANCODE_UP, down = SDL_SCANCODE_DOWN;
-		SDL_Scancode a = SDL_SCANCODE_Z, b = SDL_SCANCODE_X;
-		SDL_Scancode select = SDL_SCANCODE_RSHIFT, start = SDL_SCANCODE_RETURN;
+		std::vector<SDL_Scancode> left{SDL_SCANCODE_LEFT}, right{SDL_SCANCODE_RIGHT}, up{SDL_SCANCODE_UP}, down{SDL_SCANCODE_DOWN};
+		std::vector<SDL_Scancode> a{SDL_SCANCODE_Z}, b{SDL_SCANCODE_X}, select{SDL_SCANCODE_RSHIFT}, start{SDL_SCANCODE_RETURN};
 	};
 
-	struct GamepadMapping
+	struct ControllerMapping
 	{
-		int32_t controller_id = -1;
-		SDL_GameController *controller = nullptr;
+		std::string device_name;
+		int32_t player_index = -1; // not all controllers support this
 
-		SDL_GameControllerButton left = SDL_CONTROLLER_BUTTON_DPAD_LEFT, right = SDL_CONTROLLER_BUTTON_DPAD_RIGHT;
-		SDL_GameControllerButton up = SDL_CONTROLLER_BUTTON_DPAD_UP, down = SDL_CONTROLLER_BUTTON_DPAD_DOWN;
-		SDL_GameControllerButton a = SDL_CONTROLLER_BUTTON_A, b = SDL_CONTROLLER_BUTTON_B;
-		SDL_GameControllerButton select = SDL_CONTROLLER_BUTTON_BACK, start = SDL_CONTROLLER_BUTTON_START;
+		std::vector<SDL_GameControllerButton> left, right, up, down;
+		std::vector<SDL_GameControllerButton> a, b, select, start;
 	};
 
 	class ControllerHandler
 	{
-		int32_t controller_id = -1;
-		SDL_GameController *controller = nullptr;
+		std::vector<std::tuple<int32_t, SDL_GameController *>> controllers;
 
 	public:
-		std::vector<GamepadMapping> gamepad_maps{};
-		ControllerHandler() = default;
+		ControllerHandler();
 		ControllerHandler(const ControllerHandler &) = delete;
 		ControllerHandler(ControllerHandler &&other);
 		~ControllerHandler();
 		ControllerHandler &operator=(const ControllerHandler &) = delete;
 		ControllerHandler &operator=(ControllerHandler &&);
-
-		bool open(int32_t id);
-		bool open_with_existing_id();
+		void open();
 		void close();
-		int32_t get_id() const;
+
 		void update_state(Gamepad &pad);
+
+	private:
+		SDL_GameController *get_controller(std::string_view name, int32_t player_index);
 	};
 
 	class KeyboardHandler
 	{
 	public:
-		std::vector<KeyboardMapping> keyboard_maps{KeyboardMapping()};
-
 		void update_state(Gamepad &pad);
 	};
 

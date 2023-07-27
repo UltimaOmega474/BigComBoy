@@ -24,7 +24,8 @@ namespace SunBoy
 		Status status = Status::Stopped;
 		bool paused = false;
 		SunBoy::Core core;
-		KeyboardHandler keyboard_input;
+		KeyboardHandler keyboard;
+		ControllerHandler controllers;
 		AudioSystem audio_system;
 		std::shared_ptr<SunBoy::Cartridge> cart;
 

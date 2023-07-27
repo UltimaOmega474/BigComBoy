@@ -23,6 +23,7 @@ namespace SunBoy
 
 	void EmulationState::close()
 	{
+		controllers.close();
 		audio_system.close_device();
 		if (texture)
 		{
@@ -101,7 +102,8 @@ namespace SunBoy
 	void EmulationState::poll_input()
 	{
 		core.pad.reset();
-		keyboard_input.update_state(core.pad);
+		keyboard.update_state(core.pad);
+		controllers.update_state(core.pad);
 	}
 
 	void EmulationState::step_frame()

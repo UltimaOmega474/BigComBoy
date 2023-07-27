@@ -1,13 +1,16 @@
 #include "input.hpp"
 #include "state.hpp"
-
+#include "config.hpp"
 namespace SunBoy
 {
-	ControllerHandler::ControllerHandler(ControllerHandler &&other)
-		: controller_id(other.controller_id), controller(other.controller), gamepad_maps(std::move(other.gamepad_maps))
+	ControllerHandler::ControllerHandler()
 	{
-		other.controller = nullptr;
-		other.controller_id = -1;
+		open();
+	}
+
+	ControllerHandler::ControllerHandler(ControllerHandler &&other)
+		: controllers(std::move(other.controllers))
+	{
 	}
 
 	ControllerHandler::~ControllerHandler()
@@ -17,106 +20,135 @@ namespace SunBoy
 
 	ControllerHandler &ControllerHandler::operator=(ControllerHandler &&other)
 	{
-		controller_id = other.controller_id;
-		controller = other.controller;
-
-		other.controller = nullptr;
-		other.controller_id = -1;
-
-		gamepad_maps = std::move(other.gamepad_maps);
+		controllers = std::move(other.controllers);
 		return *this;
 	}
 
-	bool ControllerHandler::open(int32_t id)
+	void ControllerHandler::open()
 	{
-		auto saved = controller_id;
-		auto result = open_with_existing_id();
-		controller_id = id;
-
-		if (open_with_existing_id())
-			return true;
-
-		controller_id = saved;
-		return false;
-	}
-
-	bool ControllerHandler::open_with_existing_id()
-	{
-		if ((controller_id < 0) || (controller_id >= SDL_NumJoysticks()))
-			return false;
-
-		if (SDL_IsGameController(controller_id) && !controller)
+		for (auto i = 0; i < SDL_NumJoysticks(); ++i)
 		{
-			controller = SDL_GameControllerOpen(controller_id);
-			return true;
+			if (SDL_IsGameController(i))
+			{
+				auto controller = SDL_GameControllerOpen(i);
+				if (controller)
+					controllers.push_back(std::make_tuple(i, controller));
+			}
 		}
-
-		return false;
 	}
 
 	void ControllerHandler::close()
 	{
-		if (controller)
+		for (const auto [index, controller] : controllers)
 		{
 			SDL_GameControllerClose(controller);
-			controller = nullptr;
-			controller_id = -1;
 		}
-	}
-
-	int32_t ControllerHandler::get_id() const
-	{
-		return controller_id;
+		controllers.clear();
 	}
 
 	void ControllerHandler::update_state(Gamepad &pad)
 	{
-		if (controller)
+		const auto &config = Configuration::get();
+		for (const auto &map : config.controller_maps)
 		{
-			for (const auto &map : gamepad_maps)
-			{
-				if (SDL_GameControllerGetButton(controller, map.left))
-					pad.set_pad_state(Button::Left, true);
-				if (SDL_GameControllerGetButton(controller, map.right))
-					pad.set_pad_state(Button::Right, true);
-				if (SDL_GameControllerGetButton(controller, map.up))
-					pad.set_pad_state(Button::Up, true);
-				if (SDL_GameControllerGetButton(controller, map.down))
-					pad.set_pad_state(Button::Down, true);
+			auto controller = get_controller(map.device_name, map.player_index);
 
-				if (SDL_GameControllerGetButton(controller, map.a))
+			for (auto button : map.left)
+			{
+				if (SDL_GameControllerGetButton(controller, button))
+					pad.set_pad_state(Button::Left, true);
+			}
+			for (auto button : map.right)
+			{
+				if (SDL_GameControllerGetButton(controller, button))
+					pad.set_pad_state(Button::Right, true);
+			}
+			for (auto button : map.up)
+			{
+				if (SDL_GameControllerGetButton(controller, button))
+					pad.set_pad_state(Button::Up, true);
+			}
+			for (auto button : map.down)
+			{
+				if (SDL_GameControllerGetButton(controller, button))
+					pad.set_pad_state(Button::Down, true);
+			}
+			for (auto button : map.a)
+			{
+				if (SDL_GameControllerGetButton(controller, button))
 					pad.set_pad_state(Button::A, true);
-				if (SDL_GameControllerGetButton(controller, map.b))
+			}
+			for (auto button : map.b)
+			{
+				if (SDL_GameControllerGetButton(controller, button))
 					pad.set_pad_state(Button::B, true);
-				if (SDL_GameControllerGetButton(controller, map.select))
+			}
+			for (auto button : map.select)
+			{
+				if (SDL_GameControllerGetButton(controller, button))
 					pad.set_pad_state(Button::Select, true);
-				if (SDL_GameControllerGetButton(controller, map.start))
+			}
+			for (auto button : map.start)
+			{
+				if (SDL_GameControllerGetButton(controller, button))
 					pad.set_pad_state(Button::Start, true);
 			}
 		}
 	}
 
+	SDL_GameController *ControllerHandler::get_controller(std::string_view name, int32_t player_index)
+	{
+		for (const auto [index, controller] : controllers)
+		{
+			if (SDL_GameControllerName(controller) == name && SDL_GameControllerGetPlayerIndex(controller) == player_index)
+				return controller;
+		}
+		return nullptr;
+	}
+
 	void KeyboardHandler::update_state(Gamepad &pad)
 	{
 		const auto keyboard_state = SDL_GetKeyboardState(nullptr);
-		for (const auto &map : keyboard_maps)
-		{
-			if (keyboard_state[map.left])
-				pad.set_pad_state(Button::Left, true);
-			if (keyboard_state[map.right])
-				pad.set_pad_state(Button::Right, true);
-			if (keyboard_state[map.up])
-				pad.set_pad_state(Button::Up, true);
-			if (keyboard_state[map.down])
-				pad.set_pad_state(Button::Down, true);
+		const auto &config = Configuration::get();
 
-			if (keyboard_state[map.a])
+		for (auto key : config.keyboard_maps.left)
+		{
+			if (keyboard_state[key])
+				pad.set_pad_state(Button::Left, true);
+		}
+		for (auto key : config.keyboard_maps.right)
+		{
+			if (keyboard_state[key])
+				pad.set_pad_state(Button::Right, true);
+		}
+		for (auto key : config.keyboard_maps.up)
+		{
+			if (keyboard_state[key])
+				pad.set_pad_state(Button::Up, true);
+		}
+		for (auto key : config.keyboard_maps.down)
+		{
+			if (keyboard_state[key])
+				pad.set_pad_state(Button::Down, true);
+		}
+		for (auto key : config.keyboard_maps.a)
+		{
+			if (keyboard_state[key])
 				pad.set_pad_state(Button::A, true);
-			if (keyboard_state[map.b])
+		}
+		for (auto key : config.keyboard_maps.b)
+		{
+			if (keyboard_state[key])
 				pad.set_pad_state(Button::B, true);
-			if (keyboard_state[map.select])
+		}
+		for (auto key : config.keyboard_maps.select)
+		{
+			if (keyboard_state[key])
 				pad.set_pad_state(Button::Select, true);
-			if (keyboard_state[map.start])
+		}
+		for (auto key : config.keyboard_maps.start)
+		{
+			if (keyboard_state[key])
 				pad.set_pad_state(Button::Start, true);
 		}
 	}
