@@ -61,6 +61,7 @@ if(imgui_FOUND AND fmt_FOUND AND SDL2_FOUND AND SDL2_mixer_FOUND AND BUILD_SUNBO
 		src/frontend/menu/menu_bar.cpp
 		src/frontend/menu/settings_menu.cpp
 		src/frontend/menu/input_menu.cpp
+		src/frontend/menu/emulation_menu.cpp
 	)
 	set_target_properties(SunBoy PROPERTIES
 		CXX_STANDARD 20

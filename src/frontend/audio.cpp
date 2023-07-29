@@ -16,7 +16,7 @@ namespace SunBoy
 		float latency = AUDIO_LATENCY_TABLE[Configuration::get().audio.latency_select];
 		float target_samples = std::floor(static_cast<float>(audio_spec.freq) * latency / 1000.0f);
 
-		audio_spec.samples = static_cast<int32_t>(target_samples) / audio_spec.channels;
+		audio_spec.samples = static_cast<int32_t>(target_samples);
 		audio_spec.callback = NULL;
 		audio_device = SDL_OpenAudioDevice(NULL, 0, &audio_spec, &obtained, 0);
 

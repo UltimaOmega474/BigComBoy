@@ -1,4 +1,5 @@
 #pragma once
+#include "emulation_menu.hpp"
 #include "input_menu.hpp"
 #include <gb/pad.hpp>
 #include <cinttypes>
@@ -6,6 +7,7 @@
 #include <string_view>
 #include <vector>
 #include <imgui.h>
+
 namespace SunBoy
 {
 	enum class MenuSelect
@@ -21,6 +23,7 @@ namespace SunBoy
 	public:
 		bool show = false;
 		MenuSelect selected_menu = MenuSelect::Emulation;
+		EmulationMenu emulation;
 		InputMenu input_menu;
 		void open(MenuSelect menu);
 		void draw_menu(float height);

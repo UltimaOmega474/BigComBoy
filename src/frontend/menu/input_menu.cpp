@@ -151,7 +151,7 @@ namespace SunBoy
 	void InputMenu::draw_keyboard_map(InputBindingProfile &map)
 	{
 		using namespace ImGui;
-		if (BeginTable("Keyboard Bindings", 2, ImGuiTableFlags_SizingStretchProp))
+		if (BeginTable("Keyboard Bindings", 2, ImGuiTableFlags_SizingFixedFit))
 		{
 			TableNextColumn();
 			AlignTextToFramePadding();
@@ -162,6 +162,7 @@ namespace SunBoy
 				input_key_target = PadButton::Left;
 			}
 			TableNextColumn();
+			AlignTextToFramePadding();
 			Text("A");
 			if (draw_input_button("A Button", map.a) && !input_key_modal)
 			{
@@ -170,6 +171,7 @@ namespace SunBoy
 			}
 			TableNextRow();
 			TableNextColumn();
+			AlignTextToFramePadding();
 			Text("Right");
 			if (draw_input_button("Right Button", map.right) && !input_key_modal)
 			{
@@ -177,6 +179,7 @@ namespace SunBoy
 				input_key_target = PadButton::Right;
 			}
 			TableNextColumn();
+			AlignTextToFramePadding();
 			Text("B");
 			if (draw_input_button("B Button", map.b) && !input_key_modal)
 			{
@@ -185,6 +188,7 @@ namespace SunBoy
 			}
 			TableNextRow();
 			TableNextColumn();
+			AlignTextToFramePadding();
 			Text("Up");
 			if (draw_input_button("Up Button", map.up) && !input_key_modal)
 			{
@@ -192,6 +196,7 @@ namespace SunBoy
 				input_key_target = PadButton::Up;
 			}
 			TableNextColumn();
+			AlignTextToFramePadding();
 			Text("Select");
 			if (draw_input_button("Select Button", map.select) && !input_key_modal)
 			{
@@ -200,6 +205,7 @@ namespace SunBoy
 			}
 			TableNextRow();
 			TableNextColumn();
+			AlignTextToFramePadding();
 			Text("Down");
 			if (draw_input_button("Down Button", map.down) && !input_key_modal)
 			{
@@ -207,6 +213,7 @@ namespace SunBoy
 				input_key_target = PadButton::Down;
 			}
 			TableNextColumn();
+			AlignTextToFramePadding();
 			Text("Start");
 			if (draw_input_button("Start Button", map.start) && !input_key_modal)
 			{

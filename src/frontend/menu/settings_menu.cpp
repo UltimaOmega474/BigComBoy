@@ -8,6 +8,9 @@ namespace SunBoy
 	{
 		switch (menu)
 		{
+		case MenuSelect::Emulation:
+			emulation.open();
+			break;
 		case MenuSelect::Input:
 			input_menu.open();
 			break;
@@ -59,6 +62,9 @@ namespace SunBoy
 					BeginChild("Settings Content", ImVec2(), true, ImGuiWindowFlags_AlwaysAutoResize);
 					switch (selected_menu)
 					{
+					case MenuSelect::Emulation:
+						emulation.draw();
+						break;
 					case MenuSelect::Input:
 						input_menu.draw();
 						break;

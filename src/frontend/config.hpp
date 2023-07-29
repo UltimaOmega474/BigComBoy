@@ -22,7 +22,7 @@ namespace SunBoy
 		{
 			bool allow_sram_saving = true, skip_boot_rom = true;
 			uint32_t sram_save_interval = 15;
-			std::string boot_rom_path = get_full_path("/dmg_boot.bin");
+			std::string boot_rom_path;
 		} emulation;
 
 		struct
@@ -33,7 +33,7 @@ namespace SunBoy
 
 		struct
 		{
-			uint8_t master_volume = 70, latency_select = 1;
+			uint8_t master_volume = 70, latency_select = 0;
 		} audio;
 
 		std::vector<InputBindingProfile> input_profiles;
