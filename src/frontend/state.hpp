@@ -18,13 +18,14 @@ namespace SunBoy
 	class EmulationState
 	{
 		SDL_Texture *texture = nullptr;
-		SDL_Window *window = nullptr;
+		SDL_Window *_window = nullptr;
 
 	public:
 		Status status = Status::Stopped;
 		bool paused = false;
+		int32_t menu_bar_height = 0.0f;
 		SunBoy::Core core;
-		KeyboardHandler keyboard;
+		InputHandler user_input;
 		ControllerHandler controllers;
 		AudioSystem audio_system;
 		std::shared_ptr<SunBoy::Cartridge> cart;
@@ -39,6 +40,7 @@ namespace SunBoy
 
 		void initialize(SDL_Renderer *renderer);
 		void close();
+		SDL_Window *window() const;
 		void create_texture(SDL_Renderer *renderer);
 		void change_filter_mode(bool use_linear_filter);
 		bool try_play(std::string_view path);

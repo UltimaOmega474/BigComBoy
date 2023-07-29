@@ -1,6 +1,6 @@
 # SunBoy
 
-An emulator for the GameBoy written in C++. Only DMG compatible games work at this time. CGB support is planned but not in active development. The project is split into two modules, the emulator core and frontend.
+An emulator for the GameBoy written in C++. Only DMG compatible games work at this time. The project is split into two modules, the emulator core and frontend.
 
 ## Compatibility
 
@@ -9,8 +9,7 @@ Below you will find the current status of various feature implementations and te
 - [x] PPU - Scanline rendering
 - [ ] PPU - Pixel FIFO
 - [x] APU
-- [x] Keyboard Input Support
-- [ ] Controller Input Support
+- [x] Input Support (Keyboard & Controllers)
 - [x] MBC1
 - [ ] MBC1M
 - [x] MBC2
@@ -33,7 +32,7 @@ Below you will find the current status of various feature implementations and te
 
 ## Building
 
-You will need a C++ compiler that supports C++20 or later. The following insturctions are to install the dependencies for SunBoy's frontend. The emulator core does not have any dependencies.
+You will need a C++ compiler that supports C++20 or later. The following instructions are to install the dependencies for SunBoy's frontend. The emulator core does not have any dependencies.
 
 - SunBoy uses [Native File Dialog Extended](https://github.com/btzy/nativefiledialog-extended) as a submodule, please make sure to clone with the submodule included.
 

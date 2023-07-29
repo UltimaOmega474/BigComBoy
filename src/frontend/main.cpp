@@ -1,8 +1,8 @@
-#include "menu_bar.hpp"
+#include "menu/menu.hpp"
+#include "menu/style.hpp"
 #include "gui_constants.hpp"
 #include "state.hpp"
 #include "config.hpp"
-#include "palette_edit.hpp"
 #include <gb/constants.hpp>
 #include <string>
 #include <fmt/format.h>
@@ -13,13 +13,14 @@
 #include <nfd.hpp>
 #include <chrono>
 #include <iostream>
+
 int main(int argc, char **argv)
 {
 	using namespace std::chrono_literals;
 
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER | SDL_INIT_JOYSTICK) != 0)
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER | SDL_INIT_JOYSTICK | SDL_INIT_EVENTS) != 0)
 	{
-		fmt::print("Unable to initialize SDL2 Video\n");
+		fmt::print("Unable to initialize SDL2 Components\n");
 		return 0;
 	}
 
@@ -30,17 +31,16 @@ int main(int argc, char **argv)
 	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "vulkan");
 #endif
 
-	SDL_Window *window = SDL_CreateWindow("SunBoy", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SunBoy::LCD_WIDTH * 5, SunBoy::LCD_HEIGHT * 5 + SunBoy::MENU_HEIGHT, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+	SDL_Window *window = SDL_CreateWindow("SunBoy", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SunBoy::LCD_WIDTH * 4, SunBoy::LCD_HEIGHT * 4, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
-	SDL_SetWindowMinimumSize(window, SunBoy::LCD_WIDTH, SunBoy::LCD_HEIGHT + SunBoy::MENU_HEIGHT);
+	SDL_SetWindowMinimumSize(window, SunBoy::LCD_WIDTH, SunBoy::LCD_HEIGHT);
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 
 	auto ctx = ImGui::CreateContext();
-	ImGui::StyleColorsLight();
+	SetupImGuiStyle();
 	ImGuiIO &io = ImGui::GetIO();
 	io.IniFilename = nullptr;
-	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
 	io.FontDefault = io.Fonts->AddFontFromFileTTF(SunBoy::OPEN_SANS_SEMIBOLD_PATH.c_str(), SunBoy::FONT_RENDER_SIZE);
 	io.FontGlobalScale = SunBoy::FONT_SIZE / SunBoy::FONT_RENDER_SIZE;
 
@@ -53,13 +53,14 @@ int main(int argc, char **argv)
 	auto accumulator = 0ns, sram_accumulator = 0ns;
 	auto old_time = std::chrono::steady_clock::now();
 
-	SunBoy::MenuBar menu;
+	SunBoy::MenuController menu;
 	auto &config = SunBoy::Configuration::get();
 	SunBoy::EmulationState state{window};
 
 	state.initialize(renderer);
 
-	while (running)
+	SunBoy::ControllerHandler::open();
+	while (running && !menu.menu_bar.ready_to_exit)
 	{
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
@@ -71,8 +72,8 @@ int main(int argc, char **argv)
 			case SDL_EventType::SDL_CONTROLLERDEVICEADDED:
 			case SDL_EventType::SDL_CONTROLLERDEVICEREMOVED:
 			{
-				state.controllers.close();
-				state.controllers.open();
+				SunBoy::ControllerHandler::close();
+				SunBoy::ControllerHandler::open();
 				break;
 			}
 
@@ -113,10 +114,10 @@ int main(int argc, char **argv)
 			accumulator -= logic_rate;
 		}
 
-		if (config.allow_sram_saving && state.cart)
+		if (config.emulation.allow_sram_saving && state.cart)
 		{
 			sram_accumulator += full_delta;
-			auto target_rate_sram = std::chrono::seconds(config.sram_save_interval);
+			auto target_rate_sram = std::chrono::seconds(config.emulation.sram_save_interval);
 			if (sram_accumulator > target_rate_sram)
 			{
 				state.cart->save_sram_to_file();
@@ -143,6 +144,7 @@ int main(int argc, char **argv)
 		ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData());
 		SDL_RenderPresent(renderer);
 	}
+	SunBoy::ControllerHandler::close();
 	if (state.cart)
 		state.cart->save_sram_to_file();
 

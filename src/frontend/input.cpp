@@ -3,26 +3,7 @@
 #include "config.hpp"
 namespace SunBoy
 {
-	ControllerHandler::ControllerHandler()
-	{
-		open();
-	}
-
-	ControllerHandler::ControllerHandler(ControllerHandler &&other)
-		: controllers(std::move(other.controllers))
-	{
-	}
-
-	ControllerHandler::~ControllerHandler()
-	{
-		close();
-	}
-
-	ControllerHandler &ControllerHandler::operator=(ControllerHandler &&other)
-	{
-		controllers = std::move(other.controllers);
-		return *this;
-	}
+	std::vector<SDL_GameController *> ControllerHandler::controllers;
 
 	void ControllerHandler::open()
 	{
@@ -30,126 +11,96 @@ namespace SunBoy
 		{
 			if (SDL_IsGameController(i))
 			{
-				auto controller = SDL_GameControllerOpen(i);
+				SDL_GameController *controller = SDL_GameControllerOpen(i);
 				if (controller)
-					controllers.push_back(std::make_tuple(i, controller));
+					controllers.push_back(controller);
 			}
 		}
 	}
 
 	void ControllerHandler::close()
 	{
-		for (const auto [index, controller] : controllers)
+		for (const auto controller : controllers)
 		{
 			SDL_GameControllerClose(controller);
 		}
 		controllers.clear();
 	}
 
-	void ControllerHandler::update_state(Gamepad &pad)
+	const std::vector<SDL_GameController *> &ControllerHandler::get_controllers()
 	{
-		const auto &config = Configuration::get();
-		for (const auto &map : config.controller_maps)
-		{
-			auto controller = get_controller(map.device_name, map.player_index);
+		return controllers;
+	}
 
-			for (auto button : map.left)
+	void InputHandler::update_state(Gamepad &pad)
+	{
+		const Uint8 *keyboard = SDL_GetKeyboardState(nullptr);
+		const auto &config = Configuration::get();
+
+		for (const auto &map : config.input_profiles)
+		{
+			do_input(pad, PadButton::Left, map.left, keyboard);
+			do_input(pad, PadButton::Right, map.right, keyboard);
+			do_input(pad, PadButton::Up, map.up, keyboard);
+			do_input(pad, PadButton::Down, map.down, keyboard);
+			do_input(pad, PadButton::A, map.a, keyboard);
+			do_input(pad, PadButton::B, map.b, keyboard);
+			do_input(pad, PadButton::Select, map.select, keyboard);
+			do_input(pad, PadButton::Start, map.start, keyboard);
+		}
+	}
+
+	void InputHandler::do_input(Gamepad &pad, PadButton btn, const InputSource &source, const Uint8 *keyboard)
+	{
+		switch (source.type)
+		{
+		case InputSourceType::Keyboard:
+			do_keyboard_input(pad, btn, source.key, keyboard);
+			break;
+		case InputSourceType::ControllerButton:
+			do_controller_button_input(pad, btn, source);
+			break;
+		case InputSourceType::ControllerAxis:
+			do_controller_axis_input(pad, btn, source);
+			break;
+		}
+	}
+
+	void InputHandler::do_keyboard_input(Gamepad &pad, PadButton btn, SDL_Scancode key, const Uint8 *keyboard)
+	{
+		if (keyboard[key])
+			pad.set_pad_state(btn, true);
+	}
+
+	void InputHandler::do_controller_button_input(Gamepad &pad, PadButton btn, const InputSource &controller_btn)
+	{
+		for (const auto controller : ControllerHandler::get_controllers())
+		{
+			if (SDL_GameControllerName(controller) == controller_btn.controller.device_name)
 			{
-				if (SDL_GameControllerGetButton(controller, button))
-					pad.set_pad_state(Button::Left, true);
-			}
-			for (auto button : map.right)
-			{
-				if (SDL_GameControllerGetButton(controller, button))
-					pad.set_pad_state(Button::Right, true);
-			}
-			for (auto button : map.up)
-			{
-				if (SDL_GameControllerGetButton(controller, button))
-					pad.set_pad_state(Button::Up, true);
-			}
-			for (auto button : map.down)
-			{
-				if (SDL_GameControllerGetButton(controller, button))
-					pad.set_pad_state(Button::Down, true);
-			}
-			for (auto button : map.a)
-			{
-				if (SDL_GameControllerGetButton(controller, button))
-					pad.set_pad_state(Button::A, true);
-			}
-			for (auto button : map.b)
-			{
-				if (SDL_GameControllerGetButton(controller, button))
-					pad.set_pad_state(Button::B, true);
-			}
-			for (auto button : map.select)
-			{
-				if (SDL_GameControllerGetButton(controller, button))
-					pad.set_pad_state(Button::Select, true);
-			}
-			for (auto button : map.start)
-			{
-				if (SDL_GameControllerGetButton(controller, button))
-					pad.set_pad_state(Button::Start, true);
+				if (SDL_GameControllerGetButton(controller, controller_btn.controller.button))
+					pad.set_pad_state(btn, true);
+
+				return;
 			}
 		}
 	}
 
-	SDL_GameController *ControllerHandler::get_controller(std::string_view name, int32_t player_index)
+	void InputHandler::do_controller_axis_input(Gamepad &pad, PadButton btn, const InputSource &controller_btn)
 	{
-		for (const auto [index, controller] : controllers)
+		for (const auto controller : ControllerHandler::get_controllers())
 		{
-			if (SDL_GameControllerName(controller) == name && SDL_GameControllerGetPlayerIndex(controller) == player_index)
-				return controller;
-		}
-		return nullptr;
-	}
+			if (SDL_GameControllerName(controller) == controller_btn.controller.device_name)
+			{
+				Sint16 axis_value = SDL_GameControllerGetAxis(controller, controller_btn.controller.axis);
+				if ((axis_value > 10000 && controller_btn.controller.axis_direction == AxisDirection::Positive) ||
+					(axis_value < -10000 && controller_btn.controller.axis_direction == AxisDirection::Negative))
+				{
+					pad.set_pad_state(btn, true);
+				}
 
-	void KeyboardHandler::update_state(Gamepad &pad)
-	{
-		const auto keyboard_state = SDL_GetKeyboardState(nullptr);
-		const auto &config = Configuration::get();
-
-		for (auto key : config.keyboard_maps.left)
-		{
-			if (keyboard_state[key])
-				pad.set_pad_state(Button::Left, true);
-		}
-		for (auto key : config.keyboard_maps.right)
-		{
-			if (keyboard_state[key])
-				pad.set_pad_state(Button::Right, true);
-		}
-		for (auto key : config.keyboard_maps.up)
-		{
-			if (keyboard_state[key])
-				pad.set_pad_state(Button::Up, true);
-		}
-		for (auto key : config.keyboard_maps.down)
-		{
-			if (keyboard_state[key])
-				pad.set_pad_state(Button::Down, true);
-		}
-		for (auto key : config.keyboard_maps.a)
-		{
-			if (keyboard_state[key])
-				pad.set_pad_state(Button::A, true);
-		}
-		for (auto key : config.keyboard_maps.b)
-		{
-			if (keyboard_state[key])
-				pad.set_pad_state(Button::B, true);
-		}
-		for (auto key : config.keyboard_maps.select)
-		{
-			if (keyboard_state[key])
-				pad.set_pad_state(Button::Select, true);
-		}
-		for (auto key : config.keyboard_maps.start)
-		{
-			if (keyboard_state[key])
-				pad.set_pad_state(Button::Start, true);
+				return;
+			}
 		}
 	}
 }

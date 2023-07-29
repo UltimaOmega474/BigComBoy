@@ -18,17 +18,27 @@ namespace SunBoy
 	public:
 		std::string config_path = get_full_path("/settings.toml");
 
-		bool keep_aspect_ratio = true, linear_filtering = false;
-		bool allow_sram_saving = true, skip_boot_rom = true;
-		uint8_t audio_master_volume = 40;
-		uint32_t sram_save_interval = 15, audio_latency_select = 1;
+		struct
+		{
+			bool allow_sram_saving = true, skip_boot_rom = true;
+			uint32_t sram_save_interval = 15;
+			std::string boot_rom_path = get_full_path("/dmg_boot.bin");
+		} emulation;
 
-		std::array<uint32_t, 4> color_table = SunBoy::LCD_GRAY_PALETTE;
+		struct
+		{
+			bool keep_aspect_ratio = true, linear_filtering = false;
+			std::array<uint32_t, 4> color_table = SunBoy::LCD_GRAY_PALETTE;
+		} video;
+
+		struct
+		{
+			uint8_t master_volume = 0, latency_select = 1;
+		} audio;
+
+		std::vector<InputBindingProfile> input_profiles;
+
 		std::deque<std::string> recent_rom_paths;
-		std::string boot_rom_path = get_full_path("/dmg_boot.bin");
-
-		KeyboardMapping keyboard_maps;
-		std::vector<ControllerMapping> controller_maps;
 
 		Configuration(std::string path);
 
@@ -38,7 +48,16 @@ namespace SunBoy
 		static Configuration &get();
 
 	private:
-		void load_keyboard_mapping(toml::table &keyboard);
-		void save_keyboard_mapping(toml::table &keyboard) const;
+		void load_emulation_settings(toml::table &emulation);
+		toml::table emulation_settings_as_toml() const;
+
+		void load_video_settings(toml::table &video);
+		toml::table video_settings_as_toml() const;
+
+		void load_audio_settings(toml::table &audio);
+		toml::table audio_settings_as_toml() const;
+
+		void load_input_mapping(toml::array &profiles);
+		toml::array input_profiles_as_toml() const;
 	};
 }

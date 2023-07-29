@@ -52,12 +52,15 @@ if(imgui_FOUND AND fmt_FOUND AND SDL2_FOUND AND SDL2_mixer_FOUND AND BUILD_SUNBO
 	add_executable(SunBoy src/frontend/main.cpp)
 	target_sources(SunBoy PRIVATE
 		src/frontend/config.cpp
-		src/frontend/menu_bar.cpp
 		src/frontend/gui_constants.cpp
 		src/frontend/state.cpp
 		src/frontend/input.cpp
 		src/frontend/palette_edit.cpp
 		src/frontend/audio.cpp
+		src/frontend/menu/menu.cpp
+		src/frontend/menu/menu_bar.cpp
+		src/frontend/menu/settings_menu.cpp
+		src/frontend/menu/input_menu.cpp
 	)
 	set_target_properties(SunBoy PROPERTIES
 		CXX_STANDARD 20

@@ -13,10 +13,10 @@ namespace SunBoy
 		audio_spec.format = AUDIO_F32SYS;
 		audio_spec.channels = 2;
 
-		float latency = AUDIO_LATENCY_TABLE[Configuration::get().audio_latency_select];
+		float latency = AUDIO_LATENCY_TABLE[Configuration::get().audio.latency_select];
 		float target_samples = std::floor(static_cast<float>(audio_spec.freq) * latency / 1000.0f);
 
-		audio_spec.samples = (int)target_samples / audio_spec.channels;
+		audio_spec.samples = static_cast<int32_t>(target_samples) / audio_spec.channels;
 		audio_spec.callback = NULL;
 		audio_device = SDL_OpenAudioDevice(NULL, 0, &audio_spec, &obtained, 0);
 
@@ -33,7 +33,7 @@ namespace SunBoy
 		constexpr float VOLUME_SCALE = 256.0f;
 		int32_t left_vol = (128 * result.left_channel.master_volume) / 7;
 		int32_t right_vol = (128 * result.right_channel.master_volume) / 7;
-		uint8_t volume_uint = Configuration::get().audio_master_volume;
+		uint8_t volume_uint = Configuration::get().audio.master_volume;
 		float volume = static_cast<float>(volume_uint) / 100.0f;
 
 		if (volume_uint == 0)

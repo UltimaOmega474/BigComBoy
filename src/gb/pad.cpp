@@ -8,35 +8,35 @@ namespace SunBoy
 		mode = 0;
 	}
 
-	void Gamepad::set_pad_state(Button btn, bool pressed)
+	void Gamepad::set_pad_state(PadButton btn, bool pressed)
 	{
 		if (pressed)
 		{
 			switch (btn)
 			{
-			case Button::Right:
+			case PadButton::Right:
 				dpad &= ~0x1;
 				break;
-			case Button::Left:
+			case PadButton::Left:
 				dpad &= ~0x2;
 				break;
-			case Button::Up:
+			case PadButton::Up:
 				dpad &= ~0x4;
 				break;
-			case Button::Down:
+			case PadButton::Down:
 				dpad &= ~0x8;
 				break;
 
-			case Button::A:
+			case PadButton::A:
 				action &= ~0x1;
 				break;
-			case Button::B:
+			case PadButton::B:
 				action &= ~0x2;
 				break;
-			case Button::Select:
+			case PadButton::Select:
 				action &= ~0x4;
 				break;
-			case Button::Start:
+			case PadButton::Start:
 				action &= ~0x8;
 				break;
 			}
@@ -45,29 +45,29 @@ namespace SunBoy
 		{
 			switch (btn)
 			{
-			case Button::Right:
+			case PadButton::Right:
 				dpad |= 0x1;
 				break;
-			case Button::Left:
+			case PadButton::Left:
 				dpad |= 0x2;
 				break;
-			case Button::Up:
+			case PadButton::Up:
 				dpad |= 0x4;
 				break;
-			case Button::Down:
+			case PadButton::Down:
 				dpad |= 0x8;
 				break;
 
-			case Button::A:
+			case PadButton::A:
 				action |= 0x1;
 				break;
-			case Button::B:
+			case PadButton::B:
 				action |= 0x2;
 				break;
-			case Button::Select:
+			case PadButton::Select:
 				action |= 0x4;
 				break;
-			case Button::Start:
+			case PadButton::Start:
 				action |= 0x8;
 				break;
 			}
