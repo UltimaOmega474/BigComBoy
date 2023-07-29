@@ -33,7 +33,7 @@ namespace SunBoy
 
 		struct
 		{
-			uint8_t master_volume = 0, latency_select = 1;
+			uint8_t master_volume = 70, latency_select = 1;
 		} audio;
 
 		std::vector<InputBindingProfile> input_profiles;

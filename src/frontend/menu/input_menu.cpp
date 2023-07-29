@@ -231,7 +231,7 @@ namespace SunBoy
 				input_key_modal = false;
 				ImGui::CloseCurrentPopup();
 
-				if (i == SDL_SCANCODE_ESCAPE || SDL_SCANCODE_BACKSPACE)
+				if (i == SDL_SCANCODE_ESCAPE || i == SDL_SCANCODE_BACKSPACE)
 					return;
 
 				InputSource source;
