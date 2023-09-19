@@ -32,11 +32,10 @@ namespace SunBoy
 		std::array<uint8_t, 8192> wram{};
 		std::array<uint8_t, 127> hram{};
 		std::array<uint8_t, 256> boot_rom{};
-		std::shared_ptr<Cartridge> cart;
-
+		Cartridge *cart = nullptr;
 		Core();
 
-		void start(std::shared_ptr<Cartridge> cart);
+		void start(Cartridge *cart);
 		void reset();
 		void run_for_frames(uint32_t frames);
 		void run_for_cycles(uint32_t cycles, std::ostream &log_stream);
@@ -51,6 +50,7 @@ namespace SunBoy
 		uint8_t read(uint16_t address);
 		void write(uint16_t address, uint8_t value);
 		uint16_t read_uint16(uint16_t address);
+		uint16_t read_uint16_nt(uint16_t address);
 		void write_uint16(uint16_t address, uint16_t value);
 	};
 

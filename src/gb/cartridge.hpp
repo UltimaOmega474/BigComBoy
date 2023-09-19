@@ -64,7 +64,8 @@ namespace SunBoy
 		virtual void save_sram_to_file() = 0;
 		virtual void load_sram_from_file() = 0;
 
-		static std::shared_ptr<Cartridge> from_file(std::string_view rom_path);
+		static std::unique_ptr<Cartridge> from_file(std::string_view rom_path);
+		static Cartridge *from_file_raw_ptr(std::string_view rom_path);
 	};
 
 	class NoMBC : public Cartridge

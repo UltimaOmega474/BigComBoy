@@ -26,11 +26,12 @@ namespace SunBoy
 	{
 		using namespace ImGui;
 		auto size = GetIO().DisplaySize;
-		SetNextWindowBgAlpha(0.95f);
-		SetNextWindowPos({0, height});
-		SetNextWindowSize({size.x, size.y - height});
+
 		if (show)
 		{
+			SetNextWindowBgAlpha(0.95f);
+			SetNextWindowPos({0, height});
+			SetNextWindowSize({size.x, size.y - height});
 			if (ImGui::Begin("Settings", &show, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration))
 			{
 

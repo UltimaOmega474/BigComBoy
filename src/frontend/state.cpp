@@ -23,6 +23,7 @@ namespace SunBoy
 
 	void EmulationState::close()
 	{
+		core.reset();
 		audio_system.close_device();
 		if (texture)
 		{
@@ -72,7 +73,7 @@ namespace SunBoy
 			paused = false;
 			core.settings.skip_boot_rom = config.emulation.skip_boot_rom;
 			core.settings.boot_rom_path = config.emulation.boot_rom_path;
-			core.start(cart);
+			core.start(cart.get());
 			core.ppu.color_table = config.video.color_table;
 			status = Status::Running;
 			audio_system.prep_for_playback(core.apu);
@@ -89,7 +90,7 @@ namespace SunBoy
 			paused = false;
 			core.settings.skip_boot_rom = config.emulation.skip_boot_rom;
 			core.settings.boot_rom_path = config.emulation.boot_rom_path;
-			core.start(cart);
+			core.start(cart.get());
 			core.ppu.color_table = config.video.color_table;
 			status = Status::Running;
 			audio_system.prep_for_playback(core.apu);

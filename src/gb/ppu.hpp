@@ -61,16 +61,10 @@ namespace SunBoy
 	class PPU
 	{
 		Core &core;
-		bool window_draw_flag = false, previously_disabled = false;
-		uint8_t num_obj_on_scanline = 0;
-		uint32_t cycles = 0;
-		PPUState mode = PPUState::HBlank;
-		std::array<uint8_t, 8193> vram{};
-		std::array<uint8_t, 256> oam{};
-		std::array<Object, 10> objects_on_scanline{};
-		std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT> bg_color_table{};
 
 	public:
+		bool window_draw_flag = false, previously_disabled = false;
+		uint8_t num_obj_on_scanline = 0;
 		uint8_t lcd_control = 0, status = 0;
 		uint8_t screen_scroll_y = 0, screen_scroll_x = 0;
 		uint8_t line_y = 0, line_y_compare = 0;
@@ -78,6 +72,13 @@ namespace SunBoy
 		uint8_t window_line_y = 0, background_palette = 0;
 		uint8_t object_palette_0 = 0, object_palette_1 = 0;
 		uint8_t render_flags = DisplayRenderFlags::Background | DisplayRenderFlags::Window | DisplayRenderFlags::Objects;
+		PPUState mode = PPUState::HBlank;
+		uint32_t cycles = 0;
+		std::array<uint8_t, 8193> vram{};
+		std::array<uint8_t, 256> oam{};
+		std::array<Object, 10> objects_on_scanline{};
+		std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT> bg_color_table{};
+
 		std::array<uint32_t, LCD_WIDTH * LCD_HEIGHT> framebuffer{};
 		std::array<uint32_t, LCD_WIDTH * LCD_HEIGHT> framebuffer_complete{};
 		std::array<uint32_t, 4> color_table = LCD_GRAY_PALETTE;

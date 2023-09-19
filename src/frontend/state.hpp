@@ -28,7 +28,7 @@ namespace SunBoy
 		InputHandler user_input;
 		ControllerHandler controllers;
 		AudioSystem audio_system;
-		std::shared_ptr<SunBoy::Cartridge> cart;
+		std::unique_ptr<SunBoy::Cartridge> cart;
 
 		EmulationState() = default;
 		EmulationState(SDL_Window *window);

@@ -8,7 +8,12 @@ namespace SunBoy
 	{
 	}
 
-	std::shared_ptr<Cartridge> Cartridge::from_file(std::string_view rom_path)
+	std::unique_ptr<Cartridge> Cartridge::from_file(std::string_view rom_path)
+	{
+		return std::unique_ptr<Cartridge>(from_file_raw_ptr(rom_path));
+	}
+
+	Cartridge *Cartridge::from_file_raw_ptr(std::string_view rom_path)
 	{
 		CartHeader header{};
 		header.file_path = rom_path;
@@ -41,38 +46,33 @@ namespace SunBoy
 			rom.read(reinterpret_cast<char *>(&header.header_checksum), 1);
 			rom.read(reinterpret_cast<char *>(&header.checksum), 2);
 
+			Cartridge *mbc = nullptr;
 			switch (header.mbc_type)
 			{
 			case 0:
-			{
-				auto mbc = std::make_shared<NoMBC>(std::move(header));
-				mbc->init_banks(rom);
-				rom.close();
-				return std::move(mbc);
-			}
+				mbc = new NoMBC(std::move(header));
+				break;
 			case 1:
 			case 2:
 			case 3:
-			{
-				auto mbc = std::make_shared<MBC1>(std::move(header));
-				mbc->init_banks(rom);
-				mbc->load_sram_from_file();
-				rom.close();
-				return std::move(mbc);
-			}
+				mbc = new MBC1(std::move(header));
+				break;
 			case 5:
 			case 6:
+				mbc = new MBC2(std::move(header));
+				break;
+			}
+
+			if (mbc)
 			{
-				auto mbc = std::make_shared<MBC2>(std::move(header));
 				mbc->init_banks(rom);
 				mbc->load_sram_from_file();
 				rom.close();
-				return std::move(mbc);
-			}
+				return mbc;
 			}
 		}
 
-		return {};
+		return nullptr;
 	}
 
 	NoMBC::NoMBC(CartHeader &&header)

@@ -11,7 +11,7 @@ namespace SunBoy
 	{
 	}
 
-	void Core::start(std::shared_ptr<Cartridge> cart)
+	void Core::start(Cartridge *cart)
 	{
 		reset();
 		this->cart = cart;
@@ -37,7 +37,7 @@ namespace SunBoy
 		ppu.reset(true);
 		timer.reset();
 		pad.reset();
-		cart.reset();
+		cart = nullptr;
 		wram.fill(0);
 		hram.fill(0);
 	}
@@ -495,6 +495,14 @@ namespace SunBoy
 	{
 		uint8_t low = read(address);
 		uint8_t hi = read(address + 1);
+
+		return (static_cast<uint16_t>(hi) << 8) | static_cast<uint16_t>(low);
+	}
+
+	uint16_t Core::read_uint16_nt(uint16_t address)
+	{
+		uint8_t low = read_no_tick(address);
+		uint8_t hi = read_no_tick(address + 1);
 
 		return (static_cast<uint16_t>(hi) << 8) | static_cast<uint16_t>(low);
 	}
