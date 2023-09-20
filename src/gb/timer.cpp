@@ -65,7 +65,7 @@ namespace SunBoy
 				{
 					tima = tma;
 					// signal interrupt
-					core.request_interrupt(0x04);
+					core.bus.request_interrupt(0x04);
 				}
 			}
 		}

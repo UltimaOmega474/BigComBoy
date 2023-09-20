@@ -1,14 +1,14 @@
 #include "sm83.hpp"
 #include "core.hpp"
 #include "constants.hpp"
+#include "bus.hpp"
 #include <iostream>
 #include <exception>
-#include <iomanip>
+
 namespace SunBoy
 {
-
-	SM83::SM83(Core &gbcore)
-		: core(gbcore), opcodes(gen_optable()), cb_opcodes(gen_cb_optable())
+	SM83::SM83(Core &core, MainBus &bus)
+		: core(core), bus(bus), opcodes(gen_optable()), cb_opcodes(gen_cb_optable())
 	{
 	}
 
@@ -636,8 +636,7 @@ namespace SunBoy
 	void SM83::step()
 	{
 		service_interrupts();
-
-		auto opcode = core.read(pc);
+		auto opcode = bus.read(pc);
 
 		if (halted)
 			return;
@@ -713,14 +712,14 @@ namespace SunBoy
 
 	void SM83::push_sp(uint16_t temp)
 	{
-		core.write(--sp, (temp & 0xFF00) >> 8);
-		core.write(--sp, (temp & 0xFF));
+		bus.write(--sp, (temp & 0xFF00) >> 8);
+		bus.write(--sp, (temp & 0xFF));
 	}
 
 	uint16_t SM83::pop_sp()
 	{
-		auto low = core.read(sp++);
-		auto hi = core.read(sp++);
+		auto low = bus.read(sp++);
+		auto hi = bus.read(sp++);
 		return (hi << 8) | low;
 	}
 
@@ -736,31 +735,6 @@ namespace SunBoy
 		{
 			*f &= ~(flagBits);
 		}
-	}
-
-	void SM83::log_state(std::ostream &ofs)
-	{
-		using namespace std;
-		ofs << uppercase << hex << setfill('0');
-		ofs << "A: " << setw(2) << (int)registers[Register::A] << ' ';
-		ofs << "F: " << setw(2) << (int)registers[Register::F] << ' ';
-		ofs << "B: " << setw(2) << (int)registers[Register::B] << ' ';
-		ofs << "C: " << setw(2) << (int)registers[Register::C] << ' ';
-		ofs << "D: " << setw(2) << (int)registers[Register::D] << ' ';
-		ofs << "E: " << setw(2) << (int)registers[Register::E] << ' ';
-		ofs << "H: " << setw(2) << (int)registers[Register::H] << ' ';
-		ofs << "L: " << setw(2) << (int)registers[Register::L] << ' ';
-
-		ofs << "SP: " << setw(4) << sp << ' ';
-		//	ofs << dec;
-		ofs << "PC: 00:" << setw(4) << pc << ' ';
-		//	ofs << hex;
-		ofs << '(';
-		ofs << setw(2) << (int)core.read_no_tick(pc) << ' ';
-		ofs << setw(2) << (int)core.read_no_tick(pc + 1) << ' ';
-		ofs << setw(2) << (int)core.read_no_tick(pc + 2) << ' ';
-		ofs << setw(2) << (int)core.read_no_tick(pc + 3);
-		ofs << ')' << '\n';
 	}
 
 	bool SM83::get_flag(CPUFlags flagBit) const
@@ -856,9 +830,9 @@ namespace SunBoy
 
 	void SM83::op_ld_u16_sp()
 	{
-		auto addr = core.read_uint16(pc + 1);
+		auto addr = bus.read_uint16(pc + 1);
 
-		core.write_uint16(addr, sp);
+		bus.write_uint16(addr, sp);
 		pc += 3;
 	}
 	void SM83::op_stop()
@@ -867,7 +841,7 @@ namespace SunBoy
 	}
 	void SM83::op_jr_i8()
 	{
-		int8_t off = static_cast<int8_t>(core.read(pc + 1));
+		int8_t off = static_cast<int8_t>(bus.read(pc + 1));
 
 		pc += 2;
 		pc += off;
@@ -984,14 +958,14 @@ namespace SunBoy
 
 	void SM83::op_jp_u16()
 	{
-		pc = core.read_uint16(pc + 1);
+		pc = bus.read_uint16(pc + 1);
 		core.tick_subcomponents(4);
 	}
 
 	void SM83::op_call_u16()
 	{
 		auto saved_pc = pc + 3;
-		auto addr = core.read_uint16(pc + 1);
+		auto addr = bus.read_uint16(pc + 1);
 		core.tick_subcomponents(4);
 		push_sp(saved_pc);
 		pc = addr;
@@ -1001,7 +975,7 @@ namespace SunBoy
 	{
 		// todo: implement the 0xCB table.
 		// gb.tickSubcomponents(8);
-		auto opcode = core.read(pc + 1);
+		auto opcode = bus.read(pc + 1);
 
 		(this->*cb_opcodes.at(opcode))();
 		pc += 2;
@@ -1009,22 +983,22 @@ namespace SunBoy
 
 	void SM83::op_ld_ff00_u8_a()
 	{
-		auto off = core.read(pc + 1);
-		core.write(0xFF00 + off, registers[A]);
+		auto off = bus.read(pc + 1);
+		bus.write(0xFF00 + off, registers[A]);
 
 		pc += 2;
 	}
 
 	void SM83::op_ld_ff00_c_a()
 	{
-		core.write(0xFF00 + registers[C], registers[A]);
+		bus.write(0xFF00 + registers[C], registers[A]);
 
 		++pc;
 	}
 
 	void SM83::op_add_sp_i8()
 	{
-		int16_t off = static_cast<int8_t>(core.read(pc + 1));
+		int16_t off = static_cast<int8_t>(bus.read(pc + 1));
 		uint16_t sp32 = sp;
 		uint16_t res32 = (sp32 + off);
 
@@ -1047,24 +1021,24 @@ namespace SunBoy
 
 	void SM83::op_ld_u16_a()
 	{
-		auto addr = core.read_uint16(pc + 1);
-		core.write(addr, registers[A]);
+		auto addr = bus.read_uint16(pc + 1);
+		bus.write(addr, registers[A]);
 		pc += 3;
 	}
 
 	void SM83::op_ld_a_ff00_u8()
 	{
-		uint16_t off = core.read(pc + 1);
+		uint16_t off = bus.read(pc + 1);
 		uint16_t address = 0xFF00 + off;
 
-		registers[A] = core.read(0xFF00 + off);
+		registers[A] = bus.read(0xFF00 + off);
 
 		pc += 2;
 	}
 
 	void SM83::op_ld_a_ff00_c()
 	{
-		registers[A] = core.read(0xFF00 + registers[C]);
+		registers[A] = bus.read(0xFF00 + registers[C]);
 
 		++pc;
 	}
@@ -1085,7 +1059,7 @@ namespace SunBoy
 
 	void SM83::op_ld_hl_sp_i8()
 	{
-		int16_t off = static_cast<int8_t>(core.read(pc + 1));
+		int16_t off = static_cast<int8_t>(bus.read(pc + 1));
 		uint16_t sp32 = sp;
 		uint16_t res32 = (sp32 + off);
 		set_rp(HL, static_cast<uint16_t>(res32 & 0xFFFF));
@@ -1105,8 +1079,8 @@ namespace SunBoy
 
 	void SM83::op_ld_a_u16()
 	{
-		auto addr = core.read_uint16(pc + 1);
-		registers[A] = core.read(addr);
+		auto addr = bus.read_uint16(pc + 1);
+		registers[A] = bus.read(addr);
 
 		pc += 3;
 	}
@@ -1126,7 +1100,7 @@ namespace SunBoy
 	template <RegisterPair rp>
 	inline void SM83::op_ld_rp_u16()
 	{
-		uint16_t combine = core.read_uint16(pc + 1);
+		uint16_t combine = bus.read_uint16(pc + 1);
 
 		set_rp(rp, combine);
 		pc += 3;
@@ -1239,7 +1213,7 @@ namespace SunBoy
 	{
 		auto addr = get_rp(rp);
 
-		core.write(addr, registers[A]);
+		bus.write(addr, registers[A]);
 
 		if constexpr (displacement != 0)
 		{
@@ -1254,7 +1228,7 @@ namespace SunBoy
 	{
 		if (get_flag(cc) == boolean_ver)
 		{
-			int8_t off = static_cast<int8_t>(core.read(pc + 1));
+			int8_t off = static_cast<int8_t>(bus.read(pc + 1));
 
 			pc += 2;
 			pc += off;
@@ -1289,7 +1263,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			left = core.read(get_rp(HL));
+			left = bus.read(get_rp(HL));
 		}
 		else
 		{
@@ -1305,7 +1279,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			core.write(get_rp(HL), static_cast<uint8_t>(masked_result));
+			bus.write(get_rp(HL), static_cast<uint8_t>(masked_result));
 		}
 		else
 		{
@@ -1323,7 +1297,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			left = core.read(get_rp(HL));
+			left = bus.read(get_rp(HL));
 		}
 		else
 		{
@@ -1339,7 +1313,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			core.write(get_rp(HL), static_cast<uint8_t>(masked_result));
+			bus.write(get_rp(HL), static_cast<uint8_t>(masked_result));
 		}
 		else
 		{
@@ -1353,11 +1327,11 @@ namespace SunBoy
 	{
 		if constexpr (r == HL_ADDR)
 		{
-			core.write(get_rp(HL), core.read(pc + 1));
+			bus.write(get_rp(HL), bus.read(pc + 1));
 		}
 		else
 		{
-			registers[r] = core.read(pc + 1);
+			registers[r] = bus.read(pc + 1);
 		}
 
 		pc += 2;
@@ -1368,7 +1342,7 @@ namespace SunBoy
 	{
 		auto addr = get_rp(rp);
 
-		registers[A] = core.read(addr);
+		registers[A] = bus.read(addr);
 
 		if constexpr (displacement != 0)
 		{
@@ -1385,11 +1359,11 @@ namespace SunBoy
 		// r2 = source
 		if constexpr (r == HL_ADDR && r2 != HL_ADDR)
 		{
-			core.write(get_rp(HL), registers[r2]);
+			bus.write(get_rp(HL), registers[r2]);
 		}
 		else if constexpr (r != HL_ADDR && r2 == HL_ADDR)
 		{
-			registers[r] = core.read(get_rp(HL));
+			registers[r] = bus.read(get_rp(HL));
 		}
 		else if constexpr (r == HL_ADDR && r2 == HL_ADDR)
 		{
@@ -1410,11 +1384,11 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			right = static_cast<uint16_t>(core.read(get_rp(HL)));
+			right = static_cast<uint16_t>(bus.read(get_rp(HL)));
 		}
 		else if constexpr (r == U8)
 		{
-			right = static_cast<uint16_t>(core.read(pc + 1));
+			right = static_cast<uint16_t>(bus.read(pc + 1));
 			++pc;
 		}
 		else
@@ -1444,11 +1418,11 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			right = static_cast<int16_t>(core.read(get_rp(HL)));
+			right = static_cast<int16_t>(bus.read(get_rp(HL)));
 		}
 		else if constexpr (r == U8)
 		{
-			right = static_cast<int16_t>(core.read(pc + 1));
+			right = static_cast<int16_t>(bus.read(pc + 1));
 			++pc;
 		}
 		else
@@ -1477,11 +1451,11 @@ namespace SunBoy
 		uint8_t right;
 		if constexpr (r == HL_ADDR)
 		{
-			right = core.read(get_rp(HL));
+			right = bus.read(get_rp(HL));
 		}
 		else if constexpr (r == U8)
 		{
-			right = core.read(pc + 1);
+			right = bus.read(pc + 1);
 			++pc;
 		}
 		else
@@ -1505,11 +1479,11 @@ namespace SunBoy
 		uint8_t right;
 		if constexpr (r == HL_ADDR)
 		{
-			right = core.read(get_rp(HL));
+			right = bus.read(get_rp(HL));
 		}
 		else if constexpr (r == U8)
 		{
-			right = core.read(pc + 1);
+			right = bus.read(pc + 1);
 			++pc;
 		}
 		else
@@ -1533,11 +1507,11 @@ namespace SunBoy
 		uint8_t right;
 		if constexpr (r == HL_ADDR)
 		{
-			right = core.read(get_rp(HL));
+			right = bus.read(get_rp(HL));
 		}
 		else if constexpr (r == U8)
 		{
-			right = core.read(pc + 1);
+			right = bus.read(pc + 1);
 			++pc;
 		}
 		else
@@ -1561,11 +1535,11 @@ namespace SunBoy
 		uint8_t right;
 		if constexpr (r == HL_ADDR)
 		{
-			right = core.read(get_rp(HL));
+			right = bus.read(get_rp(HL));
 		}
 		else if constexpr (r == U8)
 		{
-			right = core.read(pc + 1);
+			right = bus.read(pc + 1);
 			++pc;
 		}
 		else
@@ -1615,7 +1589,7 @@ namespace SunBoy
 	{
 		if (get_flag(cc) == boolean_ver)
 		{
-			pc = core.read_uint16(pc + 1);
+			pc = bus.read_uint16(pc + 1);
 			core.tick_subcomponents(4);
 			return;
 		}
@@ -1631,7 +1605,7 @@ namespace SunBoy
 		if (get_flag(cc) == boolean_ver)
 		{
 			auto saved_pc = pc + 3;
-			auto addr = core.read_uint16(pc + 1);
+			auto addr = bus.read_uint16(pc + 1);
 			core.tick_subcomponents(4);
 			push_sp(saved_pc);
 			pc = addr;
@@ -1676,7 +1650,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			temp = core.read(get_rp(HL));
+			temp = bus.read(get_rp(HL));
 		}
 
 		uint8_t bit7 = (temp & 0x80) ? 1 : 0;
@@ -1689,7 +1663,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			core.write(get_rp(HL), temp);
+			bus.write(get_rp(HL), temp);
 		}
 		else
 		{
@@ -1704,7 +1678,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			temp = core.read(get_rp(HL));
+			temp = bus.read(get_rp(HL));
 		}
 
 		uint8_t bit0 = (temp & 0x01) ? 0x80 : 0;
@@ -1716,7 +1690,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			core.write(get_rp(HL), temp);
+			bus.write(get_rp(HL), temp);
 		}
 		else
 		{
@@ -1731,7 +1705,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			temp = core.read(get_rp(HL));
+			temp = bus.read(get_rp(HL));
 		}
 
 		uint16_t cy = get_flag(CY);
@@ -1745,7 +1719,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			core.write(get_rp(HL), static_cast<uint8_t>(temp));
+			bus.write(get_rp(HL), static_cast<uint8_t>(temp));
 		}
 		else
 		{
@@ -1760,7 +1734,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			temp = core.read(get_rp(HL));
+			temp = bus.read(get_rp(HL));
 		}
 
 		uint16_t cy = get_flag(CY);
@@ -1774,7 +1748,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			core.write(get_rp(HL), static_cast<uint8_t>(temp));
+			bus.write(get_rp(HL), static_cast<uint8_t>(temp));
 		}
 		else
 		{
@@ -1789,7 +1763,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			temp = core.read(get_rp(HL));
+			temp = bus.read(get_rp(HL));
 		}
 
 		set_flags(CY, (temp & 0x80));
@@ -1799,7 +1773,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			core.write(get_rp(HL), temp);
+			bus.write(get_rp(HL), temp);
 		}
 		else
 		{
@@ -1814,7 +1788,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			temp = core.read(get_rp(HL));
+			temp = bus.read(get_rp(HL));
 		}
 
 		uint8_t bit7 = (temp & 0x80);
@@ -1826,7 +1800,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			core.write(get_rp(HL), temp);
+			bus.write(get_rp(HL), temp);
 		}
 		else
 		{
@@ -1841,7 +1815,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			temp = core.read(get_rp(HL));
+			temp = bus.read(get_rp(HL));
 		}
 
 		uint8_t hi = (temp & 0xF0) >> 4;
@@ -1853,7 +1827,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			core.write(get_rp(HL), temp);
+			bus.write(get_rp(HL), temp);
 		}
 		else
 		{
@@ -1868,7 +1842,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			temp = core.read(get_rp(HL));
+			temp = bus.read(get_rp(HL));
 		}
 
 		set_flags(CY, (temp & 0x01));
@@ -1878,7 +1852,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			core.write(get_rp(HL), temp);
+			bus.write(get_rp(HL), temp);
 		}
 		else
 		{
@@ -1893,7 +1867,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			temp = core.read(get_rp(HL));
+			temp = bus.read(get_rp(HL));
 		}
 
 		switch (bit)
@@ -1935,7 +1909,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			temp = core.read(get_rp(HL));
+			temp = bus.read(get_rp(HL));
 		}
 
 		switch (bit)
@@ -1968,7 +1942,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			core.write(get_rp(HL), temp);
+			bus.write(get_rp(HL), temp);
 		}
 		else
 		{
@@ -1983,7 +1957,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			temp = core.read(get_rp(HL));
+			temp = bus.read(get_rp(HL));
 		}
 
 		switch (bit)
@@ -2016,7 +1990,7 @@ namespace SunBoy
 
 		if constexpr (r == HL_ADDR)
 		{
-			core.write(get_rp(HL), temp);
+			bus.write(get_rp(HL), temp);
 		}
 		else
 		{

@@ -6,6 +6,7 @@
 namespace SunBoy
 {
 	class Core;
+	class MainBus;
 	enum Register
 	{
 		B = 0,
@@ -46,6 +47,7 @@ namespace SunBoy
 	class SM83
 	{
 		Core &core;
+		MainBus &bus;
 
 	public:
 		bool master_interrupt_enable = true;
@@ -54,12 +56,11 @@ namespace SunBoy
 		uint16_t sp = 0xFFFE, pc = 0;
 		std::array<uint8_t, 8> registers{};
 
-		SM83(Core &gbcore);
+		SM83(Core &core, MainBus &bus);
 
 		void reset(uint16_t new_pc);
 		void step();
 		void service_interrupts();
-		void log_state(std::ostream &ofs);
 
 	private:
 		using opcode_function = void (SM83::*)();

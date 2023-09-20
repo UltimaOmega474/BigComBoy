@@ -24,4 +24,5 @@ target_sources(SunBoy-Core PRIVATE
 	ppu.cpp
 	pad.cpp
 	apu.cpp
+	bus.cpp
 )

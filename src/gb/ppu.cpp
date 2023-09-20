@@ -1,12 +1,12 @@
 #include "ppu.hpp"
-#include "core.hpp"
+#include "bus.hpp"
 #include "constants.hpp"
 #include <algorithm>
 
 namespace SunBoy
 {
-	PPU::PPU(Core &memory)
-		: core(memory)
+	PPU::PPU(MainBus &bus)
+		: bus(bus)
 	{
 	}
 
@@ -83,9 +83,9 @@ namespace SunBoy
 				{
 					mode = PPUState::VBlank;
 
-					core.request_interrupt(INT_VBLANK_BIT);
+					bus.request_interrupt(INT_VBLANK_BIT);
 					if (check_stat(EnableVBlankInt) && allow_interrupt)
-						core.request_interrupt(INT_LCD_STAT_BIT);
+						bus.request_interrupt(INT_LCD_STAT_BIT);
 				}
 				else
 				{
@@ -93,7 +93,7 @@ namespace SunBoy
 					mode = PPUState::OAMSearch;
 
 					if (check_stat(EnableOAMInt) && allow_interrupt)
-						core.request_interrupt(INT_LCD_STAT_BIT);
+						bus.request_interrupt(INT_LCD_STAT_BIT);
 				}
 			}
 			break;
@@ -111,7 +111,7 @@ namespace SunBoy
 					framebuffer_complete = framebuffer;
 					mode = PPUState::OAMSearch;
 					if (check_stat(EnableOAMInt) && allow_interrupt)
-						core.request_interrupt(INT_LCD_STAT_BIT);
+						bus.request_interrupt(INT_LCD_STAT_BIT);
 
 					line_y = 0;
 					window_line_y = 0;
@@ -142,7 +142,7 @@ namespace SunBoy
 				mode = PPUState::HBlank;
 
 				if (check_stat(EnableHBlankInt) && allow_interrupt)
-					core.request_interrupt(INT_LCD_STAT_BIT);
+					bus.request_interrupt(INT_LCD_STAT_BIT);
 
 				render_scanline();
 			}
@@ -174,7 +174,7 @@ namespace SunBoy
 		uint16_t addr = address << 8;
 		for (auto i = 0; i < 160; ++i)
 		{
-			oam[i] = core.read_no_tick((addr) + i);
+			oam[i] = bus.read_no_tick((addr) + i);
 		}
 	}
 
@@ -441,7 +441,7 @@ namespace SunBoy
 			set_stat(LYCandLYCompareType, true);
 			if (check_stat(EnableLYCandLYInt) && allow_interrupts)
 			{
-				core.request_interrupt(INT_LCD_STAT_BIT);
+				bus.request_interrupt(INT_LCD_STAT_BIT);
 			}
 		}
 	}

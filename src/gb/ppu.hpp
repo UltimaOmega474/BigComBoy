@@ -4,6 +4,8 @@
 #include <array>
 namespace SunBoy
 {
+	class MainBus;
+
 	enum PPUState
 	{
 		HBlank,
@@ -57,10 +59,9 @@ namespace SunBoy
 		uint8_t attributes = 0;
 	};
 
-	class Core;
 	class PPU
 	{
-		Core &core;
+		MainBus &bus;
 
 	public:
 		bool window_draw_flag = false, previously_disabled = false;
@@ -83,7 +84,7 @@ namespace SunBoy
 		std::array<uint32_t, LCD_WIDTH * LCD_HEIGHT> framebuffer_complete{};
 		std::array<uint32_t, 4> color_table = LCD_GRAY_PALETTE;
 
-		PPU(Core &core);
+		PPU(MainBus &bus);
 
 		void reset(bool hard_reset);
 		void set_post_boot_state();
