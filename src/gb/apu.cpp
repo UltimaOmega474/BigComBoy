@@ -140,7 +140,7 @@ namespace SunBoy
 		volume_output = envelope.initial_envelope_volume;
 		envelope.envelope_enabled = true;
 		// turn DAC off
-		if (envelope.initial_envelope_volume == 0)
+		if (envelope.initial_envelope_volume == 0 && envelope.envelope_direction == 0)
 			channel_on = false;
 	}
 
@@ -168,9 +168,11 @@ namespace SunBoy
 		envelope.envelope_direction = (nr12 & 0b00001000) >> 3;
 		envelope.initial_envelope_volume = (nr12 & 0b11110000) >> 4;
 
+		if (envelope.initial_envelope_volume == 0 && envelope.envelope_direction == 0)
+			channel_on = false;
 		// if channel is on, trigger again
-		if (channel_on)
-			trigger();
+		//	if (channel_on)
+		//		trigger();
 	}
 
 	void PulseChannel::write_period_low_bits(uint8_t nr13)
@@ -418,8 +420,8 @@ namespace SunBoy
 		envelope.envelope_counter = envelope.envelope_sweep_pace;
 		volume_output = envelope.initial_envelope_volume;
 		envelope.envelope_enabled = true;
-		// turn DAC off
-		if (envelope.initial_envelope_volume == 0)
+
+		if (envelope.initial_envelope_volume == 0 && envelope.envelope_direction == 0)
 			channel_on = false;
 	}
 
@@ -433,6 +435,9 @@ namespace SunBoy
 		envelope.envelope_sweep_pace = nr42 & 0b00000111;
 		envelope.envelope_direction = (nr42 & 0b00001000) >> 3;
 		envelope.initial_envelope_volume = (nr42 & 0b11110000) >> 4;
+
+		if (envelope.initial_envelope_volume == 0 && envelope.envelope_direction == 0)
+			channel_on = false;
 	}
 
 	uint8_t NoiseChannel::read_volume_envelope() const
@@ -477,12 +482,12 @@ namespace SunBoy
 
 	void APU::reset()
 	{
-		stereo_left_volume = 0;
-		stereo_right_volume = 0;
+		stereo_left_volume = 7;
+		stereo_right_volume = 7;
 		mix_vin_left = false;
 		mix_vin_right = false;
 		sample_counter = sample_rate = 0;
-		power = false;
+		power = true;
 
 		pulse_1 = PulseChannel(true);
 		pulse_2 = PulseChannel(false);

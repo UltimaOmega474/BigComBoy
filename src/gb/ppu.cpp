@@ -12,7 +12,6 @@ namespace SunBoy
 
 	void PPU::reset(bool hard_reset)
 	{
-
 		if (hard_reset)
 		{
 			status = 0;
@@ -256,17 +255,13 @@ namespace SunBoy
 			uint16_t tile_index = 0;
 
 			if (tile_data_address == 0x8800)
-			{
-				tile_index = ((tile_data_address + 0x800) & 0x1FFF) + (((int8_t)tile_id) * 16) + (y_offset % 8 * 2);
-			}
+				tile_index = ((tile_data_address + 0x800) & 0x1FFF) + (((int8_t)tile_id) * 16) + ((y_offset & 7) * 2);
 			else
-			{
-				tile_index = (tile_data_address & 0x1FFF) + (tile_id * 16) + (y_offset % 8 * 2);
-			}
+				tile_index = (tile_data_address & 0x1FFF) + (tile_id * 16) + ((y_offset & 7) * 2);
 
 			uint8_t low_byte = vram[tile_index];
 			uint8_t high_byte = vram[tile_index + 1];
-			uint8_t bit = 7 - (x_offset % 8);
+			uint8_t bit = 7 - (x_offset & 7);
 			uint8_t low_bit = (low_byte >> bit) & 0x01;
 			uint8_t high_bit = (high_byte >> bit) & 0x01;
 			uint8_t pixel = (high_bit << 1) | low_bit;
@@ -307,17 +302,13 @@ namespace SunBoy
 					uint16_t tile_index = 0;
 
 					if (tile_data_address == 0x8800)
-					{
-						tile_index = ((tile_data_address + 0x800) & 0x1FFF) + (((int8_t)tile_id) * 16) + (y_offset % 8 * 2);
-					}
+						tile_index = ((tile_data_address + 0x800) & 0x1FFF) + (((int8_t)tile_id) * 16) + ((y_offset & 7) * 2);
 					else
-					{
-						tile_index = (tile_data_address & 0x1FFF) + (tile_id * 16) + (y_offset % 8 * 2);
-					}
+						tile_index = (tile_data_address & 0x1FFF) + (tile_id * 16) + ((y_offset & 7) * 2);
 
 					uint8_t low_byte = vram[tile_index];
 					uint8_t high_byte = vram[tile_index + 1];
-					uint8_t bit = 7 - (x_offset % 8);
+					uint8_t bit = 7 - (x_offset & 7);
 					uint8_t low_bit = (low_byte >> bit) & 0x01;
 					uint8_t high_bit = (high_byte >> bit) & 0x01;
 					uint8_t pixel = (high_bit << 1) | low_bit;
@@ -349,7 +340,7 @@ namespace SunBoy
 				break;
 
 			const Object *sprite = reinterpret_cast<const Object *>((&oam[i * 4]));
-			uint8_t corrected_y_position = sprite->y - 16;
+			int16_t corrected_y_position = (int16_t)sprite->y - 16;
 
 			if (corrected_y_position <= line_y && (corrected_y_position + height) > line_y)
 			{
@@ -375,39 +366,35 @@ namespace SunBoy
 			for (auto i = 0; i < num_obj_on_scanline; ++i)
 			{
 				auto &object = objects_on_scanline[(num_obj_on_scanline - 1) - i];
-				object.y -= 16;
-				object.x -= 8;
 
 				uint8_t palette = (object.attributes & ObjectAttributeFlags::Palette) ? object_palette_1 : object_palette_0;
 				uint16_t tile_index = 0;
 
 				if (height == 16)
-				{
 					object.tile &= ~1;
-				}
+
+				int16_t obj_y = (int16_t)object.y - 16;
 
 				if (object.attributes & ObjectAttributeFlags::FlipY)
-				{
-					tile_index = (0x8000 & 0x1FFF) + (object.tile * 16) + ((height - (line_y - object.y) - 1) * 2);
-				}
+					tile_index = (0x8000 & 0x1FFF) + (object.tile * 16) + ((height - (line_y - obj_y) - 1) * 2);
 				else
-				{
-					tile_index = (0x8000 & 0x1FFF) + (object.tile * 16) + ((line_y - object.y) % height * 2);
-				}
+					tile_index = (0x8000 & 0x1FFF) + (object.tile * 16) + ((line_y - obj_y) % height * 2);
+
+				int16_t adjusted_x = (int16_t)object.x - 8;
+				size_t framebuffer_line_y = (line_y)*LCD_WIDTH;
 
 				for (auto x = 0; x < 8; ++x)
 				{
-					size_t framebuffer_line_x = (object.x + x);
-					size_t framebuffer_line_y = (line_y)*LCD_WIDTH;
+					size_t framebuffer_line_x = (adjusted_x + x);
 
-					if ((object.x + x) >= 0 && (object.x + x) < 160)
+					if (framebuffer_line_x >= 0 && framebuffer_line_x < 160)
 					{
 						uint8_t low_byte = vram[tile_index];
 						uint8_t high_byte = vram[tile_index + 1];
-						uint8_t bit = 7 - (x % 8);
+						uint8_t bit = 7 - (x & 7);
 
 						if (object.attributes & ObjectAttributeFlags::FlipX)
-							bit = x % 8;
+							bit = x & 7;
 
 						uint8_t low_bit = (low_byte >> bit) & 0x01;
 						uint8_t high_bit = (high_byte >> bit) & 0x01;
@@ -422,7 +409,7 @@ namespace SunBoy
 						}
 						else
 						{
-							if (bg_color_table[framebuffer_line_y + (object.x + x)] == 0)
+							if (bg_color_table[framebuffer_line_y + framebuffer_line_x] == 0)
 							{
 								framebuffer[framebuffer_line_y + framebuffer_line_x] = palette_index_to_color(palette, pixel);
 							}
