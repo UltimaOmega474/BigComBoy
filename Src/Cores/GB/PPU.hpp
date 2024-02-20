@@ -1,0 +1,131 @@
+/*
+    Big ComBoy
+    Copyright (C) 2023-2024 UltimaOmega474
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+#pragma once
+#include "Constants.hpp"
+#include <array>
+#include <cinttypes>
+
+namespace GB
+{
+    class MainBus;
+
+    enum PPUState
+    {
+        HBlank,
+        VBlank,
+        OAMSearch,
+        DrawScanline
+    };
+
+    enum LCDControlFlags
+    {
+        DisplayEnable = 0x80,
+        WindowTileMap = 0x40,
+        WindowEnable = 0x20,
+        BGWindowTileData = 0x10,
+        BGTileMap = 0x8,
+        SpriteSize = 0x4,
+        SpriteEnable = 0x2,
+        BGEnable = 0x1
+    };
+
+    enum StatusFlags
+    {
+        EnableLYCandLYInt = 0x40,
+        EnableOAMInt = 0x20,
+        EnableVBlankInt = 0x10,
+        EnableHBlankInt = 0x8,
+        LYCandLYCompareType = 0x4,
+        ModeFlag = 0x3
+    };
+
+    enum ObjectAttributeFlags
+    {
+        Priority = 0x80,
+        FlipY = 0x40,
+        FlipX = 0x20,
+        Palette = 0x10
+    };
+
+    enum DisplayRenderFlags
+    {
+        Background = 0x1,
+        Window = 0x2,
+        Objects = 0x4,
+    };
+
+    struct Object
+    {
+        uint8_t y = 0;
+        uint8_t x = 0;
+        uint8_t tile = 0;
+        uint8_t attributes = 0;
+    };
+
+    class PPU
+    {
+        MainBus &bus;
+
+    public:
+        bool window_draw_flag = false, previously_disabled = false;
+        uint8_t num_obj_on_scanline = 0;
+        uint8_t lcd_control = 0, status = 0;
+        uint8_t screen_scroll_y = 0, screen_scroll_x = 0;
+        uint8_t line_y = 0, line_y_compare = 0;
+        uint8_t window_y = 0, window_x = 0;
+        uint8_t window_line_y = 0, background_palette = 0;
+        uint8_t object_palette_0 = 0, object_palette_1 = 0;
+        uint8_t render_flags = DisplayRenderFlags::Background | DisplayRenderFlags::Window |
+                               DisplayRenderFlags::Objects;
+        PPUState mode = PPUState::HBlank;
+        uint32_t cycles = 0;
+        std::array<uint8_t, 8193> vram{};
+        std::array<uint8_t, 256> oam{};
+        std::array<Object, 10> objects_on_scanline{};
+        std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT> bg_color_table{};
+
+        std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT * 4> framebuffer{};
+        std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT * 4> framebuffer_complete{};
+        std::array<std::array<uint8_t, 4>, 4> color_table = LCD_GRAY_PALETTE;
+
+        PPU(MainBus &bus);
+
+        void reset(bool hard_reset);
+        void set_post_boot_state();
+        void step(uint32_t accumulated_cycles);
+
+        void write_vram(uint16_t address, uint8_t value);
+        void write_oam(uint16_t address, uint8_t value);
+        void instant_dma(uint8_t address);
+
+        uint8_t read_vram(uint16_t address) const;
+        uint8_t read_oam(uint16_t address) const;
+        bool check_stat(uint8_t flags) const;
+        void set_stat(uint8_t flags, bool value);
+        bool stat_any() const;
+
+    private:
+        void render_scanline();
+        void render_bg_layer();
+        void render_window_layer();
+        void scan_oam();
+        void render_sprite_layer();
+        void check_ly_lyc(bool allow_interrupts);
+    };
+}

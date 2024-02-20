@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SettingsWindow</class>
+ <widget class="QDialog" name="SettingsWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>323</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Settings (GameBoy)</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="layoutDirection">
+      <enum>Qt::LeftToRight</enum>
+     </property>
+     <property name="tabShape">
+      <enum>QTabWidget::Rounded</enum>
+     </property>
+     <property name="currentIndex">
+      <number>2</number>
+     </property>
+     <property name="elideMode">
+      <enum>Qt::ElideNone</enum>
+     </property>
+     <widget class="QtFrontend::EmulationWindow" name="emulation_tab">
+      <attribute name="title">
+       <string>Emulation</string>
+      </attribute>
+     </widget>
+     <widget class="QtFrontend::VideoWindow" name="video_tab">
+      <attribute name="title">
+       <string>Video</string>
+      </attribute>
+     </widget>
+     <widget class="QtFrontend::AudioWindow" name="audio_tab">
+      <attribute name="title">
+       <string>Audio</string>
+      </attribute>
+     </widget>
+     <widget class="QtFrontend::InputWindow" name="input_tab">
+      <attribute name="title">
+       <string>Input</string>
+      </attribute>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Apply|QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QtFrontend::InputWindow</class>
+   <extends>QWidget</extends>
+   <header>Qt/GB/SubWindows/InputWindow.hpp</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>QtFrontend::EmulationWindow</class>
+   <extends>QWidget</extends>
+   <header>Qt/GB/SubWindows/EmulationWindow.hpp</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>QtFrontend::VideoWindow</class>
+   <extends>QWidget</extends>
+   <header>Qt/GB/SubWindows/VideoWindow.hpp</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>QtFrontend::AudioWindow</class>
+   <extends>QWidget</extends>
+   <header>Qt/GB/SubWindows/AudioWindow.hpp</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

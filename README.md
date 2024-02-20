@@ -1,15 +1,11 @@
-# SunBoy
+# Big ComBoy
 
-An emulator for the GameBoy written in C++. Only DMG compatible games work at this time. The project is split into two modules, the emulator core and frontend.
+GameBoy emulator written in C++. 
 
 ## Compatibility
 
-Below you will find the current status of various feature implementations and test cases.
-
-- [x] PPU - Scanline rendering
-- [ ] PPU - Pixel FIFO
-- [x] APU
-- [x] Input Support (Keyboard & Controllers)
+- [x] DMG-CPU-01
+- [ ] CGB-CPU-01
 - [x] MBC1
 - [ ] MBC1M
 - [x] MBC2
@@ -21,47 +17,40 @@ Below you will find the current status of various feature implementations and te
 - [ ] M161
 - [ ] HuC1
 - [ ] HuC-3
-- [ ] Serial Data Transfer for Link Cable
-
-#### Blargg's Tests
-
-- [x] cpu_instrs
-- [x] instr_timing
-- [x] mem_timing
-- [x] mem_timing-2
 
 ## Building
 
-You will need a C++ compiler that supports C++20 or later. The following instructions are to install the dependencies for SunBoy's frontend. The emulator core does not have any dependencies.
+Windows and MacOS are currently supported. Linux port is planned but not a priority.
 
-- SunBoy uses [Native File Dialog Extended](https://github.com/btzy/nativefiledialog-extended) as a submodule, please make sure to clone with the submodule included.
+A C++ compiler that supports C++20 along with CMake is required.
 
-- Download and setup [vcpkg](https://github.com/microsoft/vcpkg) and [cmake](https://cmake.org/).
+The Following dependencies are required. 
 
-- Install imgui
+- Qt6 
+- fmtlib
+- SDL2
+- GLEW
 
-```bash
-vcpkg install "imgui[core,sdl2-binding,sdl2-renderer-binding]" --triplet=x64-windows
-```
+Install them using your favorite package manager on your platform of choice. (Windows users should consider using vcpkg)
 
-- Install {fmt}
-
-```bash
-vcpkg install fmt --triplet=x64-windows
-```
-
-- Install SDL2 and SDL2 Mixer
-
-```bash
-vcpkg install sdl2 --triplet=x64-windows
-
-vcpkg install sdl2-mixer --triplet=x64-windows
-```
-
-- Configure and Build the project. Binaries are written to the `bin/` folder in the source directory.
-
-Note: To use these dependencies as a static library change triplet to: `--triplet=x64-windows-static`
+Use the provided CMakeLists to configure. The frontend can be built via the BigComBoy target. The GB target contains the emulator core and has no external dependencies required for use.
 
 ## License
 
-SunBoy is open source and distributed under the MIT License. See LICENSE.txt for details.
+    Big ComBoy
+    Copyright (C) 2023-2024 UltimaOmega474
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+See LICENSE.txt for the full GPLv3 License.
