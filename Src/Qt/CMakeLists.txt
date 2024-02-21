@@ -45,7 +45,7 @@ target_link_libraries(BigComBoy PRIVATE
 )
 
 set_target_properties(BigComBoy PROPERTIES
-	OUTPUT_NAME "Big ComBoy v${PROJECT_VERSION}"
+	OUTPUT_NAME "BigComBoy"
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin"
 	MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
 	MACOSX_BUNDLE_GUI_IDENTIFIER com.ultimaomega.bigcomboy
