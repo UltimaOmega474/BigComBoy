@@ -200,8 +200,13 @@ namespace GB
             eram[(mode ? (bank_upper_bits * 0x2000) : 0) + address] = value;
     }
 
+    bool MBC1::has_battery() const { return header.mbc_type == 3; }
+
     void MBC1::save_sram_to_file()
     {
+        if (!has_battery())
+            return;
+
         std::filesystem::path path = header.file_path;
         path += ".sram";
 
@@ -216,6 +221,9 @@ namespace GB
 
     void MBC1::load_sram_from_file()
     {
+        if (!has_battery())
+            return;
+
         std::filesystem::path path = header.file_path;
         path += ".sram";
 
@@ -266,6 +274,11 @@ namespace GB
 
     void MBC2::write(uint16_t address, uint8_t value)
     {
+        if (address == 0x3EFF)
+        {
+            int d = 0;
+        }
+
         if (address <= 0x3FFF)
         {
             if (address & 0x100)
@@ -276,20 +289,33 @@ namespace GB
             }
             else
             {
-                ram_enabled = value == 0xA ? true : false;
+                // ram enable
+                ram_enabled = (value & 0xF) == 0xA;
             }
         }
     }
 
-    uint8_t MBC2::read_ram(uint16_t address) { return ram.at(address & 0x01FF) & 0xF; }
+    uint8_t MBC2::read_ram(uint16_t address)
+    {
+        if (ram_enabled)
+            return (ram[address & 0x01FF] & 0xF) | 0xF0;
+
+        return 0xFF;
+    }
 
     void MBC2::write_ram(uint16_t address, uint8_t value)
     {
-        ram.at(address & 0x01FF) = value & 0xF;
+        if (ram_enabled)
+            ram[address & 0x01FF] = value & 0xF;
     }
+
+    bool MBC2::has_battery() const { return header.mbc_type == 6; }
 
     void MBC2::save_sram_to_file()
     {
+        if (!has_battery())
+            return;
+
         std::filesystem::path path = header.file_path;
         path += ".sram";
 
@@ -304,6 +330,9 @@ namespace GB
 
     void MBC2::load_sram_from_file()
     {
+        if (!has_battery())
+            return;
+
         std::filesystem::path path = header.file_path;
         path += ".sram";
 

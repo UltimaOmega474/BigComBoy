@@ -79,6 +79,7 @@ namespace GB
         virtual uint8_t read_ram(uint16_t address) = 0;
         virtual void write_ram(uint16_t address, uint8_t value) = 0;
 
+        virtual bool has_battery() const = 0;
         virtual void save_sram_to_file() = 0;
         virtual void load_sram_from_file() = 0;
 
@@ -98,6 +99,8 @@ namespace GB
         void write(uint16_t address, uint8_t value) override;
         uint8_t read_ram(uint16_t address) override;
         void write_ram(uint16_t address, uint8_t value) override;
+
+        bool has_battery() const override { return false; }
         void save_sram_to_file() override{};
         void load_sram_from_file() override{};
     };
@@ -120,6 +123,7 @@ namespace GB
         uint8_t read_ram(uint16_t addr) override;
         void write_ram(uint16_t addr, uint8_t value) override;
 
+        bool has_battery() const override;
         void save_sram_to_file() override;
         void load_sram_from_file() override;
     };
@@ -141,6 +145,7 @@ namespace GB
         uint8_t read_ram(uint16_t address) override;
         void write_ram(uint16_t address, uint8_t value) override;
 
+        bool has_battery() const override;
         void save_sram_to_file() override;
         void load_sram_from_file() override;
     };
