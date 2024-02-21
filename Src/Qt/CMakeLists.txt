@@ -1,5 +1,6 @@
 set(QT_SOURCES
 	main.cpp
+	Paths.cpp
 	MainWindow.cpp
 	MainWindow.ui
 	KeyboardDevice.cpp

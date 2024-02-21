@@ -22,6 +22,7 @@
 #include "Qt/GB/SubWindows/AudioWindow.hpp"
 #include "Qt/GB/SubWindows/EmulationWindow.hpp"
 #include "Qt/GB/SubWindows/VideoWindow.hpp"
+#include "Qt/Paths.hpp"
 #include "ui_SettingsWindow.h"
 #include <QCoreApplication>
 #include <QDialogButtonBox>
@@ -81,10 +82,7 @@ namespace QtFrontend
         {
             emit on_apply_changes_to_tabs();
 
-            std::filesystem::path config_path =
-                QCoreApplication::applicationDirPath().toStdString();
-            config_path += Common::Config::FileName();
-            Common::Config::Current().write_to_file(config_path);
+            Common::Config::Current().write_to_file(QtFrontend::Paths::ConfigLocation());
         }
     }
 

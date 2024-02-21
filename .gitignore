@@ -14,5 +14,5 @@
 *.vcxproj*
 *.pdb
 *.suo
-
+.cache
 .DS_Store

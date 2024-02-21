@@ -23,7 +23,6 @@
 #include <deque>
 #include <filesystem>
 #include <string>
-#include <string_view>
 
 namespace Common
 {
@@ -70,7 +69,6 @@ namespace Common
         GBConfig gameboy;
 
         static Config &Current();
-        static const std::filesystem::path FileName();
         void add_rom_to_history(const std::string &file);
         void write_to_file(std::filesystem::path path);
         void read_from_file(std::filesystem::path path);

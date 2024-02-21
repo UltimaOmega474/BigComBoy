@@ -16,31 +16,29 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "Common/Config.hpp"
-#include "MainWindow.hpp"
 #include "Paths.hpp"
-#include <QApplication>
-#include <cstdlib>
-#include <filesystem>
-#define SDL_MAIN_HANDLED
-#include <SDL.h>
+#include <QDir>
+#include <QStandardPaths>
 
-#ifdef WIN32
-#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
-#endif
-
-void save_config() { Common::Config::Current().write_to_file(QtFrontend::Paths::ConfigLocation()); }
-
-int main(int argc, char *argv[])
+namespace QtFrontend::Paths
 {
-    QApplication a(argc, argv);
-    SDL_Init(SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO);
-    Common::Config::Current().read_from_file(QtFrontend::Paths::ConfigLocation());
 
-    atexit(SDL_Quit);
-    atexit(save_config);
+    QString QtGetAppDataPath()
+    {
+        static QString path =
+            QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).first();
 
-    QtFrontend::MainWindow w;
-    w.show();
-    return a.exec();
+        if (!QDir(path).exists())
+            QDir().mkdir(path);
+
+        return path;
+    }
+
+    std::filesystem::path ConfigLocation()
+    {
+        static std::filesystem::path config_location =
+            (QtGetAppDataPath() + "/config.toml").toStdString();
+
+        return config_location;
+    }
 }

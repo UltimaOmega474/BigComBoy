@@ -28,8 +28,6 @@ namespace Common
 
     Config &Config::Current() { return config; }
 
-    const std::filesystem::path Config::FileName() { return {"/config.toml"}; }
-
     void Config::add_rom_to_history(const std::string &path)
     {
         auto it = std::find(recent_roms.begin(), recent_roms.end(), path);
@@ -99,9 +97,13 @@ namespace Common
         };
 
         std::ofstream ofs{path};
-        ofs << data;
 
-        ofs.close();
+        if (ofs)
+        {
+            ofs << data;
+
+            ofs.close();
+        }
     }
 
     void Config::read_from_file(std::filesystem::path path)
