@@ -73,16 +73,16 @@ namespace GB
         Cartridge(CartHeader &&header);
         virtual ~Cartridge() = default;
 
+        virtual bool has_battery() const = 0;
+
         virtual void init_banks(std::ifstream &rom_stream) = 0;
         virtual uint8_t read(uint16_t address) = 0;
         virtual void write(uint16_t address, uint8_t value) = 0;
         virtual uint8_t read_ram(uint16_t address) = 0;
         virtual void write_ram(uint16_t address, uint8_t value) = 0;
-        virtual void tick(uint32_t cycles) = 0;
-
-        virtual bool has_battery() const = 0;
         virtual void save_sram_to_file() = 0;
         virtual void load_sram_from_file() = 0;
+        virtual void tick(uint32_t cycles) = 0;
 
         static std::unique_ptr<Cartridge> from_file(std::filesystem::path rom_path);
         static Cartridge *from_file_raw_ptr(std::filesystem::path rom_path);
@@ -95,16 +95,18 @@ namespace GB
     public:
         NoMBC(CartHeader &&header);
         virtual ~NoMBC() override = default;
+
+        bool has_battery() const override { return false; }
+
         void init_banks(std::ifstream &rom_stream) override;
         uint8_t read(uint16_t address) override;
         void write(uint16_t address, uint8_t value) override;
         uint8_t read_ram(uint16_t address) override;
         void write_ram(uint16_t address, uint8_t value) override;
-        void tick(uint32_t cycles) override {}
-
-        bool has_battery() const override { return false; }
         void save_sram_to_file() override{};
         void load_sram_from_file() override{};
+
+        void tick(uint32_t cycles) override {}
     };
 
     class MBC1 : public Cartridge
@@ -119,16 +121,16 @@ namespace GB
         MBC1(CartHeader &&header);
         virtual ~MBC1() override = default;
 
+        bool has_battery() const override;
+
         void init_banks(std::ifstream &rom_stream) override;
         uint8_t read(uint16_t addr) override;
         void write(uint16_t addr, uint8_t value) override;
         uint8_t read_ram(uint16_t addr) override;
         void write_ram(uint16_t addr, uint8_t value) override;
-        void tick(uint32_t cycles) override {}
-
-        bool has_battery() const override;
         void save_sram_to_file() override;
         void load_sram_from_file() override;
+        void tick(uint32_t cycles) override {}
     };
 
     class MBC2 : public Cartridge
@@ -142,16 +144,16 @@ namespace GB
         MBC2(CartHeader &&header);
         virtual ~MBC2() override = default;
 
+        bool has_battery() const override;
+
         void init_banks(std::ifstream &rom_stream) override;
         uint8_t read(uint16_t address) override;
         void write(uint16_t address, uint8_t value) override;
         uint8_t read_ram(uint16_t address) override;
         void write_ram(uint16_t address, uint8_t value) override;
-        void tick(uint32_t cycles) override {}
-
-        bool has_battery() const override;
         void save_sram_to_file() override;
         void load_sram_from_file() override;
+        void tick(uint32_t cycles) override {}
     };
 
     class RTCCounter
@@ -199,7 +201,6 @@ namespace GB
         void write_ram(uint16_t addr, uint8_t value) override;
         void save_sram_to_file() override;
         void load_sram_from_file() override;
-
         void tick(uint32_t cycles) override;
     };
 }

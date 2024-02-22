@@ -132,6 +132,8 @@ namespace GB
 
     MBC1::MBC1(CartHeader &&header) : Cartridge(std::move(header)), eram() { eram.fill(0); }
 
+    bool MBC1::has_battery() const { return header.mbc_type == 3; }
+
     void MBC1::init_banks(std::ifstream &rom_stream)
     {
 
@@ -217,8 +219,6 @@ namespace GB
             eram[(mode ? (bank_upper_bits * 0x2000) : 0) + address] = value;
     }
 
-    bool MBC1::has_battery() const { return header.mbc_type == 3; }
-
     void MBC1::save_sram_to_file()
     {
         if (!has_battery())
@@ -257,6 +257,8 @@ namespace GB
     }
 
     MBC2::MBC2(CartHeader &&header) : Cartridge(std::move(header)) {}
+
+    bool MBC2::has_battery() const { return header.mbc_type == 6; }
 
     void MBC2::init_banks(std::ifstream &rom_stream)
     {
@@ -326,8 +328,6 @@ namespace GB
             ram[address & 0x01FF] = value & 0xF;
     }
 
-    bool MBC2::has_battery() const { return header.mbc_type == 6; }
-
     void MBC2::save_sram_to_file()
     {
         if (!has_battery())
@@ -364,8 +364,6 @@ namespace GB
             sram.close();
         }
     }
-
-    // -----------------------------------------
 
     RTCCounter::RTCCounter(uint8_t bit_mask) : mask(bit_mask) {}
 
@@ -632,5 +630,4 @@ namespace GB
             }
         }
     }
-
 }
