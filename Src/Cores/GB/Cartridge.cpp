@@ -17,6 +17,7 @@
 */
 
 #include "Cartridge.hpp"
+#include "Constants.hpp"
 #include <fstream>
 
 namespace GB
@@ -366,7 +367,51 @@ namespace GB
 
     // -----------------------------------------
 
+    RTCCounter::RTCCounter(uint8_t bit_mask) : mask(bit_mask) {}
+
+    uint8_t RTCCounter::get() const { return counter; }
+
+    void RTCCounter::set(uint8_t value)
+    {
+        counter = value;
+        counter &= mask;
+    }
+
+    void RTCCounter::increment()
+    {
+        counter++;
+        counter &= mask;
+    }
+
     MBC3::MBC3(CartHeader &&header) : Cartridge(std::move(header)), eram() { eram.fill(0); }
+
+    bool MBC3::has_rtc() const
+    {
+        switch (header.mbc_type)
+        {
+        case 0x0F: // MBC3+TIMER+BATTERY
+        case 0x10: // MBC3+TIMER+RAM+BATTERY
+        {
+            return true;
+        }
+        }
+
+        return false;
+    }
+
+    bool MBC3::has_battery() const
+    {
+        switch (header.mbc_type)
+        {
+        case 0x0F: // MBC3+TIMER+BATTERY
+        case 0x10: // MBC3+TIMER+RAM+BATTERY
+        case 0x13: // MBC3+RAM+BATTERY
+        {
+            return true;
+        }
+        }
+        return false;
+    }
 
     void MBC3::init_banks(std::ifstream &rom_stream)
     {
@@ -402,18 +447,12 @@ namespace GB
     {
         if (((address >= 0x6000) && (address <= 0x7FFF)))
         {
-            // mode
-            //   mode = value & 0x1;
-
-            // RTC Latch Data
+            // RTC latch data. Ignored for now.
         }
         else if (((address >= 0x4000) && (address <= 0x5FFF)))
         {
             // ram bank or rom bank
-            if (bank_upper_bits <= 3)
-            {
-                bank_upper_bits = value & 0x3;
-            }
+            ram_rtc_select = value;
         }
         else if (((address >= 0x2000) && (address <= 0x3FFF)))
         {
@@ -432,36 +471,87 @@ namespace GB
     uint8_t MBC3::read_ram(uint16_t address)
     {
 
-        if (bank_upper_bits <= 3)
+        switch (ram_rtc_select)
+        {
+        case 0x00:
+        case 0x01:
+        case 0x02:
+        case 0x03:
         {
             if (ram_enabled)
-                return eram[(mode ? (bank_upper_bits * 0x2000) : 0) + address];
-        }
+                return eram[(ram_rtc_select * 0x2000) + address];
 
+            break;
+        }
+        case 0x08:
+        {
+            return rtc.seconds.get();
+        }
+        case 0x09:
+        {
+            return rtc.minutes.get();
+        }
+        case 0x0A:
+        {
+            return rtc.hours.get();
+        }
+        case 0x0B:
+        {
+            return static_cast<uint8_t>(rtc.days & 0xFF);
+        }
+        case 0x0C:
+        {
+            uint32_t a = rtc_ctrl | ((rtc.days & 0x100) ? 1 : 0);
+
+            return a;
+        }
+        }
         return 0xFF;
     }
 
     void MBC3::write_ram(uint16_t address, uint8_t value)
     {
-        if (bank_upper_bits <= 3)
+        switch (ram_rtc_select)
+        {
+        case 0x00:
+        case 0x01:
+        case 0x02:
+        case 0x03:
         {
             if (ram_enabled)
-                eram[(mode ? (bank_upper_bits * 0x2000) : 0) + address] = value;
+                eram[(ram_rtc_select * 0x2000) + address] = value;
+            break;
         }
-    }
+        case 0x08:
+        {
+            rtc.seconds.set(value);
+            break;
+        }
+        case 0x09:
+        {
+            rtc.minutes.set(value);
+            break;
+        }
+        case 0x0A:
+        {
+            rtc.hours.set(value);
+            break;
+        }
+        case 0x0B:
+        {
+            rtc.days &= ~0xFF;
+            rtc.days |= value;
+            break;
+        }
+        case 0x0C:
+        {
+            rtc_ctrl = value & 0xC0;
 
-    bool MBC3::has_battery() const
-    {
-        switch (header.mbc_type)
-        {
-        case 0x0F:
-        case 0x10:
-        case 0x13:
-        {
-            return true;
+            rtc.days &= 0x100;
+            rtc.days |= (value & 0x1) ? 0x100 : 0;
+            break;
         }
         }
-        return false;
     }
 
     void MBC3::save_sram_to_file()
@@ -500,4 +590,47 @@ namespace GB
             sram.close();
         }
     }
+
+    void MBC3::tick(uint32_t cycles)
+    {
+        if (has_rtc())
+        {
+            rtc_cycles += cycles;
+
+            if (rtc_cycles == CPU_CLOCK_RATE)
+            {
+                if (!(rtc_ctrl & 64))
+                {
+                    rtc.seconds.increment();
+
+                    if (rtc.seconds.get() == 60)
+                    {
+                        rtc.seconds.set(0);
+                        rtc.minutes.increment();
+
+                        if (rtc.minutes.get() == 60)
+                        {
+                            rtc.minutes.set(0);
+                            rtc.hours.increment();
+
+                            if (rtc.hours.get() == 24)
+                            {
+                                rtc.hours.set(0);
+                                rtc.days++;
+
+                                if (rtc.days == 512)
+                                {
+                                    rtc.days = 0;
+                                    rtc_ctrl |= 128;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                rtc_cycles = 0;
+            }
+        }
+    }
+
 }

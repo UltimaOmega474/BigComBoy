@@ -82,6 +82,7 @@ namespace GB
             timer.update(4);
             ppu.step(4);
             apu.step(4);
+            bus.cart->tick(4);
             cycle_count += 4;
             cycles -= 4;
         }

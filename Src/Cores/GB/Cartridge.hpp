@@ -78,6 +78,7 @@ namespace GB
         virtual void write(uint16_t address, uint8_t value) = 0;
         virtual uint8_t read_ram(uint16_t address) = 0;
         virtual void write_ram(uint16_t address, uint8_t value) = 0;
+        virtual void tick(uint32_t cycles) = 0;
 
         virtual bool has_battery() const = 0;
         virtual void save_sram_to_file() = 0;
@@ -99,6 +100,7 @@ namespace GB
         void write(uint16_t address, uint8_t value) override;
         uint8_t read_ram(uint16_t address) override;
         void write_ram(uint16_t address, uint8_t value) override;
+        void tick(uint32_t cycles) override {}
 
         bool has_battery() const override { return false; }
         void save_sram_to_file() override{};
@@ -122,6 +124,7 @@ namespace GB
         void write(uint16_t addr, uint8_t value) override;
         uint8_t read_ram(uint16_t addr) override;
         void write_ram(uint16_t addr, uint8_t value) override;
+        void tick(uint32_t cycles) override {}
 
         bool has_battery() const override;
         void save_sram_to_file() override;
@@ -144,32 +147,59 @@ namespace GB
         void write(uint16_t address, uint8_t value) override;
         uint8_t read_ram(uint16_t address) override;
         void write_ram(uint16_t address, uint8_t value) override;
+        void tick(uint32_t cycles) override {}
 
         bool has_battery() const override;
         void save_sram_to_file() override;
         void load_sram_from_file() override;
     };
 
+    class RTCCounter
+    {
+        uint8_t counter = 0;
+        uint8_t mask;
+
+    public:
+        RTCCounter(uint8_t bit_mask);
+        uint8_t get() const;
+
+        void set(uint8_t value);
+        void increment();
+    };
+
+    struct RTC
+    {
+        RTCCounter seconds = {0x3F}, minutes = {0x3F}, hours = {0x1F};
+        uint16_t days = 0;
+    };
+
     class MBC3 : public Cartridge
     {
-        uint32_t mode = 0, rom_bank_num = 1, bank_upper_bits = 0;
+        uint32_t rom_bank_num = 1, ram_rtc_select = 0;
 
         bool ram_enabled = false;
         std::array<uint8_t, 32768> eram{};
         std::vector<std::vector<uint8_t>> bank_list;
 
+        uint32_t rtc_cycles = 0;
+        RTC rtc{};
+        uint16_t rtc_ctrl = 0;
+
     public:
         MBC3(CartHeader &&header);
         virtual ~MBC3() override = default;
+
+        bool has_rtc() const;
+        bool has_battery() const override;
 
         void init_banks(std::ifstream &rom_stream) override;
         uint8_t read(uint16_t addr) override;
         void write(uint16_t addr, uint8_t value) override;
         uint8_t read_ram(uint16_t addr) override;
         void write_ram(uint16_t addr, uint8_t value) override;
-
-        bool has_battery() const override;
         void save_sram_to_file() override;
         void load_sram_from_file() override;
+
+        void tick(uint32_t cycles) override;
     };
 }
