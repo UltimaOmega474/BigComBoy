@@ -32,6 +32,7 @@ namespace GB
     constexpr uint8_t INT_JOYPAD_BIT = 0x10;
     constexpr uint32_t CPU_CLOCK_RATE = 4194304;
     constexpr uint32_t CYCLES_PER_FRAME = 70224;
+    constexpr uint32_t MBC3_RTC_CLOCK_RATE = 128;
     constexpr int16_t NO_DISPLACEMENT = 0;
     constexpr int16_t INCREMENT = 1;
     constexpr int16_t DECREMENT = -1;

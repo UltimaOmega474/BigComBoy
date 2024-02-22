@@ -149,4 +149,27 @@ namespace GB
         void save_sram_to_file() override;
         void load_sram_from_file() override;
     };
+
+    class MBC3 : public Cartridge
+    {
+        uint32_t mode = 0, rom_bank_num = 1, bank_upper_bits = 0;
+
+        bool ram_enabled = false;
+        std::array<uint8_t, 32768> eram{};
+        std::vector<std::vector<uint8_t>> bank_list;
+
+    public:
+        MBC3(CartHeader &&header);
+        virtual ~MBC3() override = default;
+
+        void init_banks(std::ifstream &rom_stream) override;
+        uint8_t read(uint16_t addr) override;
+        void write(uint16_t addr, uint8_t value) override;
+        uint8_t read_ram(uint16_t addr) override;
+        void write_ram(uint16_t addr, uint8_t value) override;
+
+        bool has_battery() const override;
+        void save_sram_to_file() override;
+        void load_sram_from_file() override;
+    };
 }
