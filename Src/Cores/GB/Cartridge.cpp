@@ -169,15 +169,26 @@ namespace GB
 
     void MBC1::write(uint16_t address, uint8_t value)
     {
-        if (((address >= 0x6000) && (address <= 0x7FFF)))
+        switch (address >> 12)
         {
-            // mode
-            mode = value & 0x1;
+        case 0x0:
+        case 0x1:
+        {
+            ram_enabled = (value & 0xF) == 0xA;
+            break;
         }
-        else if (((address >= 0x4000) && (address <= 0x5FFF)))
+        case 0x2:
+        case 0x3:
         {
-            // ram bank or rom bank
+            rom_bank_num = value & 0x1F;
+            if (rom_bank_num == 0)
+                rom_bank_num = 1;
+            break;
+        }
 
+        case 0x4:
+        case 0x5:
+        {
             if (mode)
             {
                 if (header.ram_size == Ram32KB)
@@ -190,18 +201,15 @@ namespace GB
             {
                 bank_upper_bits = (value & 0x3);
             }
+            break;
         }
-        else if (((address >= 0x2000) && (address <= 0x3FFF)))
+
+        case 0x6:
+        case 0x7:
         {
-            // rom bank num
-            rom_bank_num = value & 0x1F;
-            if (rom_bank_num == 0)
-                rom_bank_num = 1;
+            mode = value & 0x1;
+            break;
         }
-        else if (((address >= 0x0000) && (address <= 0x1FFF)))
-        {
-            // ram enable
-            ram_enabled = (value & 0xF) == 0xA;
         }
     }
 
@@ -293,11 +301,6 @@ namespace GB
 
     void MBC2::write(uint16_t address, uint8_t value)
     {
-        if (address == 0x3EFF)
-        {
-            int d = 0;
-        }
-
         if (address <= 0x3FFF)
         {
             if (address & 0x100)
@@ -443,26 +446,36 @@ namespace GB
 
     void MBC3::write(uint16_t address, uint8_t value)
     {
-        if (((address >= 0x6000) && (address <= 0x7FFF)))
+        switch (address >> 12)
         {
-            // RTC latch data. Ignored for now.
+        case 0x0:
+        case 0x1:
+        {
+            ram_rtc_enabled = (value & 0xF) == 0xA;
+            break;
         }
-        else if (((address >= 0x4000) && (address <= 0x5FFF)))
+        case 0x2:
+        case 0x3:
         {
-            // ram bank or rom bank
-            ram_rtc_select = value;
-        }
-        else if (((address >= 0x2000) && (address <= 0x3FFF)))
-        {
-            // rom bank num
             rom_bank_num = value & 0x7F;
             if (rom_bank_num == 0)
                 rom_bank_num = 1;
+            break;
         }
-        else if (((address >= 0x0000) && (address <= 0x1FFF)))
+
+        case 0x4:
+        case 0x5:
         {
-            // ram enable
-            ram_enabled = (value & 0xF) == 0xA;
+            ram_rtc_select = value;
+            break;
+        }
+
+        case 0x6:
+        case 0x7:
+        {
+            // RTC latch data. Ignored for now.
+            break;
+        }
         }
     }
 
@@ -471,33 +484,33 @@ namespace GB
 
         switch (ram_rtc_select)
         {
-        case 0x00:
-        case 0x01:
-        case 0x02:
-        case 0x03:
+        case 0x0:
+        case 0x1:
+        case 0x2:
+        case 0x3:
         {
-            if (ram_enabled)
+            if (ram_rtc_enabled)
                 return eram[(ram_rtc_select * 0x2000) + address];
 
             break;
         }
-        case 0x08:
+        case 0x8:
         {
             return rtc.seconds.get();
         }
-        case 0x09:
+        case 0x9:
         {
             return rtc.minutes.get();
         }
-        case 0x0A:
+        case 0xA:
         {
             return rtc.hours.get();
         }
-        case 0x0B:
+        case 0xB:
         {
             return static_cast<uint8_t>(rtc.days & 0xFF);
         }
-        case 0x0C:
+        case 0xC:
         {
             uint32_t a = rtc_ctrl | ((rtc.days & 0x100) ? 1 : 0);
 
@@ -516,7 +529,7 @@ namespace GB
         case 0x02:
         case 0x03:
         {
-            if (ram_enabled)
+            if (ram_rtc_enabled)
                 eram[(ram_rtc_select * 0x2000) + address] = value;
             break;
         }

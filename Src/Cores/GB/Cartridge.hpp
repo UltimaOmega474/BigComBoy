@@ -179,7 +179,7 @@ namespace GB
     {
         uint32_t rom_bank_num = 1, ram_rtc_select = 0;
 
-        bool ram_enabled = false;
+        bool ram_rtc_enabled = false;
         std::array<uint8_t, 32768> eram{};
         std::vector<std::vector<uint8_t>> bank_list;
 

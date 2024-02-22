@@ -53,9 +53,4 @@ namespace GB
         {0x55, 0x55, 0x55, 0xFF},
         {0x00, 0x00, 0x00, 0xFF},
     }};
-
-    constexpr bool within_range(uint16_t address, uint16_t start, uint16_t end)
-    {
-        return ((address >= start) && (address <= end));
-    }
 }

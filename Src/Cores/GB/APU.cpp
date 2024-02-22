@@ -53,7 +53,7 @@ namespace GB
                     new_volume++;
                 }
 
-                if (within_range(new_volume, 0, 15))
+                if ((new_volume >= 0) && (new_volume <= 15))
                 {
                     volume_output = new_volume;
                     envelope_counter = envelope_sweep_pace;

@@ -194,7 +194,7 @@ namespace GB
                     return boot_rom_enabled;
                 }
 
-                if (within_range(address, 0xFF80, 0xFFFE))
+                if ((address >= 0xFF80) && (address <= 0xFFFE))
                 {
                     return hram[address - 0xFF80]; // High Ram
                 }
@@ -435,7 +435,7 @@ namespace GB
                 }
                 }
 
-                if (within_range(address, 0xFF80, 0xFFFE))
+                if ((address >= 0xFF80) && (address <= 0xFFFE))
                 {
                     hram[address - 0xFF80] = value; // High Ram
                     return;
