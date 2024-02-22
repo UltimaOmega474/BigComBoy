@@ -473,7 +473,10 @@ namespace GB
         case 0x6:
         case 0x7:
         {
-            // RTC latch data. Ignored for now.
+            if ((latch_byte == 0) && (value == 1))
+                shadow_rtc = rtc;
+
+            latch_byte = value;
             break;
         }
         }
@@ -496,23 +499,23 @@ namespace GB
         }
         case 0x8:
         {
-            return rtc.seconds.get();
+            return shadow_rtc.seconds.get();
         }
         case 0x9:
         {
-            return rtc.minutes.get();
+            return shadow_rtc.minutes.get();
         }
         case 0xA:
         {
-            return rtc.hours.get();
+            return shadow_rtc.hours.get();
         }
         case 0xB:
         {
-            return static_cast<uint8_t>(rtc.days & 0xFF);
+            return static_cast<uint8_t>(shadow_rtc.days & 0xFF);
         }
         case 0xC:
         {
-            uint32_t a = rtc_ctrl | ((rtc.days & 0x100) ? 1 : 0);
+            uint32_t a = rtc_ctrl | ((shadow_rtc.days & 0x100) ? 1 : 0);
 
             return a;
         }
@@ -535,6 +538,7 @@ namespace GB
         }
         case 0x08:
         {
+            rtc_cycles = 0;
             rtc.seconds.set(value);
             break;
         }
@@ -558,7 +562,7 @@ namespace GB
         {
             rtc_ctrl = value & 0xC0;
 
-            rtc.days &= 0x100;
+            rtc.days &= ~0x100;
             rtc.days |= (value & 0x1) ? 0x100 : 0;
             break;
         }
@@ -604,42 +608,38 @@ namespace GB
 
     void MBC3::tick(uint32_t cycles)
     {
-        if (has_rtc())
+        if (has_rtc() && !(rtc_ctrl & 64))
         {
             rtc_cycles += cycles;
 
             if (rtc_cycles == CPU_CLOCK_RATE)
             {
-                if (!(rtc_ctrl & 64))
+                rtc_cycles = 0;
+                rtc.seconds.increment();
+
+                if (rtc.seconds.get() == 60)
                 {
-                    rtc.seconds.increment();
+                    rtc.seconds.set(0);
+                    rtc.minutes.increment();
 
-                    if (rtc.seconds.get() == 60)
+                    if (rtc.minutes.get() == 60)
                     {
-                        rtc.seconds.set(0);
-                        rtc.minutes.increment();
+                        rtc.minutes.set(0);
+                        rtc.hours.increment();
 
-                        if (rtc.minutes.get() == 60)
+                        if (rtc.hours.get() == 24)
                         {
-                            rtc.minutes.set(0);
-                            rtc.hours.increment();
+                            rtc.hours.set(0);
+                            rtc.days++;
 
-                            if (rtc.hours.get() == 24)
+                            if (rtc.days == 512)
                             {
-                                rtc.hours.set(0);
-                                rtc.days++;
-
-                                if (rtc.days == 512)
-                                {
-                                    rtc.days = 0;
-                                    rtc_ctrl |= 128;
-                                }
+                                rtc.days = 0;
+                                rtc_ctrl |= 128;
                             }
                         }
                     }
                 }
-
-                rtc_cycles = 0;
             }
         }
     }

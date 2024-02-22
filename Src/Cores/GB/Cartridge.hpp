@@ -169,7 +169,7 @@ namespace GB
         void increment();
     };
 
-    struct RTC
+    struct RTCTimePoint
     {
         RTCCounter seconds = {0x3F}, minutes = {0x3F}, hours = {0x1F};
         uint16_t days = 0;
@@ -183,8 +183,10 @@ namespace GB
         std::array<uint8_t, 32768> eram{};
         std::vector<std::vector<uint8_t>> bank_list;
 
+        uint8_t latch_byte = 0;
+
         uint32_t rtc_cycles = 0;
-        RTC rtc{};
+        RTCTimePoint rtc{}, shadow_rtc{};
         uint16_t rtc_ctrl = 0;
 
     public:

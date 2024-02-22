@@ -10,7 +10,7 @@ GameBoy emulator written in C++.
 - [ ] MBC1M
 - [x] MBC2
 - [x] MBC3
-- [ ] MBC3 RTC
+- [x] MBC3 RTC
 - [ ] MBC5
 - [ ] MBC6
 - [ ] MBC7
