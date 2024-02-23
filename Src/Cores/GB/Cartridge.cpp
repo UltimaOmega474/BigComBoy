@@ -384,7 +384,7 @@ namespace GB
         counter &= mask;
     }
 
-    MBC3::MBC3(CartHeader &&header) : Cartridge(std::move(header)), eram() { eram.fill(0); }
+    MBC3::MBC3(CartHeader &&header) : Cartridge(std::move(header)) {}
 
     bool MBC3::has_rtc() const
     {
@@ -416,32 +416,21 @@ namespace GB
 
     void MBC3::init_banks(std::ifstream &rom_stream)
     {
-
         rom_stream.seekg(0, std::ios::end);
-        size_t rom_len = rom_stream.tellg();
+        auto rom_len = rom_stream.tellg();
         rom_stream.seekg(0);
 
-        auto itc = rom_len / 0x4000;
-        uint32_t offset = 0;
-        for (auto i = 0; i < itc; ++i)
-        {
-            std::vector<uint8_t> bank;
-            bank.resize(0x4000);
+        rom.resize(rom_len);
 
-            rom_stream.read(reinterpret_cast<char *>(bank.data()),
-                            static_cast<std::streamsize>(bank.size()));
-
-            bank_list.push_back(std::move(bank));
-            offset += 0x4000;
-        }
+        rom_stream.read(reinterpret_cast<char *>(rom.data()), rom_len);
     }
 
     uint8_t MBC3::read(uint16_t address)
     {
         if (address <= 0x3FFF)
-            return bank_list[0][address];
+            return rom[address];
 
-        return bank_list[rom_bank_num % bank_list.size()][address & 0x3FFF];
+        return rom[(rom_bank_num * 0x4000) + (address & 0x3FFF)];
     }
 
     void MBC3::write(uint16_t address, uint8_t value)
@@ -457,7 +446,7 @@ namespace GB
         case 0x2:
         case 0x3:
         {
-            rom_bank_num = value & 0x7F;
+            rom_bank_num = value; // MBC3 carts will access banks 1-7F, MBC30 1-FF
             if (rom_bank_num == 0)
                 rom_bank_num = 1;
             break;
@@ -491,6 +480,10 @@ namespace GB
         case 0x1:
         case 0x2:
         case 0x3:
+        case 0x4: // MBC30 carts will access banks 0-7
+        case 0x5:
+        case 0x6:
+        case 0x7:
         {
             if (ram_rtc_enabled)
                 return eram[(ram_rtc_select * 0x2000) + address];
@@ -527,38 +520,42 @@ namespace GB
     {
         switch (ram_rtc_select)
         {
-        case 0x00:
-        case 0x01:
-        case 0x02:
-        case 0x03:
+        case 0x0:
+        case 0x1:
+        case 0x2:
+        case 0x3:
+        case 0x4: // MBC30 carts will access banks 0-7
+        case 0x5:
+        case 0x6:
+        case 0x7:
         {
             if (ram_rtc_enabled)
                 eram[(ram_rtc_select * 0x2000) + address] = value;
             break;
         }
-        case 0x08:
+        case 0x8:
         {
             rtc_cycles = 0;
             rtc.seconds.set(value);
             break;
         }
-        case 0x09:
+        case 0x9:
         {
             rtc.minutes.set(value);
             break;
         }
-        case 0x0A:
+        case 0xA:
         {
             rtc.hours.set(value);
             break;
         }
-        case 0x0B:
+        case 0xB:
         {
             rtc.days &= ~0xFF;
             rtc.days |= value;
             break;
         }
-        case 0x0C:
+        case 0xC:
         {
             rtc_ctrl = value & 0xC0;
 
