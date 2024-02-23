@@ -136,35 +136,29 @@ namespace GB
 
     void MBC1::init_banks(std::ifstream &rom_stream)
     {
-
         rom_stream.seekg(0, std::ios::end);
-        size_t rom_len = rom_stream.tellg();
+        auto rom_len = rom_stream.tellg();
         rom_stream.seekg(0);
 
-        auto itc = rom_len / 0x4000;
-        uint32_t offset = 0;
-        for (auto i = 0; i < itc; ++i)
-        {
-            std::vector<uint8_t> bank;
-            bank.resize(0x4000);
+        rom.resize(rom_len);
 
-            rom_stream.read(reinterpret_cast<char *>(bank.data()),
-                            static_cast<std::streamsize>(bank.size()));
-
-            bank_list.push_back(std::move(bank));
-            offset += 0x4000;
-        }
+        rom_stream.read(reinterpret_cast<char *>(rom.data()), rom_len);
     }
 
     uint8_t MBC1::read(uint16_t address)
     {
         uint32_t bank_num = (bank_upper_bits << 5);
 
-        if (address <= 0x3FFF)
-            return bank_list[mode ? (bank_num % bank_list.size()) : 0][address];
+        if (address < 0x4000)
+        {
+            bank_num = bank_num % (rom.size() / 0x4000);
+            return rom[(mode ? (bank_num * 0x4000) : 0) + address];
+        }
 
         bank_num |= rom_bank_num;
-        return bank_list[bank_num % bank_list.size()][address & 0x3FFF];
+        bank_num = bank_num % (rom.size() / 0x4000);
+
+        return rom[(bank_num * 0x4000) + (address & 0x3FFF)];
     }
 
     void MBC1::write(uint16_t address, uint8_t value)
@@ -271,37 +265,29 @@ namespace GB
     void MBC2::init_banks(std::ifstream &rom_stream)
     {
         rom_stream.seekg(0, std::ios::end);
-        size_t rom_len = rom_stream.tellg();
+        auto rom_len = rom_stream.tellg();
         rom_stream.seekg(0);
 
-        auto itc = rom_len / 0x4000;
-        uint32_t offset = 0;
-        for (auto i = 0; i < itc; ++i)
-        {
-            std::vector<uint8_t> bank;
-            bank.resize(0x4000);
+        rom.resize(rom_len);
 
-            rom_stream.read(reinterpret_cast<char *>(bank.data()),
-                            static_cast<std::streamsize>(bank.size()));
-
-            bank_list.push_back(std::move(bank));
-            offset += 0x4000;
-        }
+        rom_stream.read(reinterpret_cast<char *>(rom.data()), rom_len);
     }
 
     uint8_t MBC2::read(uint16_t address)
     {
-        if (address <= 0x3FFF)
+        if (address < 0x4000)
         {
-            return bank_list[0][address];
+            return rom[address];
         }
 
-        return bank_list[rom_bank_num % bank_list.size()][address & 0x3FFF];
+        auto bank = rom_bank_num % (rom.size() / 0x4000);
+
+        return rom[(bank * 0x4000) + (address & 0x3FFF)];
     }
 
     void MBC2::write(uint16_t address, uint8_t value)
     {
-        if (address <= 0x3FFF)
+        if (address < 0x4000)
         {
             if (address & 0x100)
             {
@@ -427,7 +413,7 @@ namespace GB
 
     uint8_t MBC3::read(uint16_t address)
     {
-        if (address <= 0x3FFF)
+        if (address < 0x4000)
             return rom[address];
 
         return rom[(rom_bank_num * 0x4000) + (address & 0x3FFF)];

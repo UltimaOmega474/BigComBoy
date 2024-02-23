@@ -115,7 +115,7 @@ namespace GB
 
         bool ram_enabled = false;
         std::array<uint8_t, 32768> eram{};
-        std::vector<std::vector<uint8_t>> bank_list;
+        std::vector<uint8_t> rom{};
 
     public:
         MBC1(CartHeader &&header);
@@ -138,7 +138,7 @@ namespace GB
         uint16_t rom_bank_num = 1;
         bool ram_enabled = false;
         std::array<uint8_t, 512> ram{};
-        std::vector<std::vector<uint8_t>> bank_list;
+        std::vector<uint8_t> rom{};
 
     public:
         MBC2(CartHeader &&header);
