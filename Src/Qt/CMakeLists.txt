@@ -38,11 +38,11 @@ if(APPLE)
 	)
 
 elseif(WIN32)
-	# set(APP_ICON_RESOURCE_WINDOWS ${CMAKE_SOURCE_DIR}/Icons/Windows/bcb.rc)
+	set(APP_ICON_RESOURCE_WINDOWS ${CMAKE_SOURCE_DIR}/Icons/Windows/bcb.rc)
 	qt_add_executable(BigComBoy
 		${QT_SOURCES}
 
-		# ${APP_ICON_RESOURCE_WINDOWS}
+		${APP_ICON_RESOURCE_WINDOWS}
 	)
 else()
 	qt_add_executable(BigComBoy
