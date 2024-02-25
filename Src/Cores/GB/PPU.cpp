@@ -57,7 +57,7 @@ namespace GB
 
     void PPU::set_post_boot_state()
     {
-        window_draw_flag = true;
+        //   window_draw_flag = true;
         previously_disabled = false;
         //    cycles = 420;
         status = 1;
@@ -85,6 +85,9 @@ namespace GB
 
         while (accumulated_cycles)
         {
+
+            if (window_y == line_y)
+                window_draw_flag = true;
 
             switch (mode)
             {
@@ -171,15 +174,19 @@ namespace GB
 
             case PPUState::DrawScanline:
             {
-
                 if (cycles == 172 + penalty)
                 {
                     cycles = 0;
 
                     mode = PPUState::HBlank;
 
+                    if (fetcher.mode == FetchMode::Window)
+                        window_line_y++;
+
                     if (check_stat(EnableHBlankInt) && allow_interrupt)
                         bus.request_interrupt(INT_LCD_STAT_BIT);
+
+                    continue;
                 }
                 else
                 {
@@ -194,9 +201,6 @@ namespace GB
         }
 
         check_ly_lyc(allow_interrupt);
-
-        if (window_y == line_y)
-            window_draw_flag = true;
 
         set_stat(ModeFlag, false);
         status |= mode & 0x03;
@@ -296,8 +300,21 @@ namespace GB
         if ((write_x < 160) && (bg_fifo.shift_count > 0))
         {
             clock_fifo();
-            write_x++;
             bg_fifo.shift_count--;
+            write_x++;
+        }
+
+        if ((lcd_control & LCDControlFlags::WindowEnable) && window_draw_flag &&
+            (write_x >= (window_x - 7)) && fetcher.mode == FetchMode::Background)
+        {
+            fetcher.x_pos = 0;
+            fetcher.mode = FetchMode::Window;
+            fetcher.state = FetchState::ID;
+            fetcher.substep = 0;
+            bg_fifo.pixels_high = 0;
+            bg_fifo.pixels_low = 0;
+            bg_fifo.shift_count = 0;
+            penalty += 6;
         }
     }
 
@@ -334,8 +351,10 @@ namespace GB
             {
                 address |= ((lcd_control & LCDControlFlags::WindowTileMap) ? 1 : 0) << 10;
 
-                uint16_t xoffset = (fetcher.x_pos) / 8;
-                uint16_t yoffset = (window_line_y) / 8;
+                uint16_t xoffset = ((fetcher.x_pos) / 8) & 31;
+                uint16_t yoffset = ((window_line_y) / 8) & 31;
+                xoffset &= 0x3FF;
+                yoffset &= 0x3FF;
 
                 address |= xoffset;
                 address |= (yoffset << 5);
@@ -441,7 +460,6 @@ namespace GB
         switch (fetcher.mode)
         {
         case FetchMode::Background:
-        case FetchMode::Window:
         {
             if (bg_fifo.shift_count)
             {
@@ -463,6 +481,18 @@ namespace GB
                 penalty += scx;
             }
 
+            break;
+        }
+        case FetchMode::Window:
+        {
+            if (bg_fifo.shift_count)
+            {
+                return;
+            }
+            fetcher.x_pos += 8;
+            bg_fifo.pixels_low = fetcher.queued_pixels_low;
+            bg_fifo.pixels_high = fetcher.queued_pixels_high;
+            bg_fifo.shift_count = 8;
             break;
         }
         case FetchMode::OBJ:
@@ -493,14 +523,22 @@ namespace GB
 
         std::array<uint8_t, 4> color = color_table[(background_palette >> (int)(2 * pixel)) & 3];
 
-        if (!(lcd_control & LCDControlFlags::BGEnable) ||
-            !(render_flags & DisplayRenderFlags::Background))
+        if (fetcher.mode == FetchMode::Background)
         {
-            color = color_table[(background_palette) & 3];
-            bg_color_table[framebuffer_line_y + write_x] = 0;
+            if (!(lcd_control & LCDControlFlags::BGEnable) ||
+                !(render_flags & DisplayRenderFlags::Background))
+            {
+                color = color_table[(background_palette) & 3];
+                bg_color_table[framebuffer_line_y + write_x] = 0;
+            }
+            else
+            {
+                bg_color_table[framebuffer_line_y + write_x] = pixel;
+            }
         }
         else
         {
+            //    framebuffer_line_y = window_line_y * LCD_WIDTH;
             bg_color_table[framebuffer_line_y + write_x] = pixel;
         }
 
