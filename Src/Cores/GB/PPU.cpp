@@ -81,10 +81,9 @@ namespace GB
             previously_disabled = false;
         }
 
-        bool allow_interrupt = stat_any() ? false : true;
-
         while (accumulated_cycles)
         {
+            bool allow_interrupt = stat_any() ? false : true;
 
             if (window_y == line_y)
                 window_draw_flag = true;
@@ -198,12 +197,12 @@ namespace GB
 
             accumulated_cycles--;
             cycles++;
+
+            check_ly_lyc(allow_interrupt);
+
+            set_stat(ModeFlag, false);
+            status |= mode & 0x03;
         }
-
-        check_ly_lyc(allow_interrupt);
-
-        set_stat(ModeFlag, false);
-        status |= mode & 0x03;
     }
 
     void PPU::write_vram(uint16_t address, uint8_t value) { vram[address] = value; }
@@ -330,20 +329,15 @@ namespace GB
             {
             case FetchMode::Background:
             {
+                address |= ((lcd_control & LCDControlFlags::BGTileMap) ? 1 : 0) << 10;
 
-                if (true)
-                {
-                    address |= ((lcd_control & LCDControlFlags::BGTileMap) ? 1 : 0) << 10;
+                uint16_t xoffset = ((fetcher.x_pos / 8) + (screen_scroll_x / 8)) & 31;
+                uint16_t yoffset = ((line_y + screen_scroll_y) / 8) & 31;
+                xoffset &= 0x3FF;
+                yoffset &= 0x3FF;
 
-                    uint16_t true_x = (fetcher.x_pos) / 8;
-
-                    uint16_t xoffset = (true_x + (screen_scroll_x / 8)) & 31;
-                    uint16_t yoffset = ((line_y + screen_scroll_y) / 8) & 31;
-                    xoffset &= 0x3FF;
-                    yoffset &= 0x3FF;
-                    address |= xoffset;
-                    address |= (yoffset << 5);
-                }
+                address |= xoffset;
+                address |= (yoffset << 5);
 
                 break;
             }
@@ -366,6 +360,7 @@ namespace GB
                 return;
             }
             }
+
             fetcher.address = address & 0x1FFF;
             fetcher.substep++;
             break;
