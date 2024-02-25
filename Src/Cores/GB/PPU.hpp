@@ -78,6 +78,48 @@ namespace GB
         uint8_t attributes = 0;
     };
 
+    class BackgroundFIFO
+    {
+    public:
+        uint8_t shift_count = 0;
+        uint8_t pixels_low = 0, pixels_high = 0;
+    };
+
+    class ObjectFIFO
+    {
+    public:
+        uint8_t shift_count = 0;
+        uint8_t pixels_low = 0, pixels_high = 0;
+        uint8_t palette = 0, priority = 0;
+    };
+
+    enum class FetchState
+    {
+        Idle,
+        ID,
+        TileLow,
+        TileHigh,
+        Push,
+    };
+    enum class FetchMode
+    {
+        Background,
+        Window,
+        OBJ,
+    };
+
+    class Fetcher
+    {
+    public:
+        FetchState state = FetchState::Idle;
+        FetchMode mode = FetchMode::Background;
+        uint8_t substep = 0;
+        uint16_t x_pos = 0;
+        uint8_t tile_id = 0;
+        uint16_t address = 0;
+        uint8_t queued_pixels_low = 0, queued_pixels_high = 0;
+    };
+
     class PPU
     {
         MainBus &bus;
@@ -88,13 +130,17 @@ namespace GB
         uint8_t lcd_control = 0, status = 0;
         uint8_t screen_scroll_y = 0, screen_scroll_x = 0;
         uint8_t line_y = 0, line_y_compare = 0;
+        uint8_t write_x = 0;
         uint8_t window_y = 0, window_x = 0;
         uint8_t window_line_y = 0, background_palette = 0;
         uint8_t object_palette_0 = 0, object_palette_1 = 0;
         uint8_t render_flags = DisplayRenderFlags::Background | DisplayRenderFlags::Window |
                                DisplayRenderFlags::Objects;
         PPUState mode = PPUState::HBlank;
-        uint32_t cycles = 0;
+
+        bool first_fetch = true, should_discard = true;
+        uint32_t cycles = 0, penalty = 0;
+
         std::array<uint8_t, 8193> vram{};
         std::array<uint8_t, 256> oam{};
         std::array<Object, 10> objects_on_scanline{};
@@ -103,6 +149,10 @@ namespace GB
         std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT * 4> framebuffer{};
         std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT * 4> framebuffer_complete{};
         std::array<std::array<uint8_t, 4>, 4> color_table = LCD_GRAY_PALETTE;
+
+        Fetcher fetcher;
+        BackgroundFIFO bg_fifo;
+        ObjectFIFO obj_fifo;
 
         PPU(MainBus &bus);
 
@@ -122,10 +172,13 @@ namespace GB
 
     private:
         void render_scanline();
-        void render_bg_layer();
-        void render_window_layer();
+
+        void get_tile_id();
+        void get_tile_data(uint8_t bit_plane);
+        void push_pixels();
+        void clock_fifo();
+
         void scan_oam();
-        void render_sprite_layer();
         void check_ly_lyc(bool allow_interrupts);
     };
 }

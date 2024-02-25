@@ -59,7 +59,7 @@ namespace GB
     {
         window_draw_flag = true;
         previously_disabled = false;
-        cycles = 420;
+        //    cycles = 420;
         status = 1;
         lcd_control = 0x91;
     }
@@ -81,88 +81,116 @@ namespace GB
             previously_disabled = false;
         }
 
-        cycles += accumulated_cycles;
         bool allow_interrupt = stat_any() ? false : true;
 
-        switch (mode)
+        while (accumulated_cycles)
         {
 
-        case PPUState::HBlank:
-        {
-            if (cycles >= 204)
+            switch (mode)
             {
-                cycles -= 204;
-                ++line_y;
 
-                if (line_y == 144)
+            case PPUState::HBlank:
+            {
+                if (cycles == (204 - penalty))
                 {
-                    mode = PPUState::VBlank;
+                    cycles = 0;
+                    ++line_y;
 
-                    bus.request_interrupt(INT_VBLANK_BIT);
-                    if (check_stat(EnableVBlankInt) && allow_interrupt)
+                    write_x = 0;
+
+                    if (line_y == 144)
+                    {
+                        mode = PPUState::VBlank;
+
+                        bus.request_interrupt(INT_VBLANK_BIT);
+                        if (check_stat(EnableVBlankInt) && allow_interrupt)
+                            bus.request_interrupt(INT_LCD_STAT_BIT);
+                    }
+                    else
+                    {
+
+                        mode = PPUState::OAMSearch;
+
+                        if (check_stat(EnableOAMInt) && allow_interrupt)
+                            bus.request_interrupt(INT_LCD_STAT_BIT);
+                    }
+
+                    continue;
+                }
+                break;
+            }
+
+            case PPUState::VBlank:
+            {
+                if (cycles == 456)
+                {
+                    ++line_y;
+                    cycles = 0;
+
+                    if (line_y > 153)
+                    {
+                        framebuffer_complete = framebuffer;
+                        mode = PPUState::OAMSearch;
+
+                        if (check_stat(EnableOAMInt) && allow_interrupt)
+                            bus.request_interrupt(INT_LCD_STAT_BIT);
+
+                        line_y = 0;
+                        window_line_y = 0;
+                        window_draw_flag = false;
+
+                        continue;
+                    }
+                }
+                break;
+            }
+
+            case PPUState::OAMSearch:
+            {
+                if (cycles == 80)
+                {
+                    scan_oam();
+                    cycles = 0;
+
+                    mode = PPUState::DrawScanline;
+                    bg_fifo.pixels_high = 0;
+                    bg_fifo.pixels_high = 0;
+                    bg_fifo.shift_count = 0;
+                    penalty = 0;
+                    first_fetch = true;
+                    should_discard = true;
+                    fetcher.mode = FetchMode::Background;
+                    fetcher.state = FetchState::ID;
+                    fetcher.substep = 0;
+                    fetcher.x_pos = 0;
+                    continue;
+                }
+
+                break;
+            }
+
+            case PPUState::DrawScanline:
+            {
+
+                if (cycles == 172 + penalty)
+                {
+                    cycles = 0;
+
+                    mode = PPUState::HBlank;
+
+                    if (check_stat(EnableHBlankInt) && allow_interrupt)
                         bus.request_interrupt(INT_LCD_STAT_BIT);
                 }
                 else
                 {
-
-                    mode = PPUState::OAMSearch;
-
-                    if (check_stat(EnableOAMInt) && allow_interrupt)
-                        bus.request_interrupt(INT_LCD_STAT_BIT);
+                    render_scanline();
                 }
-            }
-            break;
-        }
-
-        case PPUState::VBlank:
-        {
-            if (cycles >= 456)
-            {
-                ++line_y;
-                cycles -= 456;
-
-                if (line_y > 153)
-                {
-                    framebuffer_complete = framebuffer;
-                    mode = PPUState::OAMSearch;
-                    if (check_stat(EnableOAMInt) && allow_interrupt)
-                        bus.request_interrupt(INT_LCD_STAT_BIT);
-
-                    line_y = 0;
-                    window_line_y = 0;
-                    window_draw_flag = false;
-                }
-            }
-            break;
-        }
-
-        case PPUState::OAMSearch:
-        {
-            if (cycles >= 80)
-            {
-                scan_oam();
-                cycles -= 80;
-                mode = PPUState::DrawScanline;
                 break;
             }
-
-            break;
-        }
-
-        case PPUState::DrawScanline:
-        {
-            if (cycles >= 172)
-            {
-                cycles -= 172;
-                mode = PPUState::HBlank;
-
-                if (check_stat(EnableHBlankInt) && allow_interrupt)
-                    bus.request_interrupt(INT_LCD_STAT_BIT);
-
-                render_scanline();
             }
-            break;
-        }
+
+            accumulated_cycles--;
+            cycles++;
         }
 
         check_ly_lyc(allow_interrupt);
@@ -236,115 +264,250 @@ namespace GB
 
     void PPU::render_scanline()
     {
-        render_bg_layer();
-        if (render_flags & DisplayRenderFlags::Window)
-            render_window_layer();
-        if (render_flags & DisplayRenderFlags::Objects)
-            render_sprite_layer();
-    }
-
-    void PPU::render_bg_layer()
-    {
-        uint16_t tile_map_address = (lcd_control & LCDControlFlags::BGTileMap) ? 0x9c00 : 0x9800;
-        uint16_t tile_data_address =
-            (lcd_control & LCDControlFlags::BGWindowTileData) ? 0x8000 : 0x8800;
-
-        for (uint8_t i = 0; i < 160; ++i)
+        switch (fetcher.state)
         {
-            uint8_t x_offset = screen_scroll_x + i;
-            uint8_t y_offset = screen_scroll_y + line_y;
-            uint8_t tile_id = vram[(tile_map_address & 0x1FFF) + ((x_offset / 8) & 31) +
-                                   (((y_offset / 8) & 31) * 32)];
-            uint16_t tile_index = 0;
+        case FetchState::Idle:
+        {
+            fetcher.state = FetchState::ID;
+            return;
+        }
+        case FetchState::ID:
+        {
+            get_tile_id();
+            break;
+        }
+        case FetchState::TileLow:
+        {
+            get_tile_data(0);
+            break;
+        }
+        case FetchState::TileHigh:
+        {
+            get_tile_data(1);
+            break;
+        }
+        case FetchState::Push:
+        {
+            push_pixels();
+            break;
+        }
+        }
 
-            if (tile_data_address == 0x8800)
-                tile_index = ((tile_data_address + 0x800) & 0x1FFF) + (((int8_t)tile_id) * 16) +
-                             ((y_offset & 7) * 2);
-            else
-                tile_index = (tile_data_address & 0x1FFF) + (tile_id * 16) + ((y_offset & 7) * 2);
-
-            uint8_t low_byte = vram[tile_index];
-            uint8_t high_byte = vram[tile_index + 1];
-            uint8_t bit = 7 - (x_offset & 7);
-            uint8_t low_bit = (low_byte >> bit) & 0x01;
-            uint8_t high_bit = (high_byte >> bit) & 0x01;
-            uint8_t pixel = (high_bit << 1) | low_bit;
-
-            size_t framebuffer_line_x = i;
-            size_t framebuffer_line_y = line_y * LCD_WIDTH;
-
-            std::array<uint8_t, 4> color =
-                color_table[(background_palette >> (int)(2 * pixel)) & 3];
-
-            if (!(lcd_control & LCDControlFlags::BGEnable) ||
-                !(render_flags & DisplayRenderFlags::Background))
-            {
-                color = color_table[(background_palette) & 3];
-                bg_color_table[framebuffer_line_y + i] = 0;
-            }
-            else
-            {
-                bg_color_table[framebuffer_line_y + i] = pixel;
-            }
-
-            auto fb_pixel = std::span<uint8_t>{
-                &framebuffer[(framebuffer_line_y + framebuffer_line_x) * COLOR_DEPTH], 4};
-
-            std::copy(color.begin(), color.end(), fb_pixel.begin());
+        if ((write_x < 160) && (bg_fifo.shift_count > 0))
+        {
+            clock_fifo();
+            write_x++;
+            bg_fifo.shift_count--;
         }
     }
 
-    void PPU::render_window_layer()
+    void PPU::get_tile_id()
     {
-        uint16_t tile_map_address =
-            (lcd_control & LCDControlFlags::WindowTileMap) ? 0x9c00 : 0x9800;
-        uint16_t tile_data_address =
-            (lcd_control & LCDControlFlags::BGWindowTileData) ? 0x8000 : 0x8800;
-        uint8_t advance_by = 0;
-        if ((lcd_control & LCDControlFlags::WindowEnable) && window_draw_flag &&
-            (render_flags & DisplayRenderFlags::Window))
+        switch (fetcher.substep)
         {
-            for (uint8_t i = 0; i < LCD_WIDTH; ++i)
+        case 0:
+        {
+            uint16_t address = 0b10011 << 11;
+
+            switch (fetcher.mode)
             {
-                if (line_y >= window_y && i >= (window_x - 7))
+            case FetchMode::Background:
+            {
+
+                if (true)
                 {
-                    uint8_t x_offset = (i - (window_x - 7));
-                    uint8_t y_offset = window_line_y;
-                    uint8_t tile_id = vram[(tile_map_address & 0x1FFF) + ((x_offset / 8) & 31) +
-                                           (((y_offset / 8) & 31) * 32)];
-                    uint16_t tile_index = 0;
+                    address |= ((lcd_control & LCDControlFlags::BGTileMap) ? 1 : 0) << 10;
 
-                    if (tile_data_address == 0x8800)
-                        tile_index = ((tile_data_address + 0x800) & 0x1FFF) +
-                                     (((int8_t)tile_id) * 16) + ((y_offset & 7) * 2);
-                    else
-                        tile_index =
-                            (tile_data_address & 0x1FFF) + (tile_id * 16) + ((y_offset & 7) * 2);
+                    uint16_t true_x = (fetcher.x_pos) / 8;
 
-                    uint8_t low_byte = vram[tile_index];
-                    uint8_t high_byte = vram[tile_index + 1];
-                    uint8_t bit = 7 - (x_offset & 7);
-                    uint8_t low_bit = (low_byte >> bit) & 0x01;
-                    uint8_t high_bit = (high_byte >> bit) & 0x01;
-                    uint8_t pixel = (high_bit << 1) | low_bit;
+                    uint16_t xoffset = (true_x + (screen_scroll_x / 8)) & 31;
+                    uint16_t yoffset = ((line_y + screen_scroll_y) / 8) & 31;
+                    xoffset &= 0x3FF;
+                    yoffset &= 0x3FF;
+                    address |= xoffset;
+                    address |= (yoffset << 5);
+                }
 
-                    size_t framebuffer_line_x = i;
-                    size_t framebuffer_line_y = line_y * LCD_WIDTH;
-                    advance_by = 1;
+                break;
+            }
+            case FetchMode::Window:
+            {
+                address |= ((lcd_control & LCDControlFlags::WindowTileMap) ? 1 : 0) << 10;
 
-                    bg_color_table[framebuffer_line_y + framebuffer_line_x] = pixel;
+                uint16_t xoffset = (fetcher.x_pos) / 8;
+                uint16_t yoffset = (window_line_y) / 8;
 
-                    std::array<uint8_t, 4> color =
-                        color_table[(background_palette >> (int)(2 * pixel)) & 3];
-                    auto fb_pixel = std::span<uint8_t>{
-                        &framebuffer[(framebuffer_line_y + framebuffer_line_x) * COLOR_DEPTH], 4};
+                address |= xoffset;
+                address |= (yoffset << 5);
 
-                    std::copy(color.begin(), color.end(), fb_pixel.begin());
+                break;
+            }
+            default:
+            {
+                return;
+            }
+            }
+            fetcher.address = address & 0x1FFF;
+            fetcher.substep++;
+            break;
+        }
+
+        case 1:
+        {
+            fetcher.tile_id = vram[fetcher.address];
+            fetcher.state = FetchState::TileLow;
+
+            fetcher.substep = 0;
+            break;
+        }
+        }
+    }
+
+    void PPU::get_tile_data(uint8_t bit_plane)
+    {
+        switch (fetcher.substep)
+        {
+        // compute address
+        case 0:
+        {
+            uint16_t address = (0b1 << 15) + bit_plane;
+
+            switch (fetcher.mode)
+            {
+            case FetchMode::Background:
+            {
+                uint16_t bit12 = !((lcd_control & LCDControlFlags::BGWindowTileData) ||
+                                   (fetcher.tile_id & 0x80));
+                uint16_t yoffset = (line_y + screen_scroll_y) & 7;
+
+                address |= bit12 ? (1 << 12) : 0;
+                address |= fetcher.tile_id << 4;
+                address |= (yoffset << 1);
+
+                break;
+            }
+            case FetchMode::Window:
+            {
+                uint16_t bit12 = !((lcd_control & LCDControlFlags::BGWindowTileData) ||
+                                   (fetcher.tile_id & 0x80));
+                uint16_t yoffset = window_line_y & 7;
+
+                address |= bit12 ? (1 << 12) : 0;
+                address |= fetcher.tile_id << 4;
+                address |= (yoffset << 1);
+
+                break;
+            }
+            default:
+            {
+                return;
+            }
+            }
+
+            fetcher.address = address & 0x1FFF;
+            fetcher.substep++;
+            break;
+        }
+
+        // read from address
+        case 1:
+        {
+            fetcher.substep = 0;
+
+            if (bit_plane == 1)
+            {
+                fetcher.state = FetchState::Push;
+                fetcher.queued_pixels_high = vram[fetcher.address];
+
+                if (first_fetch)
+                {
+                    fetcher.state = FetchState::ID;
+                    first_fetch = false;
                 }
             }
+            else
+            {
+                fetcher.state = FetchState::TileHigh;
+                fetcher.queued_pixels_low = vram[fetcher.address];
+            }
+
+            break;
+        }
+        }
+    }
+
+    void PPU::push_pixels()
+    {
+        switch (fetcher.mode)
+        {
+        case FetchMode::Background:
+        case FetchMode::Window:
+        {
+            if (bg_fifo.shift_count)
+            {
+                return;
+            }
+            fetcher.x_pos += 8;
+            bg_fifo.pixels_low = fetcher.queued_pixels_low;
+            bg_fifo.pixels_high = fetcher.queued_pixels_high;
+            bg_fifo.shift_count = 8;
+
+            if (should_discard)
+            {
+                should_discard = false;
+                auto scx = screen_scroll_x & 7;
+
+                bg_fifo.pixels_low <<= scx;
+                bg_fifo.pixels_high <<= scx;
+                bg_fifo.shift_count -= scx;
+                penalty += scx;
+            }
+
+            break;
+        }
+        case FetchMode::OBJ:
+        {
+
+            break;
+        }
         }
 
-        window_line_y += advance_by;
+        fetcher.state = FetchState::ID;
+        fetcher.substep = 0;
+        fetcher.address = 0;
+        fetcher.tile_id = 0;
+        fetcher.queued_pixels_low = 0;
+        fetcher.queued_pixels_high = 0;
+    }
+
+    void PPU::clock_fifo()
+    {
+        uint8_t low_bit = (bg_fifo.pixels_low >> 7) & 0x1;
+        uint8_t high_bit = (bg_fifo.pixels_high >> 7) & 0x1;
+        uint8_t pixel = (high_bit << 1) | (low_bit);
+
+        bg_fifo.pixels_low <<= 1;
+        bg_fifo.pixels_high <<= 1;
+
+        size_t framebuffer_line_y = line_y * LCD_WIDTH;
+
+        std::array<uint8_t, 4> color = color_table[(background_palette >> (int)(2 * pixel)) & 3];
+
+        if (!(lcd_control & LCDControlFlags::BGEnable) ||
+            !(render_flags & DisplayRenderFlags::Background))
+        {
+            color = color_table[(background_palette) & 3];
+            bg_color_table[framebuffer_line_y + write_x] = 0;
+        }
+        else
+        {
+            bg_color_table[framebuffer_line_y + write_x] = pixel;
+        }
+
+        auto fb_pixel =
+            std::span<uint8_t>{&framebuffer[(framebuffer_line_y + write_x) * COLOR_DEPTH], 4};
+
+        std::copy(color.begin(), color.end(), fb_pixel.begin());
     }
 
     void PPU::scan_oam()
@@ -373,89 +536,6 @@ namespace GB
         std::stable_sort(
             objects_on_scanline.begin(), objects_on_scanline.begin() + num_obj_on_scanline,
             [=](const Object &left, const Object &right) { return (left.x) < (right.x); });
-    }
-
-    void PPU::render_sprite_layer()
-    {
-        uint8_t height = (lcd_control & LCDControlFlags::SpriteSize) ? 16 : 8;
-
-        if ((lcd_control & LCDControlFlags::SpriteEnable) &&
-            (render_flags & DisplayRenderFlags::Objects))
-        {
-            for (auto i = 0; i < num_obj_on_scanline; ++i)
-            {
-                auto &object = objects_on_scanline[(num_obj_on_scanline - 1) - i];
-
-                uint8_t palette = (object.attributes & ObjectAttributeFlags::Palette)
-                                      ? object_palette_1
-                                      : object_palette_0;
-                uint16_t tile_index = 0;
-
-                if (height == 16)
-                    object.tile &= ~1;
-
-                int16_t obj_y = (int16_t)object.y - 16;
-
-                if (object.attributes & ObjectAttributeFlags::FlipY)
-                    tile_index = (0x8000 & 0x1FFF) + (object.tile * 16) +
-                                 ((height - (line_y - obj_y) - 1) * 2);
-                else
-                    tile_index =
-                        (0x8000 & 0x1FFF) + (object.tile * 16) + ((line_y - obj_y) % height * 2);
-
-                int16_t adjusted_x = (int16_t)object.x - 8;
-                size_t framebuffer_line_y = line_y * LCD_WIDTH;
-
-                for (auto x = 0; x < 8; ++x)
-                {
-                    size_t framebuffer_line_x = adjusted_x + x;
-
-                    if (framebuffer_line_x >= 0 && framebuffer_line_x < 160)
-                    {
-                        uint8_t low_byte = vram[tile_index];
-                        uint8_t high_byte = vram[tile_index + 1];
-                        uint8_t bit = 7 - (x & 7);
-
-                        if (object.attributes & ObjectAttributeFlags::FlipX)
-                            bit = x & 7;
-
-                        uint8_t low_bit = (low_byte >> bit) & 0x01;
-                        uint8_t high_bit = (high_byte >> bit) & 0x01;
-                        uint8_t pixel = (high_bit << 1) | low_bit;
-
-                        if (pixel == 0)
-                            continue;
-
-                        if (!(object.attributes & ObjectAttributeFlags::Priority))
-                        {
-                            std::array<uint8_t, 4> color =
-                                color_table[(palette >> (int)(2 * pixel)) & 3];
-                            auto fb_pixel = std::span<uint8_t>{
-                                &framebuffer[(framebuffer_line_y + framebuffer_line_x) *
-                                             COLOR_DEPTH],
-                                4};
-
-                            std::copy(color.begin(), color.end(), fb_pixel.begin());
-                        }
-                        else
-                        {
-                            if (bg_color_table[framebuffer_line_y + framebuffer_line_x] == 0)
-                            {
-
-                                std::array<uint8_t, 4> color =
-                                    color_table[(palette >> (int)(2 * pixel)) & 3];
-                                auto fb_pixel = std::span<uint8_t>{
-                                    &framebuffer[(framebuffer_line_y + framebuffer_line_x) *
-                                                 COLOR_DEPTH],
-                                    4};
-
-                                std::copy(color.begin(), color.end(), fb_pixel.begin());
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 
     void PPU::check_ly_lyc(bool allow_interrupts)
