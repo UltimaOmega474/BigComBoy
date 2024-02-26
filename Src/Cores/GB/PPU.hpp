@@ -24,6 +24,7 @@
 namespace GB
 {
     class MainBus;
+    class PPU;
 
     enum PPUState
     {
@@ -70,6 +71,20 @@ namespace GB
         Objects = 0x4,
     };
 
+    enum class FetchState
+    {
+        GetTileID,
+        TileLow,
+        TileHigh,
+        Push,
+    };
+
+    enum class FetchMode
+    {
+        Background,
+        Window,
+    };
+
     struct Object
     {
         uint8_t y = 0;
@@ -80,44 +95,47 @@ namespace GB
 
     class BackgroundFIFO
     {
-    public:
         uint8_t shift_count = 0;
         uint8_t pixels_low = 0, pixels_high = 0;
+
+    public:
+        bool empty() const;
+
+        void clear();
+        void load(uint8_t low, uint8_t high);
+        void force_shift(uint8_t amount);
+        uint8_t clock();
     };
 
     class ObjectFIFO
     {
-    public:
         uint8_t shift_count = 0;
         uint8_t pixels_low = 0, pixels_high = 0;
         uint8_t palette = 0, priority = 0;
-    };
 
-    enum class FetchState
-    {
-        Idle,
-        ID,
-        TileLow,
-        TileHigh,
-        Push,
-    };
-    enum class FetchMode
-    {
-        Background,
-        Window,
-        OBJ,
-    };
-
-    class Fetcher
-    {
     public:
-        FetchState state = FetchState::Idle;
-        FetchMode mode = FetchMode::Background;
-        uint8_t substep = 0;
-        uint16_t x_pos = 0;
-        uint8_t tile_id = 0;
-        uint16_t address = 0;
+        void clear();
+        uint8_t clock();
+    };
+
+    class BackgroundFetcher
+    {
+        bool first_fetch = true;
+        uint8_t substep = 0, tile_id = 0;
         uint8_t queued_pixels_low = 0, queued_pixels_high = 0;
+        uint16_t x_pos = 0, address = 0;
+
+        FetchState state = FetchState::GetTileID;
+        FetchMode mode = FetchMode::Background;
+
+    public:
+        FetchMode get_mode() const;
+        void reset();
+        void clear_with_mode(FetchMode new_mode);
+        void clock(PPU &ppu);
+        void get_tile_id(PPU &ppu);
+        void get_tile_data(PPU &ppu, uint8_t bit_plane);
+        void push_pixels(PPU &ppu);
     };
 
     class PPU
@@ -138,8 +156,7 @@ namespace GB
                                DisplayRenderFlags::Objects;
         PPUState mode = PPUState::HBlank;
 
-        bool first_fetch = true, should_discard = true;
-        uint32_t cycles = 0, penalty = 0;
+        uint32_t cycles = 0, extra_cycles = 0;
 
         std::array<uint8_t, 8193> vram{};
         std::array<uint8_t, 256> oam{};
@@ -150,7 +167,7 @@ namespace GB
         std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT * 4> framebuffer_complete{};
         std::array<std::array<uint8_t, 4>, 4> color_table = LCD_GRAY_PALETTE;
 
-        Fetcher fetcher;
+        BackgroundFetcher fetcher;
         BackgroundFIFO bg_fifo;
         ObjectFIFO obj_fifo;
 
@@ -172,13 +189,10 @@ namespace GB
 
     private:
         void render_scanline();
-
-        void get_tile_id();
-        void get_tile_data(uint8_t bit_plane);
-        void push_pixels();
-        void clock_fifo();
+        void plot_pixel(uint8_t bg_pixel);
 
         void scan_oam();
         void check_ly_lyc(bool allow_interrupts);
     };
+
 }

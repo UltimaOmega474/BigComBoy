@@ -23,6 +23,259 @@
 
 namespace GB
 {
+    bool BackgroundFIFO::empty() const { return shift_count == 0; }
+
+    void BackgroundFIFO::clear()
+    {
+        shift_count = 0;
+        pixels_low = 0;
+        pixels_high = 0;
+    }
+
+    void BackgroundFIFO::load(uint8_t low, uint8_t high)
+    {
+        pixels_low = low;
+        pixels_high = high;
+        shift_count = 8;
+    }
+
+    void BackgroundFIFO::force_shift(uint8_t amount)
+    {
+        pixels_low <<= amount;
+        pixels_high <<= amount;
+        shift_count -= amount;
+    }
+
+    uint8_t BackgroundFIFO::clock()
+    {
+        uint8_t low_bit = (pixels_low >> 7) & 0x1;
+        uint8_t high_bit = (pixels_high >> 7) & 0x1;
+        uint8_t pixel = (high_bit << 1) | (low_bit);
+
+        pixels_low <<= 1;
+        pixels_high <<= 1;
+
+        shift_count--;
+        return pixel;
+    }
+
+    void ObjectFIFO::clear()
+    {
+        shift_count = 0;
+        pixels_low = 0;
+        pixels_high = 0;
+        palette = 0;
+        priority = 0;
+    }
+
+    uint8_t ObjectFIFO::clock()
+    {
+        uint8_t low_bit = (pixels_low >> 7) & 0x1;
+        uint8_t high_bit = (pixels_high >> 7) & 0x1;
+        uint8_t pixel = (high_bit << 1) | (low_bit);
+
+        pixels_low <<= 1;
+        pixels_high <<= 1;
+
+        shift_count--;
+        return pixel;
+    }
+
+    FetchMode BackgroundFetcher::get_mode() const { return mode; }
+
+    void BackgroundFetcher::reset()
+    {
+        first_fetch = true;
+        clear_with_mode(FetchMode::Background);
+    }
+
+    void BackgroundFetcher::clear_with_mode(FetchMode new_mode)
+    {
+        substep = 0;
+        tile_id = 0;
+        queued_pixels_low = 0;
+        queued_pixels_high = 0;
+        x_pos = 0;
+        address = 0;
+        state = FetchState::GetTileID;
+        mode = new_mode;
+    }
+
+    void BackgroundFetcher::clock(PPU &ppu)
+    {
+        switch (state)
+        {
+        case FetchState::GetTileID:
+        {
+            get_tile_id(ppu);
+            break;
+        }
+        case FetchState::TileLow:
+        {
+            get_tile_data(ppu, 0);
+            break;
+        }
+        case FetchState::TileHigh:
+        {
+            get_tile_data(ppu, 1);
+            break;
+        }
+        case FetchState::Push:
+        {
+            push_pixels(ppu);
+            break;
+        }
+        }
+    }
+
+    void BackgroundFetcher::get_tile_id(PPU &ppu)
+    {
+        switch (substep)
+        {
+        case 0:
+        {
+            uint16_t computed_address = 0b10011 << 11;
+
+            switch (mode)
+            {
+            case FetchMode::Background:
+            {
+                computed_address |= ((ppu.lcd_control & LCDControlFlags::BGTileMap) ? 1 : 0) << 10;
+
+                uint16_t xoffset = ((x_pos / 8) + (ppu.screen_scroll_x / 8)) & 31;
+                uint16_t yoffset = ((ppu.line_y + ppu.screen_scroll_y) / 8) & 31;
+                xoffset &= 0x3FF;
+                yoffset &= 0x3FF;
+
+                computed_address |= xoffset;
+                computed_address |= (yoffset << 5);
+
+                break;
+            }
+            case FetchMode::Window:
+            {
+                computed_address |= ((ppu.lcd_control & LCDControlFlags::WindowTileMap) ? 1 : 0)
+                                    << 10;
+
+                uint16_t xoffset = ((x_pos) / 8) & 31;
+                uint16_t yoffset = ((ppu.window_line_y) / 8) & 31;
+                xoffset &= 0x3FF;
+                yoffset &= 0x3FF;
+
+                computed_address |= xoffset;
+                computed_address |= (yoffset << 5);
+
+                break;
+            }
+            }
+
+            address = computed_address & 0x1FFF;
+            substep++;
+            break;
+        }
+
+        case 1:
+        {
+            tile_id = ppu.vram[address];
+            state = FetchState::TileLow;
+
+            substep = 0;
+            break;
+        }
+        }
+    }
+
+    void BackgroundFetcher::get_tile_data(PPU &ppu, uint8_t bit_plane)
+    {
+        switch (substep)
+        {
+        case 0:
+        {
+            uint16_t computed_address = (0b1 << 15) + bit_plane;
+
+            switch (mode)
+            {
+            case FetchMode::Background:
+            {
+                uint16_t bit12 =
+                    !((ppu.lcd_control & LCDControlFlags::BGWindowTileData) || (tile_id & 0x80));
+                uint16_t yoffset = (ppu.line_y + ppu.screen_scroll_y) & 7;
+
+                computed_address |= bit12 ? (1 << 12) : 0;
+                computed_address |= tile_id << 4;
+                computed_address |= (yoffset << 1);
+
+                break;
+            }
+            case FetchMode::Window:
+            {
+                uint16_t bit12 =
+                    !((ppu.lcd_control & LCDControlFlags::BGWindowTileData) || (tile_id & 0x80));
+                uint16_t yoffset = ppu.window_line_y & 7;
+
+                computed_address |= bit12 ? (1 << 12) : 0;
+                computed_address |= tile_id << 4;
+                computed_address |= (yoffset << 1);
+
+                break;
+            }
+            }
+
+            address = computed_address & 0x1FFF;
+            substep++;
+            break;
+        }
+
+        // read from address
+        case 1:
+        {
+            substep = 0;
+
+            if (bit_plane == 1)
+            {
+                state = FetchState::Push;
+                queued_pixels_high = ppu.vram[address];
+
+                if (first_fetch)
+                {
+                    state = FetchState::GetTileID;
+                    first_fetch = false;
+                }
+            }
+            else
+            {
+                state = FetchState::TileHigh;
+                queued_pixels_low = ppu.vram[address];
+            }
+
+            break;
+        }
+        }
+    }
+
+    void BackgroundFetcher::push_pixels(PPU &ppu)
+    {
+        if (!ppu.bg_fifo.empty())
+            return;
+
+        x_pos += 8;
+        ppu.bg_fifo.load(queued_pixels_low, queued_pixels_high);
+
+        if (mode == FetchMode::Background)
+        {
+            if (ppu.write_x == 0)
+            {
+                auto scx = ppu.screen_scroll_x & 7;
+
+                ppu.bg_fifo.force_shift(scx);
+                ppu.extra_cycles += scx;
+            }
+        }
+
+        substep = 0;
+        state = FetchState::GetTileID;
+    }
+
     PPU::PPU(MainBus &bus) : bus(bus) {}
 
     void PPU::reset(bool hard_reset)
@@ -93,7 +346,7 @@ namespace GB
 
             case PPUState::HBlank:
             {
-                if (cycles == (204 - penalty))
+                if (cycles == (204 - extra_cycles))
                 {
                     cycles = 0;
                     ++line_y;
@@ -153,18 +406,12 @@ namespace GB
                 {
                     scan_oam();
                     cycles = 0;
+                    extra_cycles = 0;
 
                     mode = PPUState::DrawScanline;
-                    bg_fifo.pixels_high = 0;
-                    bg_fifo.pixels_high = 0;
-                    bg_fifo.shift_count = 0;
-                    penalty = 0;
-                    first_fetch = true;
-                    should_discard = true;
-                    fetcher.mode = FetchMode::Background;
-                    fetcher.state = FetchState::ID;
-                    fetcher.substep = 0;
-                    fetcher.x_pos = 0;
+                    fetcher.reset();
+                    bg_fifo.clear();
+
                     continue;
                 }
 
@@ -173,13 +420,13 @@ namespace GB
 
             case PPUState::DrawScanline:
             {
-                if (cycles == 172 + penalty)
+                if (cycles == 172 + extra_cycles)
                 {
                     cycles = 0;
 
                     mode = PPUState::HBlank;
 
-                    if (fetcher.mode == FetchMode::Window)
+                    if (fetcher.get_mode() == FetchMode::Window)
                         window_line_y++;
 
                     if (check_stat(EnableHBlankInt) && allow_interrupt)
@@ -267,258 +514,32 @@ namespace GB
 
     void PPU::render_scanline()
     {
-        switch (fetcher.state)
-        {
-        case FetchState::Idle:
-        {
-            fetcher.state = FetchState::ID;
-            return;
-        }
-        case FetchState::ID:
-        {
-            get_tile_id();
-            break;
-        }
-        case FetchState::TileLow:
-        {
-            get_tile_data(0);
-            break;
-        }
-        case FetchState::TileHigh:
-        {
-            get_tile_data(1);
-            break;
-        }
-        case FetchState::Push:
-        {
-            push_pixels();
-            break;
-        }
-        }
+        fetcher.clock(*this);
 
-        if ((write_x < 160) && (bg_fifo.shift_count > 0))
+        if ((write_x < 160) && !bg_fifo.empty())
         {
-            clock_fifo();
-            bg_fifo.shift_count--;
+            uint8_t bg_pixel = bg_fifo.clock();
+
+            plot_pixel(bg_pixel);
             write_x++;
         }
 
         if ((lcd_control & LCDControlFlags::WindowEnable) && window_draw_flag &&
-            (write_x >= (window_x - 7)) && fetcher.mode == FetchMode::Background)
+            (write_x >= (window_x - 7)) && fetcher.get_mode() == FetchMode::Background)
         {
-            fetcher.x_pos = 0;
-            fetcher.mode = FetchMode::Window;
-            fetcher.state = FetchState::ID;
-            fetcher.substep = 0;
-            bg_fifo.pixels_high = 0;
-            bg_fifo.pixels_low = 0;
-            bg_fifo.shift_count = 0;
-            penalty += 6;
+            fetcher.clear_with_mode(FetchMode::Window);
+            bg_fifo.clear();
+            extra_cycles += 6;
         }
     }
 
-    void PPU::get_tile_id()
+    void PPU::plot_pixel(uint8_t bg_pixel)
     {
-        switch (fetcher.substep)
-        {
-        case 0:
-        {
-            uint16_t address = 0b10011 << 11;
-
-            switch (fetcher.mode)
-            {
-            case FetchMode::Background:
-            {
-                address |= ((lcd_control & LCDControlFlags::BGTileMap) ? 1 : 0) << 10;
-
-                uint16_t xoffset = ((fetcher.x_pos / 8) + (screen_scroll_x / 8)) & 31;
-                uint16_t yoffset = ((line_y + screen_scroll_y) / 8) & 31;
-                xoffset &= 0x3FF;
-                yoffset &= 0x3FF;
-
-                address |= xoffset;
-                address |= (yoffset << 5);
-
-                break;
-            }
-            case FetchMode::Window:
-            {
-                address |= ((lcd_control & LCDControlFlags::WindowTileMap) ? 1 : 0) << 10;
-
-                uint16_t xoffset = ((fetcher.x_pos) / 8) & 31;
-                uint16_t yoffset = ((window_line_y) / 8) & 31;
-                xoffset &= 0x3FF;
-                yoffset &= 0x3FF;
-
-                address |= xoffset;
-                address |= (yoffset << 5);
-
-                break;
-            }
-            default:
-            {
-                return;
-            }
-            }
-
-            fetcher.address = address & 0x1FFF;
-            fetcher.substep++;
-            break;
-        }
-
-        case 1:
-        {
-            fetcher.tile_id = vram[fetcher.address];
-            fetcher.state = FetchState::TileLow;
-
-            fetcher.substep = 0;
-            break;
-        }
-        }
-    }
-
-    void PPU::get_tile_data(uint8_t bit_plane)
-    {
-        switch (fetcher.substep)
-        {
-        // compute address
-        case 0:
-        {
-            uint16_t address = (0b1 << 15) + bit_plane;
-
-            switch (fetcher.mode)
-            {
-            case FetchMode::Background:
-            {
-                uint16_t bit12 = !((lcd_control & LCDControlFlags::BGWindowTileData) ||
-                                   (fetcher.tile_id & 0x80));
-                uint16_t yoffset = (line_y + screen_scroll_y) & 7;
-
-                address |= bit12 ? (1 << 12) : 0;
-                address |= fetcher.tile_id << 4;
-                address |= (yoffset << 1);
-
-                break;
-            }
-            case FetchMode::Window:
-            {
-                uint16_t bit12 = !((lcd_control & LCDControlFlags::BGWindowTileData) ||
-                                   (fetcher.tile_id & 0x80));
-                uint16_t yoffset = window_line_y & 7;
-
-                address |= bit12 ? (1 << 12) : 0;
-                address |= fetcher.tile_id << 4;
-                address |= (yoffset << 1);
-
-                break;
-            }
-            default:
-            {
-                return;
-            }
-            }
-
-            fetcher.address = address & 0x1FFF;
-            fetcher.substep++;
-            break;
-        }
-
-        // read from address
-        case 1:
-        {
-            fetcher.substep = 0;
-
-            if (bit_plane == 1)
-            {
-                fetcher.state = FetchState::Push;
-                fetcher.queued_pixels_high = vram[fetcher.address];
-
-                if (first_fetch)
-                {
-                    fetcher.state = FetchState::ID;
-                    first_fetch = false;
-                }
-            }
-            else
-            {
-                fetcher.state = FetchState::TileHigh;
-                fetcher.queued_pixels_low = vram[fetcher.address];
-            }
-
-            break;
-        }
-        }
-    }
-
-    void PPU::push_pixels()
-    {
-        switch (fetcher.mode)
-        {
-        case FetchMode::Background:
-        {
-            if (bg_fifo.shift_count)
-            {
-                return;
-            }
-            fetcher.x_pos += 8;
-            bg_fifo.pixels_low = fetcher.queued_pixels_low;
-            bg_fifo.pixels_high = fetcher.queued_pixels_high;
-            bg_fifo.shift_count = 8;
-
-            if (should_discard)
-            {
-                should_discard = false;
-                auto scx = screen_scroll_x & 7;
-
-                bg_fifo.pixels_low <<= scx;
-                bg_fifo.pixels_high <<= scx;
-                bg_fifo.shift_count -= scx;
-                penalty += scx;
-            }
-
-            break;
-        }
-        case FetchMode::Window:
-        {
-            if (bg_fifo.shift_count)
-            {
-                return;
-            }
-            fetcher.x_pos += 8;
-            bg_fifo.pixels_low = fetcher.queued_pixels_low;
-            bg_fifo.pixels_high = fetcher.queued_pixels_high;
-            bg_fifo.shift_count = 8;
-            break;
-        }
-        case FetchMode::OBJ:
-        {
-
-            break;
-        }
-        }
-
-        fetcher.state = FetchState::ID;
-        fetcher.substep = 0;
-        fetcher.address = 0;
-        fetcher.tile_id = 0;
-        fetcher.queued_pixels_low = 0;
-        fetcher.queued_pixels_high = 0;
-    }
-
-    void PPU::clock_fifo()
-    {
-        uint8_t low_bit = (bg_fifo.pixels_low >> 7) & 0x1;
-        uint8_t high_bit = (bg_fifo.pixels_high >> 7) & 0x1;
-        uint8_t pixel = (high_bit << 1) | (low_bit);
-
-        bg_fifo.pixels_low <<= 1;
-        bg_fifo.pixels_high <<= 1;
-
         size_t framebuffer_line_y = line_y * LCD_WIDTH;
 
-        std::array<uint8_t, 4> color = color_table[(background_palette >> (int)(2 * pixel)) & 3];
+        std::array<uint8_t, 4> color = color_table[(background_palette >> (int)(2 * bg_pixel)) & 3];
 
-        if (fetcher.mode == FetchMode::Background)
+        if (fetcher.get_mode() == FetchMode::Background)
         {
             if (!(lcd_control & LCDControlFlags::BGEnable) ||
                 !(render_flags & DisplayRenderFlags::Background))
@@ -528,13 +549,12 @@ namespace GB
             }
             else
             {
-                bg_color_table[framebuffer_line_y + write_x] = pixel;
+                bg_color_table[framebuffer_line_y + write_x] = bg_pixel;
             }
         }
         else
         {
-            //    framebuffer_line_y = window_line_y * LCD_WIDTH;
-            bg_color_table[framebuffer_line_y + write_x] = pixel;
+            bg_color_table[framebuffer_line_y + write_x] = bg_pixel;
         }
 
         auto fb_pixel =
