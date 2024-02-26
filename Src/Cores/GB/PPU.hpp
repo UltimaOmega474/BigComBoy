@@ -20,6 +20,8 @@
 #include "Constants.hpp"
 #include <array>
 #include <cinttypes>
+#include <cstdint>
+#include <tuple>
 
 namespace GB
 {
@@ -73,6 +75,7 @@ namespace GB
 
     enum class FetchState
     {
+        Idle,
         GetTileID,
         TileLow,
         TileHigh,
@@ -114,8 +117,11 @@ namespace GB
         uint8_t palette = 0, priority = 0;
 
     public:
+        uint8_t pixels_left() const;
         void clear();
-        uint8_t clock();
+        void load(uint8_t pixels_avail, uint8_t low, uint8_t high, uint8_t palette,
+                  uint8_t priority);
+        std::tuple<uint8_t, uint8_t, uint8_t> clock();
     };
 
     class BackgroundFetcher
@@ -145,7 +151,7 @@ namespace GB
         uint8_t queued_pixels_low = 0, queued_pixels_high = 0;
         uint16_t address = 0;
 
-        FetchState state = FetchState::GetTileID;
+        FetchState state = FetchState::Idle;
 
     public:
         void reset();
@@ -174,7 +180,7 @@ namespace GB
         uint8_t render_flags = DisplayRenderFlags::Background | DisplayRenderFlags::Window |
                                DisplayRenderFlags::Objects;
         PPUState mode = PPUState::HBlank;
-
+        bool halt_bg_fetcher = false;
         uint32_t cycles = 0, extra_cycles = 0;
 
         std::array<uint8_t, 8193> vram{};
@@ -188,6 +194,8 @@ namespace GB
 
         BackgroundFetcher fetcher;
         BackgroundFIFO bg_fifo;
+
+        ObjectFetcher obj_fetcher;
         ObjectFIFO obj_fifo;
 
         PPU(MainBus &bus);
@@ -208,7 +216,7 @@ namespace GB
 
     private:
         void render_scanline();
-        void plot_pixel(uint8_t bg_pixel);
+        void plot_pixel(uint8_t final_pixel, uint8_t palette);
 
         void scan_oam();
         void check_ly_lyc(bool allow_interrupts);

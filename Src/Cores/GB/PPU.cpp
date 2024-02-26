@@ -19,6 +19,7 @@
 #include "PPU.hpp"
 #include "Bus.hpp"
 #include <algorithm>
+#include <cstdint>
 #include <span>
 
 namespace GB
@@ -59,6 +60,8 @@ namespace GB
         return pixel;
     }
 
+    uint8_t ObjectFIFO::pixels_left() const { return shift_count; }
+
     void ObjectFIFO::clear()
     {
         shift_count = 0;
@@ -68,17 +71,34 @@ namespace GB
         priority = 0;
     }
 
-    uint8_t ObjectFIFO::clock()
+    void ObjectFIFO::load(uint8_t pixels_avail, uint8_t low, uint8_t high, uint8_t palette,
+                          uint8_t priority)
+    {
+        pixels_low |= low;
+        pixels_high |= high;
+        this->palette |= palette;
+        this->priority |= priority;
+        shift_count += pixels_avail;
+
+        if (pixels_avail != 0)
+            int d = 0;
+    }
+
+    std::tuple<uint8_t, uint8_t, uint8_t> ObjectFIFO::clock()
     {
         uint8_t low_bit = (pixels_low >> 7) & 0x1;
         uint8_t high_bit = (pixels_high >> 7) & 0x1;
-        uint8_t pixel = (high_bit << 1) | (low_bit);
+        uint8_t out_pixel = (high_bit << 1) | (low_bit);
+        uint8_t out_palette = (palette >> 7) & 1;
+        uint8_t out_priority = (priority >> 7) & 1;
 
         pixels_low <<= 1;
         pixels_high <<= 1;
+        palette <<= 1;
+        priority <<= 1;
 
         shift_count--;
-        return pixel;
+        return std::make_tuple(out_pixel, out_palette, out_priority);
     }
 
     FetchMode BackgroundFetcher::get_mode() const { return mode; }
@@ -105,6 +125,10 @@ namespace GB
     {
         switch (state)
         {
+        case FetchState::Idle:
+        {
+            break;
+        }
         case FetchState::GetTileID:
         {
             get_tile_id(ppu);
@@ -276,14 +300,45 @@ namespace GB
         state = FetchState::GetTileID;
     }
 
-    void ObjectFetcher::reset() {}
+    void ObjectFetcher::reset()
+    {
+        ppu_obj = 0;
+        substep = 0;
+        tile_id = 0;
+        queued_pixels_low = 0;
+        queued_pixels_high = 0;
+        address = 0;
+        state = FetchState::GetTileID;
+    }
 
     void ObjectFetcher::set_object(uint8_t obj_num) { ppu_obj = obj_num; }
 
     void ObjectFetcher::clock(PPU &ppu)
     {
+
         switch (state)
         {
+        case FetchState::Idle:
+        {
+            for (int i = 0; i < ppu.num_obj_on_scanline; ++i)
+            {
+                const auto &obj = ppu.objects_on_scanline[i];
+                if (obj.x <= (ppu.write_x + 8))
+                {
+                    ppu.halt_bg_fetcher = true;
+                    ppu.fetcher.clear_with_mode(ppu.fetcher.get_mode());
+
+                    ppu_obj = i;
+                    state = FetchState::GetTileID;
+                    substep = 0;
+
+                    //    ppu.extra_cycles += 6;
+                    break;
+                }
+            }
+
+            break;
+        }
         case FetchState::GetTileID:
         {
             get_tile_id(ppu);
@@ -372,7 +427,61 @@ namespace GB
         }
     }
 
-    void ObjectFetcher::push_pixels(PPU &ppu) {}
+    void ObjectFetcher::push_pixels(PPU &ppu)
+    {
+        auto &obj = ppu.objects_on_scanline[ppu_obj];
+
+        if (obj.attributes & ObjectAttributeFlags::FlipX)
+        {
+            auto byte_reverse = [](uint8_t input) -> uint8_t
+            {
+                uint8_t reversed = (input & 1) << 7;
+                reversed |= (input & 2) << 6;
+                reversed |= (input & 4) << 5;
+                reversed |= (input & 8) << 4;
+                reversed |= (input & 16) << 3;
+                reversed |= (input & 32) << 2;
+                reversed |= (input & 64) << 1;
+                reversed |= (input & 128) >> 7;
+                return reversed;
+            };
+
+            queued_pixels_low = byte_reverse(queued_pixels_low);
+            queued_pixels_high = byte_reverse(queued_pixels_high);
+        }
+
+        uint8_t avail = 8;
+        uint8_t palette_bits = (obj.attributes & ObjectAttributeFlags::Palette) ? 255 : 0;
+        uint8_t priority_bits = (obj.attributes & ObjectAttributeFlags::Priority) ? 255 : 0;
+
+        if (obj.x < 8)
+        {
+            avail = obj.x;
+            auto shift_count = (8 - obj.x);
+
+            queued_pixels_low <<= shift_count;
+            queued_pixels_high <<= shift_count;
+            palette_bits <<= shift_count;
+            priority_bits <<= shift_count;
+        }
+
+        uint8_t already_queued = ppu.obj_fifo.pixels_left();
+        if (already_queued)
+        {
+            queued_pixels_low <<= already_queued;
+            queued_pixels_high <<= already_queued;
+            palette_bits <<= already_queued;
+            priority_bits <<= already_queued;
+            avail -= already_queued;
+        }
+
+        ppu.obj_fifo.load(avail, queued_pixels_low, queued_pixels_high, palette_bits,
+                          priority_bits);
+
+        substep = 0;
+        state = FetchState::Idle;
+        ppu.halt_bg_fetcher = false;
+    }
 
     PPU::PPU(MainBus &bus) : bus(bus) {}
 
@@ -509,7 +618,9 @@ namespace GB
                     mode = PPUState::DrawScanline;
                     fetcher.reset();
                     bg_fifo.clear();
-
+                    obj_fetcher.reset();
+                    obj_fifo.clear();
+                    halt_bg_fetcher = false;
                     continue;
                 }
 
@@ -612,14 +723,52 @@ namespace GB
 
     void PPU::render_scanline()
     {
-        fetcher.clock(*this);
+        if (!halt_bg_fetcher)
+            fetcher.clock(*this);
 
-        if ((write_x < 160) && !bg_fifo.empty())
+        obj_fetcher.clock(*this);
+
+        if ((write_x < 160))
         {
-            uint8_t bg_pixel = bg_fifo.clock();
+            uint8_t final_pixel = 0, final_palette = 0;
+            uint8_t bg_pixel = 0;
+            bool bg_clocked = false, obj_clocked = false;
 
-            plot_pixel(bg_pixel);
-            write_x++;
+            if (!bg_fifo.empty())
+            {
+                bg_pixel = bg_fifo.clock();
+                final_pixel = bg_pixel;
+                final_palette = background_palette;
+                bg_clocked = true;
+
+                if (!(lcd_control & LCDControlFlags::BGEnable))
+                {
+                    final_pixel = 0;
+                }
+            }
+
+            if (obj_fifo.pixels_left())
+            {
+                auto [obj_pixel, obj_pal, obj_pri] = obj_fifo.clock();
+
+                bool bg_has_priority =
+                    bg_clocked && ((obj_pixel == 0) || (obj_pri && bg_pixel != 0));
+
+                if (!bg_has_priority)
+                {
+                    final_pixel = obj_pixel;
+                    final_palette = (obj_pal & ObjectAttributeFlags::Palette) ? object_palette_1
+                                                                              : object_palette_0;
+                }
+
+                obj_clocked = true;
+            }
+
+            if (obj_clocked || bg_clocked)
+            {
+                plot_pixel(final_pixel, final_palette);
+                write_x++;
+            }
         }
 
         if ((lcd_control & LCDControlFlags::WindowEnable) && window_draw_flag &&
@@ -631,29 +780,11 @@ namespace GB
         }
     }
 
-    void PPU::plot_pixel(uint8_t bg_pixel)
+    void PPU::plot_pixel(uint8_t final_pixel, uint8_t palette)
     {
         size_t framebuffer_line_y = line_y * LCD_WIDTH;
 
-        std::array<uint8_t, 4> color = color_table[(background_palette >> (int)(2 * bg_pixel)) & 3];
-
-        if (fetcher.get_mode() == FetchMode::Background)
-        {
-            if (!(lcd_control & LCDControlFlags::BGEnable) ||
-                !(render_flags & DisplayRenderFlags::Background))
-            {
-                color = color_table[(background_palette) & 3];
-                bg_color_table[framebuffer_line_y + write_x] = 0;
-            }
-            else
-            {
-                bg_color_table[framebuffer_line_y + write_x] = bg_pixel;
-            }
-        }
-        else
-        {
-            bg_color_table[framebuffer_line_y + write_x] = bg_pixel;
-        }
+        std::array<uint8_t, 4> color = color_table[(palette >> (int)(2 * final_pixel)) & 3];
 
         auto fb_pixel =
             std::span<uint8_t>{&framebuffer[(framebuffer_line_y + write_x) * COLOR_DEPTH], 4};
