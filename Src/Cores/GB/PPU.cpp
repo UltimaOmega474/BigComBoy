@@ -276,6 +276,104 @@ namespace GB
         state = FetchState::GetTileID;
     }
 
+    void ObjectFetcher::reset() {}
+
+    void ObjectFetcher::set_object(uint8_t obj_num) { ppu_obj = obj_num; }
+
+    void ObjectFetcher::clock(PPU &ppu)
+    {
+        switch (state)
+        {
+        case FetchState::GetTileID:
+        {
+            get_tile_id(ppu);
+            break;
+        }
+        case FetchState::TileLow:
+        {
+            get_tile_data(ppu, 0);
+            break;
+        }
+        case FetchState::TileHigh:
+        {
+            get_tile_data(ppu, 1);
+            break;
+        }
+        case FetchState::Push:
+        {
+            push_pixels(ppu);
+            break;
+        }
+        }
+    }
+
+    void ObjectFetcher::get_tile_id(PPU &ppu)
+    {
+        switch (substep)
+        {
+        case 0:
+        {
+            substep++;
+            break;
+        }
+
+        case 1:
+        {
+            tile_id = ppu.objects_on_scanline[ppu_obj].tile;
+            state = FetchState::TileLow;
+
+            substep = 0;
+            break;
+        }
+        }
+    }
+
+    void ObjectFetcher::get_tile_data(PPU &ppu, uint8_t bit_plane)
+    {
+        switch (substep)
+        {
+        case 0:
+        {
+            uint16_t computed_address = (0b1 << 15) + bit_plane;
+
+            uint16_t yoffset = (ppu.line_y - ppu.objects_on_scanline[ppu_obj].y) & 7;
+
+            auto flip_y = ppu.objects_on_scanline[ppu_obj].attributes & ObjectAttributeFlags::FlipY;
+
+            if (flip_y)
+                yoffset = ~yoffset;
+
+            computed_address |= tile_id << 4;
+            computed_address |= (yoffset << 1);
+
+            address = computed_address & 0x1FFF;
+            substep++;
+            break;
+        }
+
+        // read from address
+        case 1:
+        {
+            substep = 0;
+
+            if (bit_plane == 1)
+            {
+                state = FetchState::Push;
+                queued_pixels_high = ppu.vram[address];
+            }
+            else
+            {
+                state = FetchState::TileHigh;
+                queued_pixels_low = ppu.vram[address];
+            }
+
+            break;
+        }
+        }
+    }
+
+    void ObjectFetcher::push_pixels(PPU &ppu) {}
+
     PPU::PPU(MainBus &bus) : bus(bus) {}
 
     void PPU::reset(bool hard_reset)

@@ -138,6 +138,25 @@ namespace GB
         void push_pixels(PPU &ppu);
     };
 
+    class ObjectFetcher
+    {
+        uint8_t ppu_obj = 0;
+        uint8_t substep = 0, tile_id = 0;
+        uint8_t queued_pixels_low = 0, queued_pixels_high = 0;
+        uint16_t address = 0;
+
+        FetchState state = FetchState::GetTileID;
+
+    public:
+        void reset();
+        void set_object(uint8_t obj_num);
+
+        void clock(PPU &ppu);
+        void get_tile_id(PPU &ppu);
+        void get_tile_data(PPU &ppu, uint8_t bit_plane);
+        void push_pixels(PPU &ppu);
+    };
+
     class PPU
     {
         MainBus &bus;
