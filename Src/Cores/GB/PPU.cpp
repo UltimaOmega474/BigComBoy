@@ -24,7 +24,7 @@
 
 namespace GB
 {
-    bool BackgroundFIFO::empty() const { return shift_count == 0; }
+    uint8_t BackgroundFIFO::pixels_left() const { return shift_count; }
 
     void BackgroundFIFO::clear()
     {
@@ -278,7 +278,7 @@ namespace GB
 
     void BackgroundFetcher::push_pixels(PPU &ppu)
     {
-        if (!ppu.bg_fifo.empty())
+        if (ppu.bg_fifo.pixels_left())
             return;
 
         x_pos += 8;
@@ -330,13 +330,23 @@ namespace GB
                     if (obj.x <= (ppu.write_x + 8))
                     {
                         ppu.halt_bg_fetcher = true;
-                        ppu.fetcher.clear_with_mode(ppu.fetcher.get_mode());
+
+                        if (!ppu.bg_fifo.pixels_left())
+                            ppu.fetcher.clear_with_mode(ppu.fetcher.get_mode());
 
                         ppu_obj = i;
                         state = FetchState::GetTileID;
                         substep = 0;
                         ppu.objects_on_scanline2[i] = true;
-                        ppu.extra_cycles += 6;
+
+                        int p = (int)ppu.bg_fifo.pixels_left() - 2;
+
+                        if (p < 0)
+                            p = 0;
+
+                        p += 6;
+                        ppu.extra_cycles += obj.x == 0 ? 11 : (p);
+
                         break;
                     }
                 }
@@ -394,41 +404,21 @@ namespace GB
         {
         case 0:
         {
-            if (false)
-            {
-                uint16_t computed_address = (0b1 << 15) + bit_plane;
+            uint8_t height = (ppu.lcd_control & LCDControlFlags::SpriteSize) ? 16 : 8;
+            uint16_t tile_index = 0;
+            auto y = ppu.objects_on_scanline[ppu_obj].y;
+            int16_t obj_y = (int16_t)y - 16;
+            if (height == 16)
+                tile_id &= ~1;
 
-                uint16_t yoffset = (ppu.line_y - ppu.objects_on_scanline[ppu_obj].y) & 7;
-
-                auto flip_y =
-                    ppu.objects_on_scanline[ppu_obj].attributes & ObjectAttributeFlags::FlipY;
-
-                if (flip_y)
-                    yoffset = ~yoffset;
-
-                computed_address |= tile_id << 4;
-                computed_address |= (yoffset << 1);
-
-                address = computed_address & 0x1FFF;
-            }
+            if (ppu.objects_on_scanline[ppu_obj].attributes & ObjectAttributeFlags::FlipY)
+                tile_index =
+                    (0x8000 & 0x1FFF) + (tile_id * 16) + ((height - (ppu.line_y - obj_y) - 1) * 2);
             else
-            {
-                uint8_t height = (ppu.lcd_control & LCDControlFlags::SpriteSize) ? 16 : 8;
-                uint16_t tile_index = 0;
-                auto y = ppu.objects_on_scanline[ppu_obj].y;
-                int16_t obj_y = (int16_t)y - 16;
-                if (height == 16)
-                    tile_id &= ~1;
+                tile_index =
+                    (0x8000 & 0x1FFF) + (tile_id * 16) + ((ppu.line_y - obj_y) % height * 2);
 
-                if (ppu.objects_on_scanline[ppu_obj].attributes & ObjectAttributeFlags::FlipY)
-                    tile_index = (0x8000 & 0x1FFF) + (tile_id * 16) +
-                                 ((height - (ppu.line_y - obj_y) - 1) * 2);
-                else
-                    tile_index =
-                        (0x8000 & 0x1FFF) + (tile_id * 16) + ((ppu.line_y - obj_y) % height * 2);
-
-                address = tile_index + bit_plane;
-            }
+            address = tile_index + bit_plane;
 
             substep++;
             break;
@@ -498,8 +488,9 @@ namespace GB
             avail -= already_queued;
         }
 
-        ppu.obj_fifo.load(avail, queued_pixels_low, queued_pixels_high, palette_bits,
-                          priority_bits);
+        if (ppu.lcd_control & LCDControlFlags::SpriteEnable)
+            ppu.obj_fifo.load(avail, queued_pixels_low, queued_pixels_high, palette_bits,
+                              priority_bits);
 
         substep = 0;
         state = FetchState::Idle;
@@ -758,7 +749,7 @@ namespace GB
             uint8_t bg_pixel = 0;
             bool bg_clocked = false, obj_clocked = false;
 
-            if (!bg_fifo.empty())
+            if (bg_fifo.pixels_left())
             {
                 bg_pixel = bg_fifo.clock();
                 final_pixel = bg_pixel;
@@ -767,6 +758,7 @@ namespace GB
                 if (!(lcd_control & LCDControlFlags::BGEnable))
                 {
                     final_pixel = 0;
+                    final_palette = 0;
                 }
             }
 

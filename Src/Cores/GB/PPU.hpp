@@ -102,7 +102,7 @@ namespace GB
         uint8_t pixels_low = 0, pixels_high = 0;
 
     public:
-        bool empty() const;
+        uint8_t pixels_left() const;
 
         void clear();
         void load(uint8_t low, uint8_t high);
@@ -118,6 +118,7 @@ namespace GB
 
     public:
         uint8_t pixels_left() const;
+
         void clear();
         void load(uint8_t pixels_avail, uint8_t low, uint8_t high, uint8_t palette,
                   uint8_t priority);
