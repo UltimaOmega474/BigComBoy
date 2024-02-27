@@ -79,9 +79,6 @@ namespace GB
         this->palette |= palette;
         this->priority |= priority;
         shift_count += pixels_avail;
-
-        if (pixels_avail != 0)
-            int d = 0;
     }
 
     std::tuple<uint8_t, uint8_t, uint8_t> ObjectFIFO::clock()
@@ -100,6 +97,8 @@ namespace GB
         shift_count--;
         return std::make_tuple(out_pixel, out_palette, out_priority);
     }
+
+    FetchState BackgroundFetcher::get_state() const { return state; }
 
     FetchMode BackgroundFetcher::get_mode() const { return mode; }
 
@@ -300,6 +299,8 @@ namespace GB
         state = FetchState::GetTileID;
     }
 
+    FetchState ObjectFetcher::get_state() const { return state; }
+
     void ObjectFetcher::reset()
     {
         ppu_obj = 0;
@@ -308,7 +309,7 @@ namespace GB
         queued_pixels_low = 0;
         queued_pixels_high = 0;
         address = 0;
-        state = FetchState::GetTileID;
+        state = FetchState::Idle;
     }
 
     void ObjectFetcher::set_object(uint8_t obj_num) { ppu_obj = obj_num; }
@@ -320,20 +321,24 @@ namespace GB
         {
         case FetchState::Idle:
         {
+
             for (int i = 0; i < ppu.num_obj_on_scanline; ++i)
             {
-                const auto &obj = ppu.objects_on_scanline[i];
-                if (obj.x <= (ppu.write_x + 8))
+                if (!ppu.objects_on_scanline2[i])
                 {
-                    ppu.halt_bg_fetcher = true;
-                    ppu.fetcher.clear_with_mode(ppu.fetcher.get_mode());
+                    const auto &obj = ppu.objects_on_scanline[i];
+                    if (obj.x <= (ppu.write_x + 8))
+                    {
+                        ppu.halt_bg_fetcher = true;
+                        ppu.fetcher.clear_with_mode(ppu.fetcher.get_mode());
 
-                    ppu_obj = i;
-                    state = FetchState::GetTileID;
-                    substep = 0;
-
-                    //    ppu.extra_cycles += 6;
-                    break;
+                        ppu_obj = i;
+                        state = FetchState::GetTileID;
+                        substep = 0;
+                        ppu.objects_on_scanline2[i] = true;
+                        ppu.extra_cycles += 6;
+                        break;
+                    }
                 }
             }
 
@@ -389,19 +394,42 @@ namespace GB
         {
         case 0:
         {
-            uint16_t computed_address = (0b1 << 15) + bit_plane;
+            if (false)
+            {
+                uint16_t computed_address = (0b1 << 15) + bit_plane;
 
-            uint16_t yoffset = (ppu.line_y - ppu.objects_on_scanline[ppu_obj].y) & 7;
+                uint16_t yoffset = (ppu.line_y - ppu.objects_on_scanline[ppu_obj].y) & 7;
 
-            auto flip_y = ppu.objects_on_scanline[ppu_obj].attributes & ObjectAttributeFlags::FlipY;
+                auto flip_y =
+                    ppu.objects_on_scanline[ppu_obj].attributes & ObjectAttributeFlags::FlipY;
 
-            if (flip_y)
-                yoffset = ~yoffset;
+                if (flip_y)
+                    yoffset = ~yoffset;
 
-            computed_address |= tile_id << 4;
-            computed_address |= (yoffset << 1);
+                computed_address |= tile_id << 4;
+                computed_address |= (yoffset << 1);
 
-            address = computed_address & 0x1FFF;
+                address = computed_address & 0x1FFF;
+            }
+            else
+            {
+                uint8_t height = (ppu.lcd_control & LCDControlFlags::SpriteSize) ? 16 : 8;
+                uint16_t tile_index = 0;
+                auto y = ppu.objects_on_scanline[ppu_obj].y;
+                int16_t obj_y = (int16_t)y - 16;
+                if (height == 16)
+                    tile_id &= ~1;
+
+                if (ppu.objects_on_scanline[ppu_obj].attributes & ObjectAttributeFlags::FlipY)
+                    tile_index = (0x8000 & 0x1FFF) + (tile_id * 16) +
+                                 ((height - (ppu.line_y - obj_y) - 1) * 2);
+                else
+                    tile_index =
+                        (0x8000 & 0x1FFF) + (tile_id * 16) + ((ppu.line_y - obj_y) % height * 2);
+
+                address = tile_index + bit_plane;
+            }
+
             substep++;
             break;
         }
@@ -435,15 +463,10 @@ namespace GB
         {
             auto byte_reverse = [](uint8_t input) -> uint8_t
             {
-                uint8_t reversed = (input & 1) << 7;
-                reversed |= (input & 2) << 6;
-                reversed |= (input & 4) << 5;
-                reversed |= (input & 8) << 4;
-                reversed |= (input & 16) << 3;
-                reversed |= (input & 32) << 2;
-                reversed |= (input & 64) << 1;
-                reversed |= (input & 128) >> 7;
-                return reversed;
+                input = ((input & 0b11110000) >> 4) | ((input & 0b00001111) << 4);
+                input = ((input & 0b11001100) >> 2) | ((input & 0b00110011) << 2);
+                input = ((input & 0b10101010) >> 1) | ((input & 0b01010101) << 1);
+                return input;
             };
 
             queued_pixels_low = byte_reverse(queued_pixels_low);
@@ -723,14 +746,15 @@ namespace GB
 
     void PPU::render_scanline()
     {
+
         if (!halt_bg_fetcher)
             fetcher.clock(*this);
 
         obj_fetcher.clock(*this);
 
-        if ((write_x < 160))
+        if ((write_x < 160) && obj_fetcher.get_state() == FetchState::Idle)
         {
-            uint8_t final_pixel = 0, final_palette = 0;
+            uint8_t final_pixel = 0, final_palette = background_palette;
             uint8_t bg_pixel = 0;
             bool bg_clocked = false, obj_clocked = false;
 
@@ -738,7 +762,6 @@ namespace GB
             {
                 bg_pixel = bg_fifo.clock();
                 final_pixel = bg_pixel;
-                final_palette = background_palette;
                 bg_clocked = true;
 
                 if (!(lcd_control & LCDControlFlags::BGEnable))
@@ -751,22 +774,21 @@ namespace GB
             {
                 auto [obj_pixel, obj_pal, obj_pri] = obj_fifo.clock();
 
-                bool bg_has_priority =
-                    bg_clocked && ((obj_pixel == 0) || (obj_pri && bg_pixel != 0));
+                bool bg_has_priority = ((obj_pixel == 0) || (obj_pri && bg_pixel != 0));
 
                 if (!bg_has_priority)
                 {
                     final_pixel = obj_pixel;
-                    final_palette = (obj_pal & ObjectAttributeFlags::Palette) ? object_palette_1
-                                                                              : object_palette_0;
+                    final_palette = (obj_pal) ? object_palette_1 : object_palette_0;
                 }
 
                 obj_clocked = true;
             }
 
-            if (obj_clocked || bg_clocked)
+            if (bg_clocked || obj_clocked)
             {
                 plot_pixel(final_pixel, final_palette);
+
                 write_x++;
             }
         }
@@ -798,7 +820,7 @@ namespace GB
 
         num_obj_on_scanline = 0;
         objects_on_scanline.fill({});
-
+        objects_on_scanline2.fill(false);
         for (auto i = 0, total = 0; i < 40; ++i)
         {
             if (total == 10)

@@ -130,12 +130,13 @@ namespace GB
         uint8_t substep = 0, tile_id = 0;
         uint8_t queued_pixels_low = 0, queued_pixels_high = 0;
         uint16_t x_pos = 0, address = 0;
-
         FetchState state = FetchState::GetTileID;
         FetchMode mode = FetchMode::Background;
 
     public:
+        FetchState get_state() const;
         FetchMode get_mode() const;
+
         void reset();
         void clear_with_mode(FetchMode new_mode);
         void clock(PPU &ppu);
@@ -150,13 +151,13 @@ namespace GB
         uint8_t substep = 0, tile_id = 0;
         uint8_t queued_pixels_low = 0, queued_pixels_high = 0;
         uint16_t address = 0;
-
         FetchState state = FetchState::Idle;
 
     public:
+        FetchState get_state() const;
+
         void reset();
         void set_object(uint8_t obj_num);
-
         void clock(PPU &ppu);
         void get_tile_id(PPU &ppu);
         void get_tile_data(PPU &ppu, uint8_t bit_plane);
@@ -169,7 +170,7 @@ namespace GB
 
     public:
         bool window_draw_flag = false, previously_disabled = false;
-        uint8_t num_obj_on_scanline = 0;
+        uint8_t num_obj_on_scanline = 0, objs_processed = 0;
         uint8_t lcd_control = 0, status = 0;
         uint8_t screen_scroll_y = 0, screen_scroll_x = 0;
         uint8_t line_y = 0, line_y_compare = 0;
@@ -186,6 +187,7 @@ namespace GB
         std::array<uint8_t, 8193> vram{};
         std::array<uint8_t, 256> oam{};
         std::array<Object, 10> objects_on_scanline{};
+        std::array<bool, 10> objects_on_scanline2{};
         std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT> bg_color_table{};
 
         std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT * 4> framebuffer{};
