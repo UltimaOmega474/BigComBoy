@@ -737,29 +737,24 @@ namespace GB
 
     void PPU::render_scanline()
     {
-
         if (!halt_bg_fetcher)
             fetcher.clock(*this);
 
         obj_fetcher.clock(*this);
 
-        if ((write_x < 160) && obj_fetcher.get_state() == FetchState::Idle)
+        if ((write_x < 160) && obj_fetcher.get_state() == FetchState::Idle && bg_fifo.pixels_left())
         {
             uint8_t final_pixel = 0, final_palette = background_palette;
-            uint8_t bg_pixel = 0;
-            bool bg_clocked = false, obj_clocked = false;
+            uint8_t bg_pixel = bg_fifo.clock();
 
-            if (bg_fifo.pixels_left())
+            if (!(lcd_control & LCDControlFlags::BGEnable))
             {
-                bg_pixel = bg_fifo.clock();
+                final_pixel = 0;
+                final_palette = 0;
+            }
+            else
+            {
                 final_pixel = bg_pixel;
-                bg_clocked = true;
-
-                if (!(lcd_control & LCDControlFlags::BGEnable))
-                {
-                    final_pixel = 0;
-                    final_palette = 0;
-                }
             }
 
             if (obj_fifo.pixels_left())
@@ -773,16 +768,10 @@ namespace GB
                     final_pixel = obj_pixel;
                     final_palette = (obj_pal) ? object_palette_1 : object_palette_0;
                 }
-
-                obj_clocked = true;
             }
 
-            if (bg_clocked || obj_clocked)
-            {
-                plot_pixel(final_pixel, final_palette);
-
-                write_x++;
-            }
+            plot_pixel(final_pixel, final_palette);
+            write_x++;
         }
 
         if ((lcd_control & LCDControlFlags::WindowEnable) && window_draw_flag &&
