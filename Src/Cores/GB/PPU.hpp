@@ -102,6 +102,7 @@ namespace GB
         uint8_t pixels_low = 0, pixels_high = 0;
 
     public:
+        bool paused = false;
         uint8_t pixels_left() const;
 
         void clear();
@@ -158,7 +159,7 @@ namespace GB
         FetchState get_state() const;
 
         void reset();
-        void set_object(uint8_t obj_num);
+        void activate(uint8_t obj_num);
         void clock(PPU &ppu);
         void get_tile_id(PPU &ppu);
         void get_tile_data(PPU &ppu, uint8_t bit_plane);
@@ -219,6 +220,7 @@ namespace GB
 
     private:
         void render_scanline();
+        void check_for_sprites();
         void plot_pixel(uint8_t final_pixel, uint8_t palette);
 
         void scan_oam();

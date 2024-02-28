@@ -74,10 +74,11 @@ namespace GB
     void ObjectFIFO::load(uint8_t pixels_avail, uint8_t low, uint8_t high, uint8_t palette,
                           uint8_t priority)
     {
-        pixels_low |= low;
-        pixels_high |= high;
-        this->palette |= palette;
-        this->priority |= priority;
+        int shift = 8 - pixels_avail;
+        pixels_low |= (low >> shift);
+        pixels_high |= (high >> shift);
+        this->palette |= (palette >> shift);
+        this->priority |= (priority >> shift);
         shift_count += pixels_avail;
     }
 
@@ -312,50 +313,27 @@ namespace GB
         state = FetchState::Idle;
     }
 
-    void ObjectFetcher::set_object(uint8_t obj_num) { ppu_obj = obj_num; }
+    void ObjectFetcher::activate(uint8_t obj_num)
+    {
+        reset();
+        ppu_obj = obj_num;
+
+        state = FetchState::GetTileID;
+    }
 
     void ObjectFetcher::clock(PPU &ppu)
     {
-
+        if (ppu.fetcher.get_state() != FetchState::Push)
+            return;
         switch (state)
         {
         case FetchState::Idle:
         {
-
-            for (int i = 0; i < ppu.num_obj_on_scanline; ++i)
-            {
-                if (!ppu.objects_on_scanline2[i])
-                {
-                    const auto &obj = ppu.objects_on_scanline[i];
-                    if (obj.x <= (ppu.write_x + 8))
-                    {
-                        ppu.halt_bg_fetcher = true;
-
-                        if (!ppu.bg_fifo.pixels_left())
-                            ppu.fetcher.clear_with_mode(ppu.fetcher.get_mode());
-
-                        ppu_obj = i;
-                        state = FetchState::GetTileID;
-                        substep = 0;
-                        ppu.objects_on_scanline2[i] = true;
-
-                        int p = (int)ppu.bg_fifo.pixels_left() - 2;
-
-                        if (p < 0)
-                            p = 0;
-
-                        p += 6;
-                        ppu.extra_cycles += obj.x == 0 ? 11 : (p);
-
-                        break;
-                    }
-                }
-            }
-
             break;
         }
         case FetchState::GetTileID:
         {
+            ppu.halt_bg_fetcher = true;
             get_tile_id(ppu);
             break;
         }
@@ -495,6 +473,7 @@ namespace GB
         substep = 0;
         state = FetchState::Idle;
         ppu.halt_bg_fetcher = false;
+        ppu.bg_fifo.paused = false;
     }
 
     PPU::PPU(MainBus &bus) : bus(bus) {}
@@ -645,6 +624,8 @@ namespace GB
             {
                 if (cycles == 172 + extra_cycles)
                 {
+                    if (cycles > 289)
+                        int d = 0;
                     cycles = 0;
 
                     mode = PPUState::HBlank;
@@ -740,46 +721,81 @@ namespace GB
         if (!halt_bg_fetcher)
             fetcher.clock(*this);
 
-        obj_fetcher.clock(*this);
-
-        if ((write_x < 160) && obj_fetcher.get_state() == FetchState::Idle && bg_fifo.pixels_left())
+        if (obj_fetcher.get_state() != FetchState::Idle)
         {
-            uint8_t final_pixel = 0, final_palette = background_palette;
-            uint8_t bg_pixel = bg_fifo.clock();
-
-            if (!(lcd_control & LCDControlFlags::BGEnable))
-            {
-                final_pixel = 0;
-                final_palette = 0;
-            }
-            else
-            {
-                final_pixel = bg_pixel;
-            }
-
-            if (obj_fifo.pixels_left())
-            {
-                auto [obj_pixel, obj_pal, obj_pri] = obj_fifo.clock();
-
-                bool bg_has_priority = ((obj_pixel == 0) || (obj_pri && bg_pixel != 0));
-
-                if (!bg_has_priority)
-                {
-                    final_pixel = obj_pixel;
-                    final_palette = (obj_pal) ? object_palette_1 : object_palette_0;
-                }
-            }
-
-            plot_pixel(final_pixel, final_palette);
-            write_x++;
+            obj_fetcher.clock(*this);
         }
 
-        if ((lcd_control & LCDControlFlags::WindowEnable) && window_draw_flag &&
-            (write_x >= (window_x - 7)) && fetcher.get_mode() == FetchMode::Background)
+        if (obj_fetcher.get_state() == FetchState::Idle)
         {
-            fetcher.clear_with_mode(FetchMode::Window);
-            bg_fifo.clear();
-            extra_cycles += 6;
+            check_for_sprites();
+            if ((write_x < 160) && bg_fifo.pixels_left() && !bg_fifo.paused)
+            {
+                uint8_t final_pixel = 0, final_palette = background_palette;
+                uint8_t bg_pixel = bg_fifo.clock();
+
+                if (!(lcd_control & LCDControlFlags::BGEnable))
+                {
+                    final_pixel = 0;
+                    final_palette = 0;
+                }
+                else
+                {
+                    final_pixel = bg_pixel;
+                }
+
+                if (obj_fifo.pixels_left())
+                {
+                    auto [obj_pixel, obj_pal, obj_pri] = obj_fifo.clock();
+
+                    bool bg_has_priority = ((obj_pixel == 0) || (obj_pri && bg_pixel != 0));
+
+                    if (!bg_has_priority)
+                    {
+                        final_pixel = obj_pixel;
+                        final_palette = (obj_pal) ? object_palette_1 : object_palette_0;
+                    }
+                }
+
+                plot_pixel(final_pixel, final_palette);
+                write_x++;
+            }
+
+            if ((lcd_control & LCDControlFlags::WindowEnable) && window_draw_flag &&
+                (write_x >= (window_x - 7)) && fetcher.get_mode() == FetchMode::Background)
+            {
+                fetcher.clear_with_mode(FetchMode::Window);
+                bg_fifo.clear();
+                extra_cycles += 6;
+            }
+        }
+    }
+
+    void PPU::check_for_sprites()
+    {
+        for (int i = 0; i < num_obj_on_scanline; ++i)
+        {
+            if (!objects_on_scanline2[i])
+            {
+                const auto &obj = objects_on_scanline[i];
+                if (obj.x <= (write_x + 8))
+                {
+
+                    obj_fetcher.activate(i);
+                    bg_fifo.paused = true;
+                    objects_on_scanline2[i] = true;
+
+                    int p = (int)bg_fifo.pixels_left() - 2;
+
+                    if (p < 0)
+                        p = 0;
+
+                    p += 5;
+                    extra_cycles += obj.x == 0 ? 11 : (p);
+
+                    break;
+                }
+            }
         }
     }
 
