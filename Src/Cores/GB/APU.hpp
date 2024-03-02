@@ -59,7 +59,7 @@ namespace GB
         bool channel_on = false;
         bool has_sweep, sweep_enabled = false;
         bool left_out_enabled = false, right_out_enabled = false;
-        uint8_t sweep_slope = 0; // (Read/Write)
+        uint8_t sweep_shift = 0; // (Read/Write)
         uint8_t sweep_direction =
             0; // 0: Addition (period increases) 1: Subtraction (period decreases)
         uint8_t sweep_pace = 0;

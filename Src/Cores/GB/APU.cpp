@@ -70,7 +70,7 @@ namespace GB
 
     void PulseChannel::step_frequency_sweep()
     {
-        if (!channel_on)
+        if (!channel_on || !sweep_enabled)
             return;
 
         if (sweep_pace_counter > 0)
@@ -78,20 +78,13 @@ namespace GB
 
         if (sweep_pace_counter == 0)
         {
-            if (sweep_pace > 0)
-            {
-                sweep_pace_counter = sweep_pace;
-            }
-            else
-            {
-                sweep_pace_counter = 8;
-            }
+            sweep_pace_counter = sweep_pace ? sweep_pace : 8;
 
-            if (sweep_enabled && sweep_pace > 0)
+            if (sweep_pace > 0)
             {
                 auto nf = calculate_period();
 
-                if (nf <= 2047 && sweep_slope > 0)
+                if (nf <= 2047 && sweep_shift > 0)
                 {
                     update_split_period(nf);
                     period_shadow = nf;
@@ -153,16 +146,20 @@ namespace GB
                 length.step_length(channel_on);
         }
 
+        if (has_sweep)
+        {
+            period_shadow = get_combined_period();
+            sweep_pace_counter = sweep_pace ? sweep_pace : 8;
+
+            sweep_enabled = (sweep_pace || sweep_shift) ? true : false;
+
+            if (sweep_shift)
+                calculate_period();
+        }
+
         uint16_t old_period = get_combined_period();
 
         period_counter = (0x800 - old_period) * 4;
-
-        period_shadow = get_combined_period();
-        sweep_pace_counter = sweep_pace;
-        sweep_enabled = get_combined_period() || sweep_slope ? true : false;
-
-        if (sweep_slope)
-            calculate_period();
 
         envelope.envelope_counter = envelope.envelope_sweep_pace;
         volume_output = envelope.initial_envelope_volume;
@@ -177,7 +174,7 @@ namespace GB
         if (!has_sweep)
             return;
 
-        sweep_slope = nr10 & 0b111;
+        sweep_shift = nr10 & 0b111;
         sweep_direction = (nr10 & 0b1000) >> 3;
         sweep_pace = (nr10 & 0b01110000) >> 4;
     }
@@ -232,7 +229,7 @@ namespace GB
             return 0xFF;
 
         uint8_t nr10 = 0;
-        nr10 |= sweep_slope;
+        nr10 |= sweep_shift;
         nr10 |= sweep_direction << 3;
         nr10 |= sweep_pace << 4;
 
@@ -273,7 +270,7 @@ namespace GB
 
     uint16_t PulseChannel::calculate_period()
     {
-        uint16_t new_period = period_shadow >> sweep_slope;
+        uint16_t new_period = period_shadow >> sweep_shift;
 
         if (sweep_direction)
         {
@@ -284,7 +281,7 @@ namespace GB
             new_period = period_shadow + new_period;
         }
 
-        if (new_period > 2048)
+        if (new_period > 2047)
             channel_on = false;
 
         return new_period;
