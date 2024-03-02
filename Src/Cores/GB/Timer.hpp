@@ -33,7 +33,6 @@ namespace GB
         uint8_t tma = 0;
         uint8_t tac = 0;
         uint32_t tac_rate = 0;
-        uint8_t apu_div = 0;
 
         Timer(Core &core);
         void reset();

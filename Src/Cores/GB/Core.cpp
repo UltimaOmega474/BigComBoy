@@ -62,9 +62,7 @@ namespace GB
                 cpu.step();
 
             if (cycle_count >= CYCLES_PER_FRAME)
-            {
                 cycle_count -= CYCLES_PER_FRAME;
-            }
         }
     }
 

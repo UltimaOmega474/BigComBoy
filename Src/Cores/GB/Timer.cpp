@@ -29,7 +29,6 @@ namespace GB
         tima = 0;
         tma = 0;
         set_tac(0);
-        apu_div = 0;
     }
 
     void Timer::set_tac(uint8_t rate)
@@ -62,10 +61,7 @@ namespace GB
     {
         if (EdgeFell(div_cycles >> 8, new_div >> 8, 0b10000))
         {
-            core.apu.step_counters(apu_div);
-            apu_div++;
-            if (apu_div == 8)
-                apu_div = 0;
+            core.apu.step_frame_sequencer();
         }
 
         if (timer_enabled() && EdgeFell(div_cycles, new_div, tac_rate))

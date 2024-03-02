@@ -82,13 +82,13 @@ namespace GB
         void step_frequency_sweep();
         void step_frequency();
         uint8_t sample(uint8_t side);
-        void trigger();
+        void trigger(uint8_t frame_sequencer_counter);
 
         void write_nr10(uint8_t nr10);
         void write_nrX1(bool apu_on, uint8_t nr11);
         void write_nrX2(uint8_t nr12);
         void write_nrX3(uint8_t nr13);
-        void write_nrX4(uint8_t nr14);
+        void write_nrX4(uint8_t nr14, uint8_t frame_sequencer_counter);
 
         uint8_t read_nr10() const;
         uint8_t read_nrX1() const;
@@ -120,12 +120,12 @@ namespace GB
         uint8_t buffer = 0;
         void step(const std::array<uint8_t, 16> &wave_table);
         uint8_t sample(uint8_t side);
-        void trigger();
+        void trigger(uint8_t frame_sequencer_counter);
         void write_nr30(uint8_t nr30);
         void write_nr31(uint8_t nr31);
         void write_nr32(uint8_t nr32);
         void write_nr33(uint8_t nr33);
-        void write_nr34(uint8_t nr34);
+        void write_nr34(uint8_t nr34, uint8_t frame_sequencer_counter);
 
         uint8_t read_nr30() const;
         uint8_t read_nr32() const;
@@ -151,11 +151,11 @@ namespace GB
 
         void step();
         uint8_t sample(uint8_t side);
-        void trigger();
+        void trigger(uint8_t frame_sequencer_counter);
         void write_nr41(uint8_t nr41);
         void write_nr42(uint8_t nr42);
         void write_nr43(uint8_t nr43);
-        void write_nr44(uint8_t nr44);
+        void write_nr44(uint8_t nr44, uint8_t frame_sequencer_counter);
 
         uint8_t read_nr42() const;
         uint8_t read_nr43() const;
@@ -184,6 +184,7 @@ namespace GB
         bool mix_vin_left = false, mix_vin_right = false;
         bool power = 0; // (0: turn the APU off) (Read/Write)
         uint8_t stereo_left_volume = 0, stereo_right_volume = 0;
+        uint8_t frame_sequencer_counter = 0;
         uint32_t sample_counter = 0, sample_rate = 0;
         std::array<uint8_t, 16> wave_table{};
         PulseChannel pulse_1{true};
@@ -206,6 +207,6 @@ namespace GB
         uint8_t read_nr50() const;
         uint8_t read_nr51() const;
         void step(uint32_t cycles);
-        void step_counters(uint8_t apu_div);
+        void step_frame_sequencer();
     };
 }

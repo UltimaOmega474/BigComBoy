@@ -140,7 +140,7 @@ namespace GB
         return 0;
     }
 
-    void PulseChannel::trigger()
+    void PulseChannel::trigger(uint8_t frame_sequencer_counter)
     {
         channel_on = true;
 
@@ -148,6 +148,9 @@ namespace GB
         {
             length.length_counter = 64;
             length.clocks = 0;
+
+            if (frame_sequencer_counter & 1)
+                length.step_length(channel_on);
         }
 
         uint16_t old_period = get_combined_period();
@@ -206,15 +209,21 @@ namespace GB
         frequency_too_high = get_combined_period() >= HIGH_FREQUENCY_CUTOFF;
     }
 
-    void PulseChannel::write_nrX4(uint8_t nr14)
+    void PulseChannel::write_nrX4(uint8_t nr14, uint8_t frame_sequencer_counter)
     {
         period_high = nr14 & 0b00000111;
+
+        bool old_length = length.sound_length_enable;
         length.sound_length_enable = (nr14 & 0b01000000) >> 6;
+
+        if ((!old_length && length.sound_length_enable) && (frame_sequencer_counter & 1))
+            length.step_length(channel_on);
+
         trigger_channel = (nr14 & 0b10000000) >> 7;
         frequency_too_high = get_combined_period() >= HIGH_FREQUENCY_CUTOFF;
         // trigger the channel if the bit is 1
         if (trigger_channel)
-            trigger();
+            trigger(frame_sequencer_counter);
     }
 
     uint8_t PulseChannel::read_nr10() const
@@ -324,7 +333,7 @@ namespace GB
         return 0;
     }
 
-    void WaveChannel::trigger()
+    void WaveChannel::trigger(uint8_t frame_sequencer_counter)
     {
         if (dac_enabled)
             channel_on = true;
@@ -333,6 +342,9 @@ namespace GB
         {
             length.length_counter = 256;
             length.clocks = 0;
+
+            if (frame_sequencer_counter & 1)
+                length.step_length(channel_on);
         }
 
         position_counter = 0;
@@ -362,15 +374,21 @@ namespace GB
         frequency_too_high = get_combined_period() >= HIGH_FREQUENCY_CUTOFF;
     }
 
-    void WaveChannel::write_nr34(uint8_t nr34)
+    void WaveChannel::write_nr34(uint8_t nr34, uint8_t frame_sequencer_counter)
     {
         period_high = nr34 & 0b00000111;
+
+        bool old_length = length.sound_length_enable;
         length.sound_length_enable = (nr34 & 0b01000000) >> 6;
+
+        if ((!old_length && length.sound_length_enable) && (frame_sequencer_counter & 1))
+            length.step_length(channel_on);
+
         trigger_channel = (nr34 & 0b10000000) >> 7;
         frequency_too_high = get_combined_period() >= HIGH_FREQUENCY_CUTOFF;
         // trigger the channel if the bit is 1
         if (trigger_channel)
-            trigger();
+            trigger(frame_sequencer_counter);
     }
 
     uint8_t WaveChannel::read_nr30() const { return dac_enabled << 7; }
@@ -431,7 +449,7 @@ namespace GB
         return 0;
     }
 
-    void NoiseChannel::trigger()
+    void NoiseChannel::trigger(uint8_t frame_sequencer_counter)
     {
         channel_on = true;
 
@@ -439,6 +457,9 @@ namespace GB
         {
             length.length_counter = 64;
             length.clocks = 0;
+
+            if (frame_sequencer_counter & 1)
+                length.step_length(channel_on);
         }
 
         period_counter = (NOISE_DIV[clock_divider] << clock_shift) * 4;
@@ -483,14 +504,19 @@ namespace GB
         clock_shift = (nr43 & 0b11110000) >> 4;
     }
 
-    void NoiseChannel::write_nr44(uint8_t nr44)
+    void NoiseChannel::write_nr44(uint8_t nr44, uint8_t frame_sequencer_counter)
     {
+        bool old_length = length.sound_length_enable;
         length.sound_length_enable = (nr44 & 0b01000000) >> 6;
+
+        if ((!old_length && length.sound_length_enable) && (frame_sequencer_counter & 1))
+            length.step_length(channel_on);
+
         trigger_channel = (nr44 & 0b10000000) >> 7;
 
         // triggers channel if 1 for bit7
         if (trigger_channel)
-            trigger();
+            trigger(frame_sequencer_counter);
     }
 
     uint8_t NoiseChannel::read_nr43() const
@@ -588,7 +614,7 @@ namespace GB
                 pulse_1.write_nrX3(value);
                 return;
             case 0x14:
-                pulse_1.write_nrX4(value);
+                pulse_1.write_nrX4(value, frame_sequencer_counter);
                 return;
 
             case 0x15:
@@ -603,7 +629,7 @@ namespace GB
                 pulse_2.write_nrX3(value);
                 return;
             case 0x19:
-                pulse_2.write_nrX4(value);
+                pulse_2.write_nrX4(value, frame_sequencer_counter);
                 return;
 
             case 0x1A:
@@ -619,7 +645,7 @@ namespace GB
                 wave.write_nr33(value);
                 return;
             case 0x1E:
-                wave.write_nr34(value);
+                wave.write_nr34(value, frame_sequencer_counter);
                 return;
 
             case 0x1F:
@@ -635,7 +661,7 @@ namespace GB
                 noise.write_nr43(value);
                 return;
             case 0x23:
-                noise.write_nr44(value);
+                noise.write_nr44(value, frame_sequencer_counter);
                 return;
 
             case 0x24:
@@ -690,6 +716,7 @@ namespace GB
         mix_vin_left = false;
         mix_vin_right = false;
         sample_counter = sample_rate = 0;
+        frame_sequencer_counter = 0;
         power = true;
 
         pulse_1 = PulseChannel(true);
@@ -809,9 +836,9 @@ namespace GB
             }
         }
     }
-    void APU::step_counters(uint8_t apu_div)
+    void APU::step_frame_sequencer()
     {
-        switch (apu_div)
+        switch (frame_sequencer_counter)
         {
         case 0:
         case 4:
@@ -847,6 +874,8 @@ namespace GB
             break;
         }
         }
+
+        frame_sequencer_counter = ++frame_sequencer_counter & 7;
     }
 
 }
