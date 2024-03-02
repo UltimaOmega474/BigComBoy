@@ -39,32 +39,22 @@ namespace GB
 
     void EnvelopeCounter::step_envelope_sweep(uint8_t &volume_output)
     {
-        if (envelope_sweep_pace != 0 && envelope_enabled)
+        if (envelope_sweep_pace && envelope_enabled)
         {
+            if (envelope_counter)
+                envelope_counter--;
+
             if (envelope_counter == 0)
             {
-                uint8_t new_volume = volume_output;
-                if (envelope_direction == 0)
-                {
-                    new_volume--;
-                }
-                else
-                {
-                    new_volume++;
-                }
+                envelope_counter = envelope_sweep_pace;
+
+                uint8_t new_volume = volume_output + (envelope_direction ? 1 : -1);
 
                 if ((new_volume >= 0) && (new_volume <= 15))
-                {
                     volume_output = new_volume;
-                    envelope_counter = envelope_sweep_pace;
-                }
                 else
-                {
                     envelope_enabled = false;
-                }
             }
-
-            envelope_counter--;
         }
     }
 
@@ -161,7 +151,7 @@ namespace GB
 
         period_counter = (0x800 - old_period) * 4;
 
-        envelope.envelope_counter = envelope.envelope_sweep_pace;
+        envelope.envelope_counter = envelope.envelope_sweep_pace ? envelope.envelope_sweep_pace : 8;
         volume_output = envelope.initial_envelope_volume;
         envelope.envelope_enabled = true;
         // turn DAC off
@@ -192,9 +182,27 @@ namespace GB
 
     void PulseChannel::write_nrX2(uint8_t nr12)
     {
+        auto old_pace = envelope.envelope_sweep_pace;
+        auto old_direction = envelope.envelope_direction;
+
         envelope.envelope_sweep_pace = nr12 & 0b00000111;
         envelope.envelope_direction = (nr12 & 0b00001000) >> 3;
         envelope.initial_envelope_volume = (nr12 & 0b11110000) >> 4;
+
+        /*
+            "Zombie mode" from https://gbdev.gg8.se/wiki/articles/Gameboy_sound_hardware
+            Except incrementing by 2 in subtract mode doesn't fix the issue. Incrementing both
+            situations by one fixes the problem.
+            Fixes Prehistorik Man's broken audio.
+        */
+
+        if ((!old_pace && envelope.envelope_enabled) || !old_direction)
+            volume_output++;
+
+        if (old_direction != envelope.envelope_direction)
+            volume_output = 0x10 - volume_output;
+
+        volume_output &= 0x0F;
 
         if (envelope.initial_envelope_volume == 0 && envelope.envelope_direction == 0)
             channel_on = false;
@@ -217,7 +225,9 @@ namespace GB
             length.step_length(channel_on);
 
         trigger_channel = (nr14 & 0b10000000) >> 7;
+
         frequency_too_high = get_combined_period() >= HIGH_FREQUENCY_CUTOFF;
+
         // trigger the channel if the bit is 1
         if (trigger_channel)
             trigger(frame_sequencer_counter);
@@ -462,7 +472,7 @@ namespace GB
         period_counter = (NOISE_DIV[clock_divider] << clock_shift) * 4;
         LFSR = 0x7FFF;
 
-        envelope.envelope_counter = envelope.envelope_sweep_pace;
+        envelope.envelope_counter = envelope.envelope_sweep_pace ? envelope.envelope_sweep_pace : 8;
         volume_output = envelope.initial_envelope_volume;
         envelope.envelope_enabled = true;
 
@@ -477,9 +487,22 @@ namespace GB
 
     void NoiseChannel::write_nr42(uint8_t nr42)
     {
+        auto old_pace = envelope.envelope_sweep_pace;
+        auto old_direction = envelope.envelope_direction;
+
         envelope.envelope_sweep_pace = nr42 & 0b00000111;
         envelope.envelope_direction = (nr42 & 0b00001000) >> 3;
         envelope.initial_envelope_volume = (nr42 & 0b11110000) >> 4;
+
+        // see: PulseChannel::write_nrx2 for explanation
+
+        if ((!old_pace && envelope.envelope_enabled) || !old_direction)
+            volume_output++;
+
+        if (old_direction != envelope.envelope_direction)
+            volume_output = 0x10 - volume_output;
+
+        volume_output &= 0x0F;
 
         if (envelope.initial_envelope_volume == 0 && envelope.envelope_direction == 0)
             channel_on = false;
