@@ -2,22 +2,23 @@
 
 GameBoy emulator written in C++. 
 
-## Compatibility
+## Hardware Compatibility
 
-- [x] DMG-CPU-01
-- [ ] CGB-CPU-01
+- [x] DMG
+- [ ] CGB
 - [x] MBC1
 - [ ] MBC1M
 - [x] MBC2
 - [x] MBC3/MBC30
 - [x] MBC3 RTC
-- [ ] MBC5
+- [x] MBC5
 - [ ] MBC6
 - [ ] MBC7
 - [ ] MMM01
 - [ ] M161
 - [ ] HuC1
 - [ ] HuC-3
+- [ ] Link Cable
 
 ## Building
 

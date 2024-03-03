@@ -88,13 +88,13 @@ namespace GB
         static Cartridge *from_file_raw_ptr(std::filesystem::path rom_path);
     };
 
-    class NoMBC : public Cartridge
+    class ROMOnly : public Cartridge
     {
         std::vector<uint8_t> rom;
 
     public:
-        NoMBC(CartHeader &&header);
-        virtual ~NoMBC() override = default;
+        ROMOnly(CartHeader &&header);
+        virtual ~ROMOnly() override = default;
 
         bool has_battery() const override { return false; }
 
@@ -204,5 +204,29 @@ namespace GB
         void save_sram_to_file() override;
         void load_sram_from_file() override;
         void tick(uint32_t cycles) override;
+    };
+
+    class MBC5 : public Cartridge
+    {
+        uint32_t rom_bank_num = 1, bank_upper_bits = 0, ram_bank_num = 0;
+
+        bool ram_enabled = false;
+        std::array<uint8_t, 131072> eram{};
+        std::vector<uint8_t> rom{};
+
+    public:
+        MBC5(CartHeader &&header);
+        virtual ~MBC5() override = default;
+
+        bool has_battery() const override;
+
+        void init_banks(std::ifstream &rom_stream) override;
+        uint8_t read(uint16_t addr) override;
+        void write(uint16_t addr, uint8_t value) override;
+        uint8_t read_ram(uint16_t addr) override;
+        void write_ram(uint16_t addr, uint8_t value) override;
+        void save_sram_to_file() override;
+        void load_sram_from_file() override;
+        void tick(uint32_t cycles) override {}
     };
 }
