@@ -427,7 +427,12 @@ namespace GB
                     core.ppu.window_x = value;
                     return;
                 }
-
+                case 0x4D:
+                {
+                    KEY1 &= ~0x1;
+                    KEY1 |= value & 0x1;
+                    break;
+                }
                 case 0x50:
                 {
                     boot_rom_enabled = false;

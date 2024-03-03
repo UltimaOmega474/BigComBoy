@@ -58,7 +58,7 @@ namespace GB
     {
         while (frames-- && ready_to_run)
         {
-            while (cycle_count <= CYCLES_PER_FRAME && !cpu.stopped)
+            while (cycle_count < CYCLES_PER_FRAME && !cpu.stopped)
                 cpu.step();
 
             if (cycle_count >= CYCLES_PER_FRAME)
@@ -69,19 +69,21 @@ namespace GB
     void Core::run_for_cycles(uint32_t cycles)
     {
         cycle_count = 0;
-        while (cycle_count <= cycles && !cpu.stopped)
+        while (cycle_count < cycles && !cpu.stopped)
             cpu.step();
     }
 
     void Core::tick_subcomponents(uint8_t cycles)
     {
+        auto adjusted_cycles = cpu.double_speed ? 2 : 4;
+
         while (cycles > 0)
         {
             timer.update(4);
-            ppu.step(4);
+            ppu.step(adjusted_cycles);
             apu.step(4);
-            bus.cart->tick(4);
-            cycle_count += 4;
+            bus.cart->tick(adjusted_cycles);
+            cycle_count += adjusted_cycles;
             cycles -= 4;
         }
     }

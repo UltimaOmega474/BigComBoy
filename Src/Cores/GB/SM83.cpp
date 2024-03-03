@@ -884,7 +884,20 @@ namespace GB
         pc += 3;
     }
 
-    void SM83::op_stop() { stopped = true; }
+    void SM83::op_stop()
+    {
+        if (!cgb_mode)
+        {
+            stopped = true;
+            return;
+        }
+
+        if (bus.KEY1 & 0x1)
+        {
+            double_speed = !double_speed;
+            bus.KEY1 = double_speed << 7;
+        }
+    }
 
     void SM83::op_jr_i8()
     {
