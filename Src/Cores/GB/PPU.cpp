@@ -19,7 +19,6 @@
 #include "PPU.hpp"
 #include "Bus.hpp"
 #include <algorithm>
-#include <cstdint>
 #include <span>
 
 namespace GB
@@ -60,45 +59,6 @@ namespace GB
         return pixel;
     }
 
-    uint8_t ObjectFIFO::pixels_left() const { return shift_count; }
-
-    void ObjectFIFO::clear()
-    {
-        shift_count = 0;
-        pixels_low = 0;
-        pixels_high = 0;
-        palette = 0;
-        priority = 0;
-    }
-
-    void ObjectFIFO::load(uint8_t pixels_avail, uint8_t low, uint8_t high, uint8_t palette,
-                          uint8_t priority)
-    {
-        int shift = 8 - pixels_avail;
-        pixels_low |= (low >> shift);
-        pixels_high |= (high >> shift);
-        this->palette |= (palette >> shift);
-        this->priority |= (priority >> shift);
-        shift_count += pixels_avail;
-    }
-
-    std::tuple<uint8_t, uint8_t, uint8_t> ObjectFIFO::clock()
-    {
-        uint8_t low_bit = (pixels_low >> 7) & 0x1;
-        uint8_t high_bit = (pixels_high >> 7) & 0x1;
-        uint8_t out_pixel = (high_bit << 1) | (low_bit);
-        uint8_t out_palette = (palette >> 7) & 1;
-        uint8_t out_priority = (priority >> 7) & 1;
-
-        pixels_low <<= 1;
-        pixels_high <<= 1;
-        palette <<= 1;
-        priority <<= 1;
-
-        shift_count--;
-        return std::make_tuple(out_pixel, out_palette, out_priority);
-    }
-
     FetchState BackgroundFetcher::get_state() const { return state; }
 
     FetchMode BackgroundFetcher::get_mode() const { return mode; }
@@ -125,10 +85,6 @@ namespace GB
     {
         switch (state)
         {
-        case FetchState::Idle:
-        {
-            break;
-        }
         case FetchState::GetTileID:
         {
             get_tile_id(ppu);
@@ -287,7 +243,7 @@ namespace GB
 
         if (mode == FetchMode::Background)
         {
-            if (ppu.write_x == 0)
+            if (ppu.line_x == 0)
             {
                 auto scx = ppu.screen_scroll_x & 7;
 
@@ -298,182 +254,6 @@ namespace GB
 
         substep = 0;
         state = FetchState::GetTileID;
-    }
-
-    FetchState ObjectFetcher::get_state() const { return state; }
-
-    void ObjectFetcher::reset()
-    {
-        ppu_obj = 0;
-        substep = 0;
-        tile_id = 0;
-        queued_pixels_low = 0;
-        queued_pixels_high = 0;
-        address = 0;
-        state = FetchState::Idle;
-    }
-
-    void ObjectFetcher::activate(uint8_t obj_num)
-    {
-        reset();
-        ppu_obj = obj_num;
-
-        state = FetchState::GetTileID;
-    }
-
-    void ObjectFetcher::clock(PPU &ppu)
-    {
-        if (ppu.fetcher.get_state() != FetchState::Push)
-            return;
-        switch (state)
-        {
-        case FetchState::Idle:
-        {
-            break;
-        }
-        case FetchState::GetTileID:
-        {
-            ppu.halt_bg_fetcher = true;
-            get_tile_id(ppu);
-            break;
-        }
-        case FetchState::TileLow:
-        {
-            get_tile_data(ppu, 0);
-            break;
-        }
-        case FetchState::TileHigh:
-        {
-            get_tile_data(ppu, 1);
-            break;
-        }
-        case FetchState::Push:
-        {
-            push_pixels(ppu);
-            break;
-        }
-        }
-    }
-
-    void ObjectFetcher::get_tile_id(PPU &ppu)
-    {
-        switch (substep)
-        {
-        case 0:
-        {
-            substep++;
-            break;
-        }
-
-        case 1:
-        {
-            tile_id = ppu.objects_on_scanline[ppu_obj].tile;
-            state = FetchState::TileLow;
-
-            substep = 0;
-            break;
-        }
-        }
-    }
-
-    void ObjectFetcher::get_tile_data(PPU &ppu, uint8_t bit_plane)
-    {
-        switch (substep)
-        {
-        case 0:
-        {
-            uint8_t height = (ppu.lcd_control & LCDControlFlags::SpriteSize) ? 16 : 8;
-            uint16_t tile_index = 0;
-            auto y = ppu.objects_on_scanline[ppu_obj].y;
-            int16_t obj_y = (int16_t)y - 16;
-            if (height == 16)
-                tile_id &= ~1;
-
-            if (ppu.objects_on_scanline[ppu_obj].attributes & ObjectAttributeFlags::FlipY)
-                tile_index =
-                    (0x8000 & 0x1FFF) + (tile_id * 16) + ((height - (ppu.line_y - obj_y) - 1) * 2);
-            else
-                tile_index =
-                    (0x8000 & 0x1FFF) + (tile_id * 16) + ((ppu.line_y - obj_y) % height * 2);
-
-            address = tile_index + bit_plane;
-
-            substep++;
-            break;
-        }
-
-        // read from address
-        case 1:
-        {
-            substep = 0;
-
-            if (bit_plane == 1)
-            {
-                state = FetchState::Push;
-                queued_pixels_high = ppu.vram[address];
-            }
-            else
-            {
-                state = FetchState::TileHigh;
-                queued_pixels_low = ppu.vram[address];
-            }
-
-            break;
-        }
-        }
-    }
-
-    void ObjectFetcher::push_pixels(PPU &ppu)
-    {
-        auto &obj = ppu.objects_on_scanline[ppu_obj];
-
-        if (obj.attributes & ObjectAttributeFlags::FlipX)
-        {
-            auto byte_reverse = [](uint8_t input) -> uint8_t
-            {
-                input = ((input & 0b11110000) >> 4) | ((input & 0b00001111) << 4);
-                input = ((input & 0b11001100) >> 2) | ((input & 0b00110011) << 2);
-                input = ((input & 0b10101010) >> 1) | ((input & 0b01010101) << 1);
-                return input;
-            };
-
-            queued_pixels_low = byte_reverse(queued_pixels_low);
-            queued_pixels_high = byte_reverse(queued_pixels_high);
-        }
-
-        uint8_t avail = 8;
-        uint8_t palette_bits = (obj.attributes & ObjectAttributeFlags::Palette) ? 255 : 0;
-        uint8_t priority_bits = (obj.attributes & ObjectAttributeFlags::Priority) ? 255 : 0;
-
-        if (obj.x < 8)
-        {
-            avail = obj.x;
-            auto shift_count = (8 - obj.x);
-
-            queued_pixels_low <<= shift_count;
-            queued_pixels_high <<= shift_count;
-            palette_bits <<= shift_count;
-            priority_bits <<= shift_count;
-        }
-
-        uint8_t already_queued = ppu.obj_fifo.pixels_left();
-        if (already_queued)
-        {
-            queued_pixels_low <<= already_queued;
-            queued_pixels_high <<= already_queued;
-            palette_bits <<= already_queued;
-            priority_bits <<= already_queued;
-            avail -= already_queued;
-        }
-
-        if (ppu.lcd_control & LCDControlFlags::SpriteEnable)
-            ppu.obj_fifo.load(avail, queued_pixels_low, queued_pixels_high, palette_bits,
-                              priority_bits);
-
-        substep = 0;
-        state = FetchState::Idle;
-        ppu.halt_bg_fetcher = false;
-        ppu.bg_fifo.paused = false;
     }
 
     PPU::PPU(MainBus &bus) : bus(bus) {}
@@ -504,15 +284,15 @@ namespace GB
         num_obj_on_scanline = 0;
         cycles = 0;
         line_y = 0;
-
         window_line_y = 0;
+
+        fetcher.reset();
+        bg_fifo.clear();
     }
 
     void PPU::set_post_boot_state()
     {
-        //   window_draw_flag = true;
         previously_disabled = false;
-        //    cycles = 420;
         status = 1;
         lcd_control = 0x91;
     }
@@ -551,7 +331,7 @@ namespace GB
                     cycles = 0;
                     ++line_y;
 
-                    write_x = 0;
+                    line_x = 0;
 
                     if (line_y == 144)
                     {
@@ -611,9 +391,6 @@ namespace GB
                     mode = PPUState::DrawScanline;
                     fetcher.reset();
                     bg_fifo.clear();
-                    obj_fetcher.reset();
-                    obj_fifo.clear();
-                    halt_bg_fetcher = false;
                     continue;
                 }
 
@@ -624,8 +401,7 @@ namespace GB
             {
                 if (cycles == 172 + extra_cycles)
                 {
-                    if (cycles > 289)
-                        int d = 0;
+                    render_objects();
                     cycles = 0;
 
                     mode = PPUState::HBlank;
@@ -664,9 +440,7 @@ namespace GB
     {
         uint16_t addr = address << 8;
         for (auto i = 0; i < 160; ++i)
-        {
             oam[i] = bus.read((addr) + i);
-        }
     }
 
     uint8_t PPU::read_vram(uint16_t address) const { return vram[address]; }
@@ -678,13 +452,9 @@ namespace GB
     void PPU::set_stat(uint8_t flags, bool value)
     {
         if (value)
-        {
             status |= flags;
-        }
         else
-        {
             status &= ~flags;
-        }
     }
 
     bool PPU::stat_any() const
@@ -718,95 +488,107 @@ namespace GB
 
     void PPU::render_scanline()
     {
-        if (!halt_bg_fetcher)
-            fetcher.clock(*this);
+        fetcher.clock(*this);
 
-        if (obj_fetcher.get_state() != FetchState::Idle)
+        if ((line_x < 160) && bg_fifo.pixels_left())
         {
-            obj_fetcher.clock(*this);
+            uint8_t final_pixel = 0, final_palette = background_palette;
+            uint8_t bg_pixel = bg_fifo.clock();
+
+            if (!(lcd_control & LCDControlFlags::BGEnable) ||
+                !(render_flags & RenderFlags::Background))
+            {
+                final_pixel = 0;
+                final_palette = 0;
+            }
+            else
+            {
+                final_pixel = bg_pixel;
+            }
+
+            bg_color_table[(line_y * LCD_WIDTH) + line_x] = final_pixel;
+            plot_pixel(line_x, final_pixel, final_palette);
+            line_x++;
         }
 
-        if (obj_fetcher.get_state() == FetchState::Idle)
+        if ((lcd_control & LCDControlFlags::WindowEnable) && window_draw_flag &&
+            (line_x >= (window_x - 7)) && fetcher.get_mode() == FetchMode::Background)
         {
-            check_for_sprites();
-            if ((write_x < 160) && bg_fifo.pixels_left() && !bg_fifo.paused)
+            fetcher.clear_with_mode(FetchMode::Window);
+            bg_fifo.clear();
+            extra_cycles += 6;
+        }
+    }
+
+    void PPU::render_objects()
+    {
+        if (!(lcd_control & LCDControlFlags::SpriteEnable) ||
+            !(render_flags & RenderFlags::Objects))
+            return;
+
+        uint8_t height = (lcd_control & LCDControlFlags::SpriteSize) ? 16 : 8;
+
+        for (auto i = 0; i < num_obj_on_scanline; ++i)
+        {
+            auto &object = objects_on_scanline[(num_obj_on_scanline - 1) - i];
+
+            uint8_t palette = (object.attributes & OBJAttributeFlags::Palette) ? object_palette_1
+                                                                               : object_palette_0;
+            uint16_t tile_index = 0;
+
+            if (height == 16)
+                object.tile &= ~1;
+
+            int32_t obj_y = static_cast<int32_t>(object.y) - 16;
+
+            if (object.attributes & OBJAttributeFlags::FlipY)
+                tile_index =
+                    (0x8000 & 0x1FFF) + (object.tile * 16) + ((height - (line_y - obj_y) - 1) * 2);
+            else
+                tile_index =
+                    (0x8000 & 0x1FFF) + (object.tile * 16) + ((line_y - obj_y) % height * 2);
+
+            int32_t adjusted_x = static_cast<int32_t>(object.x) - 8;
+            size_t framebuffer_line_y = line_y * LCD_WIDTH;
+
+            for (auto x = 0; x < 8; ++x)
             {
-                uint8_t final_pixel = 0, final_palette = background_palette;
-                uint8_t bg_pixel = bg_fifo.clock();
+                size_t framebuffer_line_x = adjusted_x + x;
 
-                if (!(lcd_control & LCDControlFlags::BGEnable))
+                if (framebuffer_line_x >= 0 && framebuffer_line_x < 160)
                 {
-                    final_pixel = 0;
-                    final_palette = 0;
-                }
-                else
-                {
-                    final_pixel = bg_pixel;
-                }
+                    uint8_t low_byte = vram[tile_index];
+                    uint8_t high_byte = vram[tile_index + 1];
+                    uint8_t bit = 7 - (x & 7);
 
-                if (obj_fifo.pixels_left())
-                {
-                    auto [obj_pixel, obj_pal, obj_pri] = obj_fifo.clock();
+                    if (object.attributes & OBJAttributeFlags::FlipX)
+                        bit = x & 7;
 
-                    bool bg_has_priority = ((obj_pixel == 0) || (obj_pri && bg_pixel != 0));
+                    uint8_t low_bit = (low_byte >> bit) & 0x01;
+                    uint8_t high_bit = (high_byte >> bit) & 0x01;
+                    uint8_t pixel = (high_bit << 1) | low_bit;
+
+                    if (pixel == 0)
+                        continue;
+
+                    bool bg_has_priority = (object.attributes & OBJAttributeFlags::Priority) &&
+                                           bg_color_table[framebuffer_line_y + framebuffer_line_x];
 
                     if (!bg_has_priority)
-                    {
-                        final_pixel = obj_pixel;
-                        final_palette = (obj_pal) ? object_palette_1 : object_palette_0;
-                    }
-                }
-
-                plot_pixel(final_pixel, final_palette);
-                write_x++;
-            }
-
-            if ((lcd_control & LCDControlFlags::WindowEnable) && window_draw_flag &&
-                (write_x >= (window_x - 7)) && fetcher.get_mode() == FetchMode::Background)
-            {
-                fetcher.clear_with_mode(FetchMode::Window);
-                bg_fifo.clear();
-                extra_cycles += 6;
-            }
-        }
-    }
-
-    void PPU::check_for_sprites()
-    {
-        for (int i = 0; i < num_obj_on_scanline; ++i)
-        {
-            if (!objects_on_scanline2[i])
-            {
-                const auto &obj = objects_on_scanline[i];
-                if (obj.x <= (write_x + 8))
-                {
-
-                    obj_fetcher.activate(i);
-                    bg_fifo.paused = true;
-                    objects_on_scanline2[i] = true;
-
-                    int p = (int)bg_fifo.pixels_left() - 2;
-
-                    if (p < 0)
-                        p = 0;
-
-                    p += 5;
-                    extra_cycles += obj.x == 0 ? 11 : (p);
-
-                    break;
+                        plot_pixel(framebuffer_line_x, pixel, palette);
                 }
             }
         }
     }
 
-    void PPU::plot_pixel(uint8_t final_pixel, uint8_t palette)
+    void PPU::plot_pixel(uint8_t x_pos, uint8_t final_pixel, uint8_t palette)
     {
         size_t framebuffer_line_y = line_y * LCD_WIDTH;
 
         std::array<uint8_t, 4> color = color_table[(palette >> (int)(2 * final_pixel)) & 3];
 
         auto fb_pixel =
-            std::span<uint8_t>{&framebuffer[(framebuffer_line_y + write_x) * COLOR_DEPTH], 4};
+            std::span<uint8_t>{&framebuffer[(framebuffer_line_y + x_pos) * COLOR_DEPTH], 4};
 
         std::copy(color.begin(), color.end(), fb_pixel.begin());
     }
@@ -817,14 +599,13 @@ namespace GB
 
         num_obj_on_scanline = 0;
         objects_on_scanline.fill({});
-        objects_on_scanline2.fill(false);
         for (auto i = 0, total = 0; i < 40; ++i)
         {
             if (total == 10)
                 break;
 
             const Object *sprite = reinterpret_cast<const Object *>((&oam[i * 4]));
-            int16_t corrected_y_position = (int16_t)sprite->y - 16;
+            int32_t corrected_y_position = static_cast<int32_t>(sprite->y) - 16;
 
             if (corrected_y_position <= line_y && (corrected_y_position + height) > line_y)
             {
@@ -846,9 +627,7 @@ namespace GB
         {
             set_stat(LYCandLYCompareType, true);
             if (check_stat(EnableLYCandLYInt) && allow_interrupts)
-            {
                 bus.request_interrupt(INT_LCD_STAT_BIT);
-            }
         }
     }
 }
