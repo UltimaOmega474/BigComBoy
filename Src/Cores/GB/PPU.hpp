@@ -20,10 +20,12 @@
 #include "Constants.hpp"
 #include <array>
 #include <cinttypes>
+#include <tuple>
 
 namespace GB
 {
     class MainBus;
+    class PPU;
 
     enum PPUState
     {
@@ -45,7 +47,7 @@ namespace GB
         BGEnable = 0x1
     };
 
-    enum StatusFlags
+    enum LCDStatusFlags
     {
         EnableLYCandLYInt = 0x40,
         EnableOAMInt = 0x20,
@@ -55,7 +57,7 @@ namespace GB
         ModeFlag = 0x3
     };
 
-    enum ObjectAttributeFlags
+    enum OBJAttributeFlags
     {
         Priority = 0x80,
         FlipY = 0x40,
@@ -63,11 +65,24 @@ namespace GB
         Palette = 0x10
     };
 
-    enum DisplayRenderFlags
+    enum RenderFlags
     {
         Background = 0x1,
-        Window = 0x2,
-        Objects = 0x4,
+        Objects = 0x2,
+    };
+
+    enum class FetchState
+    {
+        GetTileID,
+        TileLow,
+        TileHigh,
+        Push,
+    };
+
+    enum class FetchMode
+    {
+        Background,
+        Window,
     };
 
     struct Object
@@ -78,31 +93,69 @@ namespace GB
         uint8_t attributes = 0;
     };
 
+    class BackgroundFIFO
+    {
+        uint8_t shift_count = 0;
+        uint8_t pixels_low = 0, pixels_high = 0;
+
+    public:
+        uint8_t pixels_left() const;
+
+        void clear();
+        void load(uint8_t low, uint8_t high);
+        void force_shift(uint8_t amount);
+        uint8_t clock();
+    };
+
+    class BackgroundFetcher
+    {
+        bool first_fetch = true;
+        uint8_t substep = 0, tile_id = 0;
+        uint8_t queued_pixels_low = 0, queued_pixels_high = 0;
+        uint16_t x_pos = 0, address = 0;
+        FetchState state = FetchState::GetTileID;
+        FetchMode mode = FetchMode::Background;
+
+    public:
+        FetchState get_state() const;
+        FetchMode get_mode() const;
+
+        void reset();
+        void clear_with_mode(FetchMode new_mode);
+        void clock(PPU &ppu);
+        void get_tile_id(PPU &ppu);
+        void get_tile_data(PPU &ppu, uint8_t bit_plane);
+        void push_pixels(PPU &ppu);
+    };
+
     class PPU
     {
         MainBus &bus;
 
     public:
         bool window_draw_flag = false, previously_disabled = false;
-        uint8_t num_obj_on_scanline = 0;
+        uint8_t num_obj_on_scanline = 0, objs_processed = 0;
         uint8_t lcd_control = 0, status = 0;
         uint8_t screen_scroll_y = 0, screen_scroll_x = 0;
         uint8_t line_y = 0, line_y_compare = 0;
+        uint8_t line_x = 0;
         uint8_t window_y = 0, window_x = 0;
         uint8_t window_line_y = 0, background_palette = 0;
         uint8_t object_palette_0 = 0, object_palette_1 = 0;
-        uint8_t render_flags = DisplayRenderFlags::Background | DisplayRenderFlags::Window |
-                               DisplayRenderFlags::Objects;
+        uint8_t render_flags = RenderFlags::Background | RenderFlags::Objects;
+        uint32_t cycles = 0, extra_cycles = 0;
         PPUState mode = PPUState::HBlank;
-        uint32_t cycles = 0;
+
         std::array<uint8_t, 8193> vram{};
         std::array<uint8_t, 256> oam{};
         std::array<Object, 10> objects_on_scanline{};
         std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT> bg_color_table{};
-
         std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT * 4> framebuffer{};
         std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT * 4> framebuffer_complete{};
         std::array<std::array<uint8_t, 4>, 4> color_table = LCD_GRAY_PALETTE;
+
+        BackgroundFetcher fetcher;
+        BackgroundFIFO bg_fifo;
 
         PPU(MainBus &bus);
 
@@ -122,10 +175,11 @@ namespace GB
 
     private:
         void render_scanline();
-        void render_bg_layer();
-        void render_window_layer();
+        void render_objects();
+        void plot_pixel(uint8_t x_pos, uint8_t final_pixel, uint8_t palette);
+
         void scan_oam();
-        void render_sprite_layer();
         void check_ly_lyc(bool allow_interrupts);
     };
+
 }
