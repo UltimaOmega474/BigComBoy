@@ -71,11 +71,11 @@ namespace GB
             return 0xFF;
         }
         case 0xC:
+            return wram[address & (address & 0xFFF)];
         case 0xD:
+            return wram[(wram_bank_num * 0x1000) + (address & 0xFFF)];
         case 0xE:
-        {
-            return wram[address & 0x1FFF];
-        }
+            return wram[address & (address & 0xFFF)];
         case 0xF:
         {
             auto hram_page = address >> 8;
@@ -189,9 +189,27 @@ namespace GB
                     return core.ppu.window_y;
                 case 0x4B:
                     return core.ppu.window_x;
-
+                case 0x4D:
+                    return KEY1;
+                case 0x4F:
+                    return core.ppu.vram_bank_select | 0xFE;
                 case 0x50:
                     return boot_rom_enabled;
+                case 0x55:
+                    return core.ppu.hdma_blocks_remain();
+                case 0x68:
+                    return core.ppu.bg_palette_select;
+                case 0x69:
+                    return core.ppu.read_bg_palette();
+
+                case 0x6A:
+                    return core.ppu.obj_palette_select;
+                case 0x6B:
+                    return core.ppu.read_obj_palette();
+                case 0x6C:
+                    return core.ppu.object_priority_mode;
+                case 0x70:
+                    return wram_bank_num;
                 }
 
                 if ((address >= 0xFF80) && (address <= 0xFFFE))
@@ -254,11 +272,19 @@ namespace GB
         }
 
         case 0xC:
+        {
+            wram[address & (address & 0xFFF)] = value;
+            break;
+        }
         case 0xD:
+        {
+            wram[(wram_bank_num * 0x1000) + (address & 0xFFF)] = value;
+            break;
+        }
         case 0xE:
         {
-            wram[address & 0x1FFF] = value;
-            return;
+            wram[address & (address & 0xFFF)] = value;
+            break;
         }
 
         case 0xF:
@@ -433,10 +459,77 @@ namespace GB
                     KEY1 |= value & 0x1;
                     break;
                 }
+                case 0x4F:
+                {
+                    core.ppu.vram_bank_select = value & 0x1;
+                    break;
+                }
                 case 0x50:
                 {
                     boot_rom_enabled = false;
                     return;
+                }
+                case 0x51:
+                {
+                    core.ppu.HDMA_src &= ~0xFF00;
+                    core.ppu.HDMA_src |= value << 8;
+                    break;
+                }
+                case 0x52:
+                {
+                    core.ppu.HDMA_src &= ~0xFF;
+                    core.ppu.HDMA_src |= value & 0xF0;
+                    break;
+                }
+                case 0x53:
+                {
+                    core.ppu.HDMA_dst &= ~0xFF00;
+                    core.ppu.HDMA_src |= (value & 0x1F) << 8;
+                    break;
+                }
+                case 0x54:
+                {
+                    core.ppu.HDMA_dst &= ~0xFF;
+                    core.ppu.HDMA_dst |= value & 0xF0;
+                    break;
+                }
+                case 0x55:
+                {
+                    core.ppu.instant_hdma(value);
+                    break;
+                }
+                case 0x68:
+                {
+                    core.ppu.bg_palette_select = value;
+                    break;
+                }
+                case 0x69:
+                {
+                    core.ppu.write_bg_palette(value);
+                    break;
+                }
+                case 0x6A:
+                {
+                    core.ppu.obj_palette_select = value;
+                    break;
+                }
+                case 0x6B:
+                {
+                    core.ppu.write_obj_palette(value);
+                    break;
+                }
+                case 0x6C:
+                {
+                    if (boot_rom_enabled)
+                        core.ppu.object_priority_mode = value & 0x1;
+                    break;
+                }
+
+                case 0x70:
+                {
+                    value &= 0x7;
+                    wram_bank_num = value ? value : 1;
+                    break;
                 }
                 }
 

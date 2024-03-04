@@ -434,6 +434,30 @@ namespace GB
 
     void PPU::write_vram(uint16_t address, uint8_t value) { vram[address] = value; }
 
+    void PPU::write_bg_palette(uint8_t value)
+    {
+        bg_cram[bg_palette_select & 0x3F] = value;
+
+        if (bg_palette_select & 0x80)
+        {
+            bg_palette_select = ((bg_palette_select + 1) & 0x3F) | 0x80;
+        }
+    }
+
+    uint8_t PPU::read_bg_palette() const { return bg_cram[bg_palette_select & 0x3F]; }
+
+    void PPU::write_obj_palette(uint8_t value)
+    {
+        obj_cram[obj_palette_select & 0x3F] = value;
+
+        if (obj_palette_select & 0x80)
+        {
+            obj_palette_select = ((obj_palette_select + 1) & 0x3F) | 0x80;
+        }
+    }
+
+    uint8_t PPU::read_obj_palette() const { return obj_cram[obj_palette_select & 0x3F]; }
+
     void PPU::write_oam(uint16_t address, uint8_t value) { oam[address] = value; }
 
     void PPU::instant_dma(uint8_t address)
@@ -442,6 +466,19 @@ namespace GB
         for (auto i = 0; i < 160; ++i)
             oam[i] = bus.read((addr) + i);
     }
+
+    void PPU::instant_hdma(uint8_t length)
+    {
+        length &= ~0x80;
+        for (int i = 0; i < length; ++i)
+        {
+            uint8_t data = bus.read(HDMA_src + i);
+
+            vram[(HDMA_dst & 0x1FFF) + i] = data;
+        }
+    }
+
+    uint8_t PPU::hdma_blocks_remain() const { return 0xFF; }
 
     uint8_t PPU::read_vram(uint16_t address) const { return vram[address]; }
 

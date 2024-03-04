@@ -142,11 +142,22 @@ namespace GB
         uint8_t window_y = 0, window_x = 0;
         uint8_t window_line_y = 0, background_palette = 0;
         uint8_t object_palette_0 = 0, object_palette_1 = 0;
+
+        // CGB
+        uint8_t vram_bank_select = 0b11111110;
+        uint8_t bg_palette_select = 0;
+        uint8_t obj_palette_select = 0;
+        uint8_t object_priority_mode = 0;
+
+        uint16_t HDMA_src = 0, HDMA_dst = 0;
+
         uint8_t render_flags = RenderFlags::Background | RenderFlags::Objects;
         uint32_t cycles = 0, extra_cycles = 0;
         PPUState mode = PPUState::HBlank;
 
-        std::array<uint8_t, 8193> vram{};
+        std::array<uint8_t, 64> obj_cram{};
+        std::array<uint8_t, 64> bg_cram{};
+        std::array<uint8_t, 16384> vram{};
         std::array<uint8_t, 256> oam{};
         std::array<Object, 10> objects_on_scanline{};
         std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT> bg_color_table{};
@@ -163,9 +174,15 @@ namespace GB
         void set_post_boot_state();
         void step(uint32_t accumulated_cycles);
 
+        void write_bg_palette(uint8_t value);
+        uint8_t read_bg_palette() const;
+        void write_obj_palette(uint8_t value);
+        uint8_t read_obj_palette() const;
         void write_vram(uint16_t address, uint8_t value);
         void write_oam(uint16_t address, uint8_t value);
         void instant_dma(uint8_t address);
+        void instant_hdma(uint8_t length);
+        uint8_t hdma_blocks_remain() const;
 
         uint8_t read_vram(uint16_t address) const;
         uint8_t read_oam(uint16_t address) const;
