@@ -39,6 +39,20 @@ namespace GB
         pixels_high = high;
         shift_count = 8;
         this->attribute = attribute;
+
+        if (attribute & AttributeFlags::FlipX)
+        {
+            auto byte_reverse = [](uint8_t input) -> uint8_t
+            {
+                input = ((input & 0b11110000) >> 4) | ((input & 0b00001111) << 4);
+                input = ((input & 0b11001100) >> 2) | ((input & 0b00110011) << 2);
+                input = ((input & 0b10101010) >> 1) | ((input & 0b01010101) << 1);
+                return input;
+            };
+
+            pixels_low = byte_reverse(pixels_low);
+            pixels_high = byte_reverse(pixels_high);
+        }
     }
 
     void BackgroundFIFO::force_shift(uint8_t amount)
@@ -185,6 +199,9 @@ namespace GB
                     !((ppu.lcd_control & LCDControlFlags::BGWindowTileData) || (tile_id & 0x80));
                 uint16_t yoffset = (ppu.line_y + ppu.screen_scroll_y) & 7;
 
+                if (attribute_id & AttributeFlags::FlipY)
+                    yoffset = (7 - (ppu.line_y + ppu.screen_scroll_y)) & 7;
+
                 computed_address |= bit12 ? (1 << 12) : 0;
                 computed_address |= tile_id << 4;
                 computed_address |= (yoffset << 1);
@@ -196,6 +213,9 @@ namespace GB
                 uint16_t bit12 =
                     !((ppu.lcd_control & LCDControlFlags::BGWindowTileData) || (tile_id & 0x80));
                 uint16_t yoffset = ppu.window_line_y & 7;
+
+                if (attribute_id & AttributeFlags::FlipY)
+                    yoffset = (7 - ppu.window_line_y) & 7;
 
                 computed_address |= bit12 ? (1 << 12) : 0;
                 computed_address |= tile_id << 4;
@@ -546,8 +566,9 @@ namespace GB
             uint8_t final_pixel = 0, final_palette = bg_fifo.attribute & 0x7;
             uint8_t bg_pixel = bg_fifo.clock();
 
-            if (!(lcd_control & LCDControlFlags::BGEnable) ||
-                !(render_flags & RenderFlags::Background))
+            bool bg_enabled = (bus.KEY0 == 0xC0) ? true : (lcd_control & LCDControlFlags::BGEnable);
+
+            if (!bg_enabled || !(render_flags & RenderFlags::Background))
             {
                 final_pixel = 0;
                 final_palette = 0;
@@ -583,10 +604,10 @@ namespace GB
         {
             auto &object = objects_on_scanline[(num_obj_on_scanline - 1) - i];
 
-            uint8_t palette = (object.attributes & OBJAttributeFlags::Palette) ? object_palette_1
-                                                                               : object_palette_0;
-            uint8_t cgb_palette = (object.attributes & OBJAttributeFlags::PaletteBits);
-            uint8_t bank = 0x2000 * ((object.attributes & OBJAttributeFlags::BankSelect) >> 3);
+            uint8_t palette =
+                (object.attributes & AttributeFlags::Palette) ? object_palette_1 : object_palette_0;
+            uint8_t cgb_palette = (object.attributes & AttributeFlags::PaletteBits);
+            uint8_t bank = 0x2000 * ((object.attributes & AttributeFlags::BankSelect) ? 1 : 0);
 
             uint16_t tile_index = 0;
 
@@ -595,7 +616,7 @@ namespace GB
 
             int32_t obj_y = static_cast<int32_t>(object.y) - 16;
 
-            if (object.attributes & OBJAttributeFlags::FlipY)
+            if (object.attributes & AttributeFlags::FlipY)
                 tile_index =
                     (0x8000 & 0x1FFF) + (object.tile * 16) + ((height - (line_y - obj_y) - 1) * 2);
             else
@@ -615,7 +636,7 @@ namespace GB
                     uint8_t high_byte = vram[bank + (tile_index + 1)];
                     uint8_t bit = 7 - (x & 7);
 
-                    if (object.attributes & OBJAttributeFlags::FlipX)
+                    if (object.attributes & AttributeFlags::FlipX)
                         bit = x & 7;
 
                     uint8_t low_bit = (low_byte >> bit) & 0x01;
@@ -625,7 +646,7 @@ namespace GB
                     if (pixel == 0)
                         continue;
 
-                    bool bg_has_priority = (object.attributes & OBJAttributeFlags::Priority) &&
+                    bool bg_has_priority = (object.attributes & AttributeFlags::Priority) &&
                                            bg_color_table[framebuffer_line_y + framebuffer_line_x];
 
                     if (!bg_has_priority)

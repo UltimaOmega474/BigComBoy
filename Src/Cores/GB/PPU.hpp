@@ -57,14 +57,14 @@ namespace GB
         ModeFlag = 0x3
     };
 
-    enum OBJAttributeFlags
+    enum AttributeFlags
     {
         Priority = 0x80,
         FlipY = 0x40,
         FlipX = 0x20,
         Palette = 0x10,
         BankSelect = 0x08,
-        PaletteBits = 0x7,
+        PaletteBits = 0x07,
     };
 
     enum RenderFlags
