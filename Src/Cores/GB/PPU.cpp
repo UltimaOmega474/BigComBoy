@@ -558,8 +558,6 @@ namespace GB
             }
 
             bg_color_table[(line_y * LCD_WIDTH) + line_x] = final_pixel;
-            //         plot_pixel(line_x, final_pixel, final_palette);
-
             plot_cgb_pixel(line_x, final_pixel, final_palette, false);
             line_x++;
         }
@@ -588,7 +586,7 @@ namespace GB
             uint8_t palette = (object.attributes & OBJAttributeFlags::Palette) ? object_palette_1
                                                                                : object_palette_0;
             uint8_t cgb_palette = (object.attributes & OBJAttributeFlags::PaletteBits);
-            uint8_t bank = 0x2000 + ((object.attributes & OBJAttributeFlags::BankSelect) >> 3);
+            uint8_t bank = 0x2000 * ((object.attributes & OBJAttributeFlags::BankSelect) >> 3);
 
             uint16_t tile_index = 0;
 
