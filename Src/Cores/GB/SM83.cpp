@@ -886,7 +886,7 @@ namespace GB
 
     void SM83::op_stop()
     {
-        if (!cgb_mode)
+        if (bus.KEY0 == 0x80)
         {
             stopped = true;
             return;

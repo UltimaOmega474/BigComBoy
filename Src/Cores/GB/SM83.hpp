@@ -68,7 +68,7 @@ namespace GB
         MainBus &bus;
 
     public:
-        bool master_interrupt_enable = true, double_speed = false, cgb_mode = true;
+        bool master_interrupt_enable = true, double_speed = false;
         bool halted = false, stopped = false, ei_delay = false;
         uint8_t interrupt_flag = 0, interrupt_enable = 0;
         uint16_t sp = 0xFFFE, pc = 0;

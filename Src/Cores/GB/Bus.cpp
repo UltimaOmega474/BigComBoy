@@ -189,6 +189,8 @@ namespace GB
                     return core.ppu.window_y;
                 case 0x4B:
                     return core.ppu.window_x;
+                case 0x4C:
+                    return KEY0;
                 case 0x4D:
                     return KEY1;
                 case 0x4F:
@@ -452,6 +454,14 @@ namespace GB
                 {
                     core.ppu.window_x = value;
                     return;
+                }
+                case 0x4C:
+                {
+                    if (boot_rom_enabled)
+                    {
+                        KEY0 = value;
+                    }
+                    break;
                 }
                 case 0x4D:
                 {
