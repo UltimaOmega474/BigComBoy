@@ -30,7 +30,7 @@ namespace GB
 
     public:
         bool boot_rom_enabled = true;
-        uint8_t KEY0 = 0x80, KEY1 = 0;
+        uint8_t KEY0 = 0xC0, KEY1 = 0;
         uint8_t wram_bank_num = 1;
 
         std::array<uint8_t, 32768> wram{};

@@ -30,13 +30,15 @@ namespace GB
         shift_count = 0;
         pixels_low = 0;
         pixels_high = 0;
+        attribute = 0;
     }
 
-    void BackgroundFIFO::load(uint8_t low, uint8_t high)
+    void BackgroundFIFO::load(uint8_t low, uint8_t high, uint8_t attribute)
     {
         pixels_low = low;
         pixels_high = high;
         shift_count = 8;
+        this->attribute = attribute;
     }
 
     void BackgroundFIFO::force_shift(uint8_t amount)
@@ -73,6 +75,7 @@ namespace GB
     {
         substep = 0;
         tile_id = 0;
+        attribute_id = 0;
         queued_pixels_low = 0;
         queued_pixels_high = 0;
         x_pos = 0;
@@ -157,6 +160,7 @@ namespace GB
         case 1:
         {
             tile_id = ppu.vram[address];
+            attribute_id = ppu.vram[0x2000 + address];
             state = FetchState::TileLow;
 
             substep = 0;
@@ -214,7 +218,9 @@ namespace GB
             if (bit_plane == 1)
             {
                 state = FetchState::Push;
-                queued_pixels_high = ppu.vram[address];
+
+                auto bank = (attribute_id & 0x8) >> 3;
+                queued_pixels_high = ppu.vram[(0x2000 * bank) + address];
 
                 if (first_fetch)
                 {
@@ -225,7 +231,8 @@ namespace GB
             else
             {
                 state = FetchState::TileHigh;
-                queued_pixels_low = ppu.vram[address];
+                auto bank = (attribute_id & 0x8) >> 3;
+                queued_pixels_low = ppu.vram[(0x2000 * bank) + address];
             }
 
             break;
@@ -239,7 +246,7 @@ namespace GB
             return;
 
         x_pos += 8;
-        ppu.bg_fifo.load(queued_pixels_low, queued_pixels_high);
+        ppu.bg_fifo.load(queued_pixels_low, queued_pixels_high, attribute_id);
 
         if (mode == FetchMode::Background)
         {
@@ -432,7 +439,10 @@ namespace GB
         }
     }
 
-    void PPU::write_vram(uint16_t address, uint8_t value) { vram[address] = value; }
+    void PPU::write_vram(uint16_t address, uint8_t value)
+    {
+        vram[(vram_bank_select * 0x2000) + address] = value;
+    }
 
     void PPU::write_bg_palette(uint8_t value)
     {
@@ -474,13 +484,17 @@ namespace GB
         {
             uint8_t data = bus.read(HDMA_src + i);
 
-            vram[(HDMA_dst & 0x1FFF) + i] = data;
+            auto vram_bank = (vram_bank_select * 0x2000);
+            vram[vram_bank + (HDMA_dst & 0x1FFF) + i] = data;
         }
     }
 
     uint8_t PPU::hdma_blocks_remain() const { return 0xFF; }
 
-    uint8_t PPU::read_vram(uint16_t address) const { return vram[address]; }
+    uint8_t PPU::read_vram(uint16_t address) const
+    {
+        return vram[(vram_bank_select * 0x2000) + address];
+    }
 
     uint8_t PPU::read_oam(uint16_t address) const { return oam[address]; }
 
@@ -529,7 +543,7 @@ namespace GB
 
         if ((line_x < 160) && bg_fifo.pixels_left())
         {
-            uint8_t final_pixel = 0, final_palette = background_palette;
+            uint8_t final_pixel = 0, final_palette = bg_fifo.attribute & 0x7;
             uint8_t bg_pixel = bg_fifo.clock();
 
             if (!(lcd_control & LCDControlFlags::BGEnable) ||
@@ -544,7 +558,9 @@ namespace GB
             }
 
             bg_color_table[(line_y * LCD_WIDTH) + line_x] = final_pixel;
-            plot_pixel(line_x, final_pixel, final_palette);
+            //         plot_pixel(line_x, final_pixel, final_palette);
+
+            plot_cgb_pixel(line_x, final_pixel, final_palette, false);
             line_x++;
         }
 
@@ -571,6 +587,9 @@ namespace GB
 
             uint8_t palette = (object.attributes & OBJAttributeFlags::Palette) ? object_palette_1
                                                                                : object_palette_0;
+            uint8_t cgb_palette = (object.attributes & OBJAttributeFlags::PaletteBits);
+            uint8_t bank = 0x2000 + ((object.attributes & OBJAttributeFlags::BankSelect) >> 3);
+
             uint16_t tile_index = 0;
 
             if (height == 16)
@@ -594,8 +613,8 @@ namespace GB
 
                 if (framebuffer_line_x >= 0 && framebuffer_line_x < 160)
                 {
-                    uint8_t low_byte = vram[tile_index];
-                    uint8_t high_byte = vram[tile_index + 1];
+                    uint8_t low_byte = vram[bank + tile_index];
+                    uint8_t high_byte = vram[bank + (tile_index + 1)];
                     uint8_t bit = 7 - (x & 7);
 
                     if (object.attributes & OBJAttributeFlags::FlipX)
@@ -612,7 +631,7 @@ namespace GB
                                            bg_color_table[framebuffer_line_y + framebuffer_line_x];
 
                     if (!bg_has_priority)
-                        plot_pixel(framebuffer_line_x, pixel, palette);
+                        plot_cgb_pixel(framebuffer_line_x, pixel, cgb_palette, true);
                 }
             }
         }
@@ -628,6 +647,37 @@ namespace GB
             std::span<uint8_t>{&framebuffer[(framebuffer_line_y + x_pos) * COLOR_DEPTH], 4};
 
         std::copy(color.begin(), color.end(), fb_pixel.begin());
+    }
+
+    void PPU::plot_cgb_pixel(uint8_t x_pos, uint8_t final_pixel, uint8_t palette, bool is_obj)
+    {
+        size_t framebuffer_line_y = line_y * LCD_WIDTH;
+        size_t select_color = (palette * 8) + (final_pixel * 2);
+
+        uint16_t color = 0;
+
+        if (is_obj)
+        {
+            color = obj_cram[select_color];
+            color |= obj_cram[select_color + 1] << 8;
+        }
+        else
+        {
+            color = bg_cram[select_color];
+            color |= bg_cram[select_color + 1] << 8;
+        }
+
+        auto fb_pixel =
+            std::span<uint8_t>{&framebuffer[(framebuffer_line_y + x_pos) * COLOR_DEPTH], 4};
+
+        auto r = color & 0x1F;
+        auto g = (color >> 5) & 0x1F;
+        auto b = (color >> 10) & 0x1F;
+
+        fb_pixel[0] = (r * 255) / 31;
+        fb_pixel[1] = (g * 255) / 31;
+        fb_pixel[2] = (b * 255) / 31;
+        fb_pixel[3] = 255;
     }
 
     void PPU::scan_oam()

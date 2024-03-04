@@ -62,7 +62,9 @@ namespace GB
         Priority = 0x80,
         FlipY = 0x40,
         FlipX = 0x20,
-        Palette = 0x10
+        Palette = 0x10,
+        BankSelect = 0x08,
+        PaletteBits = 0x7,
     };
 
     enum RenderFlags
@@ -99,10 +101,11 @@ namespace GB
         uint8_t pixels_low = 0, pixels_high = 0;
 
     public:
+        uint8_t attribute = 0;
         uint8_t pixels_left() const;
 
         void clear();
-        void load(uint8_t low, uint8_t high);
+        void load(uint8_t low, uint8_t high, uint8_t attribute);
         void force_shift(uint8_t amount);
         uint8_t clock();
     };
@@ -110,7 +113,7 @@ namespace GB
     class BackgroundFetcher
     {
         bool first_fetch = true;
-        uint8_t substep = 0, tile_id = 0;
+        uint8_t substep = 0, tile_id = 0, attribute_id = 0;
         uint8_t queued_pixels_low = 0, queued_pixels_high = 0;
         uint16_t x_pos = 0, address = 0;
         FetchState state = FetchState::GetTileID;
@@ -144,7 +147,7 @@ namespace GB
         uint8_t object_palette_0 = 0, object_palette_1 = 0;
 
         // CGB
-        uint8_t vram_bank_select = 0b11111110;
+        uint8_t vram_bank_select = 0;
         uint8_t bg_palette_select = 0;
         uint8_t obj_palette_select = 0;
         uint8_t object_priority_mode = 0;
@@ -194,6 +197,7 @@ namespace GB
         void render_scanline();
         void render_objects();
         void plot_pixel(uint8_t x_pos, uint8_t final_pixel, uint8_t palette);
+        void plot_cgb_pixel(uint8_t x_pos, uint8_t final_pixel, uint8_t palette, bool is_obj);
 
         void scan_oam();
         void check_ly_lyc(bool allow_interrupts);

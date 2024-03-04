@@ -81,7 +81,7 @@ namespace GB
         {
             timer.update(4);
             ppu.step(adjusted_cycles);
-            apu.step(4);
+            apu.step(adjusted_cycles);
             bus.cart->tick(adjusted_cycles);
             cycle_count += adjusted_cycles;
             cycles -= 4;

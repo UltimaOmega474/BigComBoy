@@ -649,6 +649,8 @@ namespace GB
         set_rp(HL, 0x014D);
         set_rp(AF, 0x01B0);
         set_rp(SP, 0xFFFE);
+
+        registers[A] = 0x11;
     }
 
     void SM83::step()
@@ -897,6 +899,8 @@ namespace GB
             double_speed = !double_speed;
             bus.KEY1 = double_speed << 7;
         }
+
+        pc++;
     }
 
     void SM83::op_jr_i8()
