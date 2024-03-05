@@ -152,8 +152,6 @@ namespace GB
         uint8_t obj_palette_select = 0;
         uint8_t object_priority_mode = 0;
 
-        uint16_t HDMA_src = 0, HDMA_dst = 0;
-
         uint8_t render_flags = RenderFlags::Background | RenderFlags::Objects;
         uint32_t cycles = 0, extra_cycles = 0;
         PPUState mode = PPUState::HBlank;
@@ -166,7 +164,6 @@ namespace GB
         std::array<uint16_t, LCD_WIDTH * LCD_HEIGHT> bg_color_table{};
         std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT * 4> framebuffer{};
         std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT * 4> framebuffer_complete{};
-        std::array<std::array<uint8_t, 4>, 4> color_table = LCD_GRAY_PALETTE;
 
         BackgroundFetcher fetcher;
         BackgroundFIFO bg_fifo;
@@ -184,8 +181,6 @@ namespace GB
         void write_vram(uint16_t address, uint8_t value);
         void write_oam(uint16_t address, uint8_t value);
         void instant_dma(uint8_t address);
-        void instant_hdma(uint8_t length);
-        uint8_t hdma_blocks_remain() const;
 
         uint8_t read_vram(uint16_t address) const;
         uint8_t read_oam(uint16_t address) const;
@@ -196,7 +191,6 @@ namespace GB
     private:
         void render_scanline();
         void render_objects();
-        void plot_pixel(uint8_t x_pos, uint8_t final_pixel, uint8_t palette);
         void plot_cgb_pixel(uint8_t x_pos, uint8_t final_pixel, uint8_t palette, bool is_obj);
 
         void scan_oam();

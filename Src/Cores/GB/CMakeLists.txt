@@ -7,4 +7,5 @@ add_library(GB STATIC
 	Pad.cpp
 	APU.cpp
 	Bus.cpp
+	DMA.cpp
 )

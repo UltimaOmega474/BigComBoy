@@ -198,7 +198,7 @@ namespace GB
                 case 0x50:
                     return boot_rom_enabled;
                 case 0x55:
-                    return core.ppu.hdma_blocks_remain();
+                    return core.dma.get_dma_status();
                 case 0x68:
                     return core.ppu.bg_palette_select;
                 case 0x69:
@@ -481,31 +481,27 @@ namespace GB
                 }
                 case 0x51:
                 {
-                    core.ppu.HDMA_src &= ~0xFF00;
-                    core.ppu.HDMA_src |= value << 8;
+                    core.dma.set_hdma1(value);
                     break;
                 }
                 case 0x52:
                 {
-                    core.ppu.HDMA_src &= ~0xFF;
-                    core.ppu.HDMA_src |= value & 0xF0;
+                    core.dma.set_hdma2(value);
                     break;
                 }
                 case 0x53:
                 {
-                    core.ppu.HDMA_dst &= ~0xFF00;
-                    core.ppu.HDMA_src |= (value & 0x1F) << 8;
+                    core.dma.set_hdma3(value);
                     break;
                 }
                 case 0x54:
                 {
-                    core.ppu.HDMA_dst &= ~0xFF;
-                    core.ppu.HDMA_dst |= value & 0xF0;
+                    core.dma.set_hdma4(value);
                     break;
                 }
                 case 0x55:
                 {
-                    core.ppu.instant_hdma(value);
+                    core.dma.set_dma_control(value);
                     break;
                 }
                 case 0x68:

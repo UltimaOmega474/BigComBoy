@@ -22,7 +22,7 @@
 
 namespace GB
 {
-    Core::Core() : bus(*this), ppu(bus), timer(*this), cpu(*this, bus) {}
+    Core::Core() : bus(*this), ppu(bus), timer(*this), cpu(*this, bus), dma(*this) {}
 
     void Core::set_cartridge(Cartridge *cart, bool skip_boot_rom)
     {
@@ -59,7 +59,10 @@ namespace GB
         while (frames-- && ready_to_run)
         {
             while (cycle_count < CYCLES_PER_FRAME && !cpu.stopped)
+            {
+                dma.tick();
                 cpu.step();
+            }
 
             if (cycle_count >= CYCLES_PER_FRAME)
                 cycle_count -= CYCLES_PER_FRAME;

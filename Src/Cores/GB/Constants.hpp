@@ -39,18 +39,31 @@ namespace GB
     constexpr auto WITHOUT_CARRY = false;
     constexpr auto DONT_SET_IME = false;
     constexpr auto SET_IME = true;
-    constexpr std::array<uint16_t, 8> NOISE_DIV{2, 4, 8, 12, 16, 20, 24, 28};
-    constexpr std::array<uint8_t, 4> WAVE_VOLUME{4, 0, 1, 2};
+
+    constexpr std::array<uint16_t, 8> NOISE_DIV{
+        2, 4, 8, 12, 16, 20, 24, 28,
+    };
+
+    constexpr std::array<uint8_t, 4> WAVE_VOLUME{
+        4,
+        0,
+        1,
+        2,
+    };
+
     constexpr std::array<std::array<uint8_t, 8>, 4> DUTY_TABLE{
         std::array<uint8_t, 8>{0, 0, 0, 0, 0, 0, 0, 1},
         std::array<uint8_t, 8>{1, 0, 0, 0, 0, 0, 0, 1},
         std::array<uint8_t, 8>{1, 0, 0, 0, 0, 1, 1, 1},
-        std::array<uint8_t, 8>{0, 1, 1, 1, 1, 1, 1, 0}};
+        std::array<uint8_t, 8>{0, 1, 1, 1, 1, 1, 1, 0},
+    };
 
-    constexpr std::array<std::array<uint8_t, 4>, 4> LCD_GRAY_PALETTE{{
-        {0xFF, 0xFF, 0xFF, 0xFF},
-        {0xAA, 0xAA, 0xAA, 0xFF},
-        {0x55, 0x55, 0x55, 0xFF},
-        {0x00, 0x00, 0x00, 0xFF},
-    }};
+    consteval uint32_t RGB555ToUInt(uint32_t r, uint32_t g, uint32_t b)
+    {
+        r &= 0x1F;
+        g &= 0x1F;
+        b &= 0x1F;
+
+        return (r) | (g << 5) | (b << 10);
+    }
 }

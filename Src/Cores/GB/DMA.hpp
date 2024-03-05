@@ -17,40 +17,45 @@
 */
 
 #pragma once
-#include "APU.hpp"
-#include "Bus.hpp"
-#include "Cartridge.hpp"
-#include "DMA.hpp"
-#include "PPU.hpp"
-#include "Pad.hpp"
-#include "SM83.hpp"
-#include "Timer.hpp"
 #include <cinttypes>
-#include <filesystem>
 
 namespace GB
 {
-    class Core
+    class Core;
+
+    enum class DMAType
     {
-        uint32_t cycle_count = 0;
-        bool boot_rom_loaded = false, ready_to_run = false;
-
-    public:
-        Gamepad pad;
-        MainBus bus;
-        PPU ppu;
-        APU apu;
-        Timer timer;
-        SM83 cpu;
-        DMAController dma;
-        Core();
-
-        void set_cartridge(Cartridge *cart, bool skip_boot_rom);
-        void reset();
-        void run_for_frames(uint32_t frames);
-        void run_for_cycles(uint32_t cycles);
-        void tick_subcomponents(uint8_t cycles);
-        void load_boot_rom_from_file(std::filesystem::path path);
+        GDMA,
+        HDMA
     };
 
+    class DMAController
+    {
+        Core &core;
+        bool active = false, is_mode0 = false;
+        uint8_t current_length = 0x7F;
+        uint16_t src_address = 0, dst_address = 0;
+        DMAType type = DMAType::GDMA;
+
+    public:
+        DMAController(Core &core) : core(core) {}
+        void reset();
+
+        void set_dma_control(uint8_t ctrl);
+        void set_hdma1(uint8_t high);
+        void set_hdma2(uint8_t low);
+        void set_hdma3(uint8_t high);
+        void set_hdma4(uint8_t low);
+
+        uint8_t get_dma_status() const;
+        uint8_t get_hdma1() const;
+        uint8_t get_hdma2() const;
+        uint8_t get_hdma3() const;
+        uint8_t get_hdma4() const;
+
+        void tick();
+
+    private:
+        void transfer_block();
+    };
 }

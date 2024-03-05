@@ -497,19 +497,6 @@ namespace GB
             oam[i] = bus.read((addr) + i);
     }
 
-    void PPU::instant_hdma(uint8_t length)
-    {
-        int bytes_length = ((length & 0x7F) + 1) * 0x10;
-
-        for (int i = 0; i < bytes_length; ++i)
-        {
-            uint8_t data = bus.read(HDMA_src + i);
-            write_vram(HDMA_dst + i, data);
-        }
-    }
-
-    uint8_t PPU::hdma_blocks_remain() const { return 0xFF; }
-
     uint8_t PPU::read_vram(uint16_t address) const
     {
         return vram[(vram_bank_select * 0x2000) + address];
@@ -670,18 +657,6 @@ namespace GB
                 }
             }
         }
-    }
-
-    void PPU::plot_pixel(uint8_t x_pos, uint8_t final_pixel, uint8_t palette)
-    {
-        size_t framebuffer_line_y = line_y * LCD_WIDTH;
-
-        std::array<uint8_t, 4> color = color_table[(palette >> (int)(2 * final_pixel)) & 3];
-
-        auto fb_pixel =
-            std::span<uint8_t>{&framebuffer[(framebuffer_line_y + x_pos) * COLOR_DEPTH], 4};
-
-        std::copy(color.begin(), color.end(), fb_pixel.begin());
     }
 
     void PPU::plot_cgb_pixel(uint8_t x_pos, uint8_t final_pixel, uint8_t palette, bool is_obj)
