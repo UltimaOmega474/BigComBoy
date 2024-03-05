@@ -59,7 +59,7 @@ namespace GB
 
     void Timer::change_div(uint16_t new_div)
     {
-        if (EdgeFell(div_cycles >> 8, new_div >> 8, 0b10000))
+        if (EdgeFell(div_cycles >> 8, new_div >> 8, core.cpu.double_speed ? 0b100000 : 0b10000))
         {
             core.apu.step_frame_sequencer();
         }

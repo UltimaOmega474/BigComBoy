@@ -163,7 +163,7 @@ namespace GB
         std::array<uint8_t, 16384> vram{};
         std::array<uint8_t, 256> oam{};
         std::array<Object, 10> objects_on_scanline{};
-        std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT> bg_color_table{};
+        std::array<uint16_t, LCD_WIDTH * LCD_HEIGHT> bg_color_table{};
         std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT * 4> framebuffer{};
         std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT * 4> framebuffer_complete{};
         std::array<std::array<uint8_t, 4>, 4> color_table = LCD_GRAY_PALETTE;

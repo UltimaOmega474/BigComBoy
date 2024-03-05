@@ -499,13 +499,12 @@ namespace GB
 
     void PPU::instant_hdma(uint8_t length)
     {
-        length &= ~0x80;
-        for (int i = 0; i < length; ++i)
+        int bytes_length = ((length & 0x7F) + 1) * 0x10;
+
+        for (int i = 0; i < bytes_length; ++i)
         {
             uint8_t data = bus.read(HDMA_src + i);
-
-            auto vram_bank = (vram_bank_select * 0x2000);
-            vram[vram_bank + (HDMA_dst & 0x1FFF) + i] = data;
+            write_vram(HDMA_dst + i, data);
         }
     }
 
@@ -578,7 +577,8 @@ namespace GB
                 final_pixel = bg_pixel;
             }
 
-            bg_color_table[(line_y * LCD_WIDTH) + line_x] = final_pixel;
+            bg_color_table[(line_y * LCD_WIDTH) + line_x] =
+                final_pixel | (static_cast<uint16_t>(bg_fifo.attribute) << 8);
             plot_cgb_pixel(line_x, final_pixel, final_palette, false);
             line_x++;
         }
@@ -607,7 +607,7 @@ namespace GB
             uint8_t palette =
                 (object.attributes & AttributeFlags::Palette) ? object_palette_1 : object_palette_0;
             uint8_t cgb_palette = (object.attributes & AttributeFlags::PaletteBits);
-            uint8_t bank = 0x2000 * ((object.attributes & AttributeFlags::BankSelect) ? 1 : 0);
+            uint16_t bank = 0x2000 * ((object.attributes & AttributeFlags::BankSelect) >> 3);
 
             uint16_t tile_index = 0;
 
@@ -646,8 +646,24 @@ namespace GB
                     if (pixel == 0)
                         continue;
 
-                    bool bg_has_priority = (object.attributes & AttributeFlags::Priority) &&
-                                           bg_color_table[framebuffer_line_y + framebuffer_line_x];
+                    uint16_t bg_pixel =
+                        bg_color_table[framebuffer_line_y + framebuffer_line_x] & 0xFF;
+                    uint16_t bg_attribute =
+                        bg_color_table[framebuffer_line_y + framebuffer_line_x] >> 8;
+
+                    bool bg_priority = bg_attribute & AttributeFlags::Priority;
+                    bool oam_priority = object.attributes & AttributeFlags::Priority;
+                    bool master_priority = lcd_control & LCDControlFlags::BGEnable;
+
+                    bool bg_has_priority = false;
+
+                    if (bus.KEY0 == 0xC0)
+                    {
+                        if (master_priority && bg_pixel)
+                        {
+                            bg_has_priority = oam_priority || bg_priority;
+                        }
+                    }
 
                     if (!bg_has_priority)
                         plot_cgb_pixel(framebuffer_line_x, pixel, cgb_palette, true);
@@ -721,9 +737,12 @@ namespace GB
             }
         }
 
-        std::stable_sort(
-            objects_on_scanline.begin(), objects_on_scanline.begin() + num_obj_on_scanline,
-            [=](const Object &left, const Object &right) { return (left.x) < (right.x); });
+        if (object_priority_mode & 0x1)
+        {
+            std::stable_sort(
+                objects_on_scanline.begin(), objects_on_scanline.begin() + num_obj_on_scanline,
+                [=](const Object &left, const Object &right) { return (left.x) < (right.x); });
+        }
     }
 
     void PPU::check_ly_lyc(bool allow_interrupts)
