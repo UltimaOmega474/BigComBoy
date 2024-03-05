@@ -49,6 +49,7 @@ namespace GB
         pad.reset();
         bus.reset();
         cpu.reset(0);
+        dma.reset();
 
         ready_to_run = false;
         boot_rom_loaded = false;

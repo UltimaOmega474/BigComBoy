@@ -307,12 +307,20 @@ namespace GB
             objects_on_scanline.fill({});
             mode = PPUState::HBlank;
         }
+
         window_draw_flag = false;
         num_obj_on_scanline = 0;
         cycles = 0;
         line_y = 0;
         window_line_y = 0;
 
+        vram_bank_select = 0;
+        bg_palette_select = 0;
+        obj_palette_select = 0;
+        object_priority_mode = 0;
+
+        bg_cram.fill(0);
+        obj_cram.fill(0);
         fetcher.reset();
         bg_fifo.clear();
     }

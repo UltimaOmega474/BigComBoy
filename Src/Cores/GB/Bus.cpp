@@ -24,6 +24,8 @@ namespace GB
     MainBus::MainBus(Core &core) : core(core) {}
     void MainBus::reset()
     {
+        KEY0 = 0;
+        KEY1 = 0;
         boot_rom_enabled = true;
         boot_rom.fill(0);
         wram.fill(0);
