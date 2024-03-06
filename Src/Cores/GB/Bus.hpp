@@ -19,6 +19,7 @@
 #pragma once
 #include <array>
 #include <cinttypes>
+#include <vector>
 
 namespace GB
 {
@@ -30,21 +31,21 @@ namespace GB
 
     public:
         bool boot_rom_enabled = true;
-        uint8_t KEY0 = 0xC0, KEY1 = 0;
+        uint8_t KEY0 = 0x0, KEY1 = 0;
         uint8_t wram_bank_num = 1;
 
         std::array<uint8_t, 32768> wram{};
         std::array<uint8_t, 127> hram{};
-        std::array<uint8_t, 256> boot_rom{};
+        std::vector<uint8_t> boot_rom{};
 
         Cartridge *cart = nullptr;
         MainBus(Core &core);
 
+        bool is_compatibility_mode() const;
+
         void reset();
-        bool use_cgb_behavior() const;
         void request_interrupt(uint8_t interrupt);
 
-        // bus functions
         uint8_t read(uint16_t address);
         void write(uint16_t address, uint8_t value);
     };

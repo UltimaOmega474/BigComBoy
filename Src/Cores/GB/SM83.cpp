@@ -25,6 +25,14 @@
 
 namespace GB
 {
+    constexpr int16_t NO_DISPLACEMENT = 0;
+    constexpr int16_t INCREMENT = 1;
+    constexpr int16_t DECREMENT = -1;
+    constexpr auto WITH_CARRY = true;
+    constexpr auto WITHOUT_CARRY = false;
+    constexpr auto DONT_SET_IME = false;
+    constexpr auto SET_IME = true;
+
     SM83::SM83(Core &core, MainBus &bus)
         : core(core), bus(bus), opcodes(gen_optable()), cb_opcodes(gen_cb_optable())
     {
@@ -644,9 +652,7 @@ namespace GB
         interrupt_enable = 0;
         interrupt_flag = 0;
 
-        switch (core.console)
-        {
-        case Console::DMG:
+        if (bus.is_compatibility_mode())
         {
             set_flags(N, false);
             set_flags(Z, true);
@@ -660,12 +666,10 @@ namespace GB
             registers[H] = 0x01;
             registers[L] = 0x4D;
 
-            pc = 0x0100;
+            pc = new_pc;
             sp = 0xFFFE;
-
-            break;
         }
-        case Console::CGB:
+        else
         {
             set_flags(N | HC | CY, false);
             set_flags(Z, true);
@@ -678,10 +682,8 @@ namespace GB
             registers[H] = 0x00;
             registers[L] = 0x0D;
 
-            pc = 0x0100;
+            pc = new_pc;
             sp = 0xFFFE;
-            break;
-        }
         }
     }
 
@@ -920,7 +922,7 @@ namespace GB
 
     void SM83::op_stop()
     {
-        if (!core.bus.use_cgb_behavior())
+        if (core.bus.is_compatibility_mode())
         {
             stopped = true;
             return;

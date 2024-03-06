@@ -25,6 +25,24 @@ namespace GB
     // Fixes Final Fantasy Adventure because it mutes channels by setting the frequency to max
     constexpr int HIGH_FREQUENCY_CUTOFF = 0x7FF;
 
+    constexpr std::array<uint16_t, 8> NOISE_DIV{
+        2, 4, 8, 12, 16, 20, 24, 28,
+    };
+
+    constexpr std::array<uint8_t, 4> WAVE_VOLUME{
+        4,
+        0,
+        1,
+        2,
+    };
+
+    constexpr std::array<std::array<uint8_t, 8>, 4> DUTY_TABLE{
+        std::array<uint8_t, 8>{0, 0, 0, 0, 0, 0, 0, 1},
+        std::array<uint8_t, 8>{1, 0, 0, 0, 0, 0, 0, 1},
+        std::array<uint8_t, 8>{1, 0, 0, 0, 0, 1, 1, 1},
+        std::array<uint8_t, 8>{0, 1, 1, 1, 1, 1, 1, 0},
+    };
+
     void LengthCounter::step_length(bool &channel_on)
     {
         if (sound_length_enable && length_counter > 0)

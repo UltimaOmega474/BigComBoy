@@ -20,58 +20,41 @@
 #include "Constants.hpp"
 #include <array>
 #include <cinttypes>
-#include <tuple>
+#include <span>
 
 namespace GB
 {
     class MainBus;
     class PPU;
 
-    enum PPUState
-    {
-        HBlank,
-        VBlank,
-        OAMSearch,
-        DrawScanline
-    };
+    constexpr uint8_t HBLANK = 0x0;
+    constexpr uint8_t VBLANK = 0x1;
+    constexpr uint8_t OAM_SEARCH = 0x2;
+    constexpr uint8_t PIXEL_TRANSFER = 0x3;
 
-    enum LCDControlFlags
-    {
-        DisplayEnable = 0x80,
-        WindowTileMap = 0x40,
-        WindowEnable = 0x20,
-        BGWindowTileData = 0x10,
-        BGTileMap = 0x8,
-        SpriteSize = 0x4,
-        SpriteEnable = 0x2,
-        BGEnable = 0x1
-    };
+    constexpr uint8_t LCD_ENABLED_BIT = 0x80;
+    constexpr uint8_t WND_TILE_MAP_BIT = 0x40;
+    constexpr uint8_t WND_ENABLED_BIT = 0x20;
+    constexpr uint8_t TILE_DATA_LOC_BIT = 0x10;
+    constexpr uint8_t BG_TILE_MAP_BIT = 0x08;
+    constexpr uint8_t OBJECT_SIZE_BIT = 0x04;
+    constexpr uint8_t OBJECTS_ENABLED_BIT = 0x02;
+    constexpr uint8_t BG_ENABLED_BIT = 0x01;
+    constexpr uint8_t MASTER_PRIORITY_BIT = 0x01;
 
-    enum LCDStatusFlags
-    {
-        EnableLYCandLYInt = 0x40,
-        EnableOAMInt = 0x20,
-        EnableVBlankInt = 0x10,
-        EnableHBlankInt = 0x8,
-        LYCandLYCompareType = 0x4,
-        ModeFlag = 0x3
-    };
+    constexpr uint8_t LYC_LY_STAT_INT_BIT = 0x40;
+    constexpr uint8_t OAM_STAT_INT_BIT = 0x20;
+    constexpr uint8_t VBLANK_STAT_INT_BIT = 0x10;
+    constexpr uint8_t HBLANK_STAT_INT_BIT = 0x08;
+    constexpr uint8_t LYC_LY_COMPARE_MODE_BIT = 0x04;
+    constexpr uint8_t MODE_MASK = 0x03;
 
-    enum AttributeFlags
-    {
-        Priority = 0x80,
-        FlipY = 0x40,
-        FlipX = 0x20,
-        Palette = 0x10,
-        BankSelect = 0x08,
-        PaletteBits = 0x07,
-    };
-
-    enum RenderFlags
-    {
-        Background = 0x1,
-        Objects = 0x2,
-    };
+    constexpr uint8_t PRIORITY_BIT = 0x80;
+    constexpr uint8_t TILE_FLIP_Y_BIT = 0x40;
+    constexpr uint8_t TILE_FLIP_X_BIT = 0x20;
+    constexpr uint8_t OBJ_PALETTE_SELECT_BIT = 0x10;
+    constexpr uint8_t VRAM_BANK_SELECT_BIT = 0x08;
+    constexpr uint8_t CGB_PALETTE_NUM_MASK = 0x07;
 
     enum class FetchState
     {
@@ -85,6 +68,13 @@ namespace GB
     {
         Background,
         Window,
+    };
+
+    enum class PaletteID
+    {
+        BG,
+        OBJ1,
+        OBJ2,
     };
 
     struct Object
@@ -133,44 +123,59 @@ namespace GB
 
     class PPU
     {
+        friend class BackgroundFIFO;
+        friend class BackgroundFetcher;
+
         MainBus &bus;
+        BackgroundFetcher fetcher;
+        BackgroundFIFO bg_fifo;
+
+        bool window_draw_flag = false;
+        bool previously_disabled = false;
+        uint8_t num_obj_on_scanline = 0;
+        uint8_t line_x = 0;
+        uint32_t cycles = 0;
+        uint32_t extra_cycles = 0;
 
     public:
-        bool window_draw_flag = false, previously_disabled = false;
-        uint8_t num_obj_on_scanline = 0, objs_processed = 0;
-        uint8_t lcd_control = 0, status = 0;
-        uint8_t screen_scroll_y = 0, screen_scroll_x = 0;
-        uint8_t line_y = 0, line_y_compare = 0;
-        uint8_t line_x = 0;
-        uint8_t window_y = 0, window_x = 0;
-        uint8_t window_line_y = 0, background_palette = 0;
-        uint8_t object_palette_0 = 0, object_palette_1 = 0;
+        uint8_t lcd_control = 0;
+        uint8_t status = 0;
 
-        // CGB
+        uint8_t screen_scroll_y = 0;
+        uint8_t screen_scroll_x = 0;
+        uint8_t line_y = 0;
+        uint8_t line_y_compare = 0;
+
+        uint8_t window_y = 0;
+        uint8_t window_x = 0;
+        uint8_t window_line_y = 0;
+
+        uint8_t background_palette = 0;
+        uint8_t object_palette_0 = 0;
+        uint8_t object_palette_1 = 0;
+
         uint8_t vram_bank_select = 0;
         uint8_t bg_palette_select = 0;
         uint8_t obj_palette_select = 0;
         uint8_t object_priority_mode = 0;
 
-        uint8_t render_flags = RenderFlags::Background | RenderFlags::Objects;
-        uint32_t cycles = 0, extra_cycles = 0;
-        PPUState mode = PPUState::HBlank;
-
         std::array<uint8_t, 64> obj_cram{};
         std::array<uint8_t, 64> bg_cram{};
+
         std::array<uint8_t, 16384> vram{};
+
         std::array<uint8_t, 256> oam{};
         std::array<Object, 10> objects_on_scanline{};
+
         std::array<uint16_t, LCD_WIDTH * LCD_HEIGHT> bg_color_table{};
         std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT * 4> framebuffer{};
         std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT * 4> framebuffer_complete{};
 
-        BackgroundFetcher fetcher;
-        BackgroundFIFO bg_fifo;
-
         PPU(MainBus &bus);
 
-        void reset(bool hard_reset);
+        void set_compatibility_palette(PaletteID palette_type,
+                                       const std::span<const uint16_t> colors);
+        void reset();
         void set_post_boot_state();
         void step(uint32_t accumulated_cycles);
 
@@ -184,17 +189,16 @@ namespace GB
 
         uint8_t read_vram(uint16_t address) const;
         uint8_t read_oam(uint16_t address) const;
-        bool check_stat(uint8_t flags) const;
         void set_stat(uint8_t flags, bool value);
         bool stat_any() const;
 
     private:
         void render_scanline();
         void render_objects();
-        void plot_pixel(uint8_t x_pos, uint8_t final_pixel, uint8_t palette);
         void plot_cgb_pixel(uint8_t x_pos, uint8_t final_pixel, uint8_t palette, bool is_obj);
 
         void scan_oam();
+        void set_mode(uint8_t mode);
         void check_ly_lyc(bool allow_interrupts);
     };
 

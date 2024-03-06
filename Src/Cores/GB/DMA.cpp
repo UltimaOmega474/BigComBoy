@@ -87,7 +87,7 @@ namespace GB
 
     void DMAController::tick()
     {
-        bool mode0_now = core.ppu.mode == PPUState::HBlank;
+        bool mode0_now = (core.ppu.status & 0x3) == HBLANK;
 
         if (active)
         {

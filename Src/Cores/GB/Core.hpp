@@ -30,13 +30,18 @@
 
 namespace GB
 {
+    enum class ConsoleType
+    {
+        DMG,
+        CGB,
+    };
+
     class Core
     {
         uint32_t cycle_count = 0;
         bool boot_rom_loaded = false, ready_to_run = false;
 
     public:
-        Console console = Console::CGB;
         Gamepad pad;
         MainBus bus;
         PPU ppu;

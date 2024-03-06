@@ -18,7 +18,9 @@
 
 #include "PPU.hpp"
 #include "Bus.hpp"
+#include "Constants.hpp"
 #include <algorithm>
+#include <cstdint>
 #include <span>
 
 namespace GB
@@ -40,7 +42,7 @@ namespace GB
         shift_count = 8;
         this->attribute = attribute;
 
-        if (attribute & AttributeFlags::FlipX)
+        if (attribute & TILE_FLIP_X_BIT)
         {
             auto byte_reverse = [](uint8_t input) -> uint8_t
             {
@@ -137,7 +139,7 @@ namespace GB
             {
             case FetchMode::Background:
             {
-                computed_address |= ((ppu.lcd_control & LCDControlFlags::BGTileMap) ? 1 : 0) << 10;
+                computed_address |= ((ppu.lcd_control & BG_TILE_MAP_BIT) ? 1 : 0) << 10;
 
                 uint16_t xoffset = ((x_pos / 8) + (ppu.screen_scroll_x / 8)) & 31;
                 uint16_t yoffset = ((ppu.line_y + ppu.screen_scroll_y) / 8) & 31;
@@ -151,8 +153,7 @@ namespace GB
             }
             case FetchMode::Window:
             {
-                computed_address |= ((ppu.lcd_control & LCDControlFlags::WindowTileMap) ? 1 : 0)
-                                    << 10;
+                computed_address |= ((ppu.lcd_control & WND_TILE_MAP_BIT) ? 1 : 0) << 10;
 
                 uint16_t xoffset = ((x_pos) / 8) & 31;
                 uint16_t yoffset = ((ppu.window_line_y) / 8) & 31;
@@ -195,11 +196,10 @@ namespace GB
             {
             case FetchMode::Background:
             {
-                uint16_t bit12 =
-                    !((ppu.lcd_control & LCDControlFlags::BGWindowTileData) || (tile_id & 0x80));
+                uint16_t bit12 = !((ppu.lcd_control & TILE_DATA_LOC_BIT) || (tile_id & 0x80));
                 uint16_t yoffset = (ppu.line_y + ppu.screen_scroll_y) & 7;
 
-                if (attribute_id & AttributeFlags::FlipY)
+                if (attribute_id & TILE_FLIP_Y_BIT)
                     yoffset = (7 - (ppu.line_y + ppu.screen_scroll_y)) & 7;
 
                 computed_address |= bit12 ? (1 << 12) : 0;
@@ -210,11 +210,10 @@ namespace GB
             }
             case FetchMode::Window:
             {
-                uint16_t bit12 =
-                    !((ppu.lcd_control & LCDControlFlags::BGWindowTileData) || (tile_id & 0x80));
+                uint16_t bit12 = !((ppu.lcd_control & TILE_DATA_LOC_BIT) || (tile_id & 0x80));
                 uint16_t yoffset = ppu.window_line_y & 7;
 
-                if (attribute_id & AttributeFlags::FlipY)
+                if (attribute_id & TILE_FLIP_Y_BIT)
                     yoffset = (7 - ppu.window_line_y) & 7;
 
                 computed_address |= bit12 ? (1 << 12) : 0;
@@ -285,52 +284,82 @@ namespace GB
 
     PPU::PPU(MainBus &bus) : bus(bus) {}
 
-    void PPU::reset(bool hard_reset)
+    void PPU::set_compatibility_palette(PaletteID palette_type,
+                                        const std::span<const uint16_t> colors)
     {
-        if (hard_reset)
+        switch (palette_type)
         {
-            status = 0;
-            lcd_control = 0;
-            background_palette = 0;
-            object_palette_0 = 0;
-            object_palette_1 = 0;
-            screen_scroll_y = 0;
-            screen_scroll_x = 0;
-            window_y = 0;
-            window_x = 0;
-            line_y_compare = 0;
-            vram.fill(0);
-            oam.fill(0);
-            framebuffer.fill(0);
-            framebuffer_complete.fill(0);
-            bg_color_table.fill(0);
-            objects_on_scanline.fill({});
-            mode = PPUState::HBlank;
+        case PaletteID::BG:
+        {
+            auto palette = std::span(reinterpret_cast<uint16_t *>(bg_cram.data()), 4);
+            std::copy(colors.begin(), colors.end(), palette.begin());
 
-            vram_bank_select = 0;
-            bg_palette_select = 0;
-            obj_palette_select = 0;
-            object_priority_mode = 0;
-
-            bg_cram.fill(0);
-            obj_cram.fill(0);
+            break;
         }
+        case PaletteID::OBJ1:
+        {
+            auto palette = std::span(reinterpret_cast<uint16_t *>(obj_cram.data()), 4);
+            std::copy(colors.begin(), colors.end(), palette.begin());
+            break;
+        }
+        case PaletteID::OBJ2:
+        {
+            auto palette = std::span(reinterpret_cast<uint16_t *>(obj_cram.data() + 8), 4);
+            std::copy(colors.begin(), colors.end(), palette.begin());
+            break;
+        }
+        }
+    }
 
-        window_draw_flag = false;
-        num_obj_on_scanline = 0;
-        cycles = 0;
-        line_y = 0;
-        window_line_y = 0;
-
+    void PPU::reset()
+    {
         fetcher.reset();
         bg_fifo.clear();
+
+        window_draw_flag = false;
+        previously_disabled = false;
+        num_obj_on_scanline = 0;
+        line_x = 0;
+        cycles = 0;
+        extra_cycles = 0;
+
+        lcd_control = 0;
+        status = 0;
+        screen_scroll_y = 0;
+        screen_scroll_x = 0;
+        line_y = 0;
+        line_y_compare = 0;
+
+        window_y = 0;
+        window_x = 0;
+        line_y_compare = 0;
+
+        background_palette = 0;
+        object_palette_0 = 0;
+        object_palette_1 = 0;
+
+        vram_bank_select = 0;
+        bg_palette_select = 0;
+        obj_palette_select = 0;
+        object_priority_mode = 0;
+
+        obj_cram.fill(0);
+        bg_cram.fill(0);
+
+        vram.fill(0);
+
+        oam.fill(0);
+        objects_on_scanline.fill(Object{});
+
+        bg_color_table.fill(0);
+        framebuffer.fill(0);
+        framebuffer_complete.fill(0);
     }
 
     void PPU::set_post_boot_state()
     {
         previously_disabled = false;
         status = 0x85;
-        mode = PPUState::VBlank;
         lcd_control = 0x91;
         screen_scroll_x = 0;
         screen_scroll_y = 0;
@@ -340,18 +369,24 @@ namespace GB
 
     void PPU::step(uint32_t accumulated_cycles)
     {
-        if (!(lcd_control & LCDControlFlags::DisplayEnable))
+        if (!(lcd_control & LCD_ENABLED_BIT))
         {
-            mode = HBlank;
-            set_stat(ModeFlag, false);
-            status |= mode & 0x03;
+            set_mode(HBLANK);
             previously_disabled = true;
             return;
         }
 
         if (previously_disabled)
         {
-            reset(false);
+            window_draw_flag = false;
+            num_obj_on_scanline = 0;
+            cycles = 0;
+            line_y = 0;
+            window_line_y = 0;
+
+            fetcher.reset();
+            bg_fifo.clear();
+
             previously_disabled = false;
         }
 
@@ -362,10 +397,10 @@ namespace GB
             if (window_y == line_y)
                 window_draw_flag = true;
 
-            switch (mode)
+            switch (status & 0x3)
             {
 
-            case PPUState::HBlank:
+            case HBLANK:
             {
                 if (cycles == (204 - extra_cycles))
                 {
@@ -376,18 +411,18 @@ namespace GB
 
                     if (line_y == 144)
                     {
-                        mode = PPUState::VBlank;
+                        set_mode(VBLANK);
 
                         bus.request_interrupt(INT_VBLANK_BIT);
-                        if (check_stat(EnableVBlankInt) && allow_interrupt)
+                        if ((status & VBLANK_STAT_INT_BIT) && allow_interrupt)
                             bus.request_interrupt(INT_LCD_STAT_BIT);
                     }
                     else
                     {
 
-                        mode = PPUState::OAMSearch;
+                        set_mode(OAM_SEARCH);
 
-                        if (check_stat(EnableOAMInt) && allow_interrupt)
+                        if ((status & OAM_STAT_INT_BIT) && allow_interrupt)
                             bus.request_interrupt(INT_LCD_STAT_BIT);
                     }
 
@@ -396,7 +431,7 @@ namespace GB
                 break;
             }
 
-            case PPUState::VBlank:
+            case VBLANK:
             {
                 if (cycles == 456)
                 {
@@ -406,9 +441,9 @@ namespace GB
                     if (line_y > 153)
                     {
                         framebuffer_complete = framebuffer;
-                        mode = PPUState::OAMSearch;
+                        set_mode(OAM_SEARCH);
 
-                        if (check_stat(EnableOAMInt) && allow_interrupt)
+                        if ((status & OAM_STAT_INT_BIT) && allow_interrupt)
                             bus.request_interrupt(INT_LCD_STAT_BIT);
 
                         line_y = 0;
@@ -421,7 +456,7 @@ namespace GB
                 break;
             }
 
-            case PPUState::OAMSearch:
+            case OAM_SEARCH:
             {
                 if (cycles == 80)
                 {
@@ -429,7 +464,7 @@ namespace GB
                     cycles = 0;
                     extra_cycles = 0;
 
-                    mode = PPUState::DrawScanline;
+                    set_mode(PIXEL_TRANSFER);
                     fetcher.reset();
                     bg_fifo.clear();
                     continue;
@@ -438,19 +473,18 @@ namespace GB
                 break;
             }
 
-            case PPUState::DrawScanline:
+            case PIXEL_TRANSFER:
             {
                 if (cycles == 172 + extra_cycles)
                 {
                     render_objects();
                     cycles = 0;
 
-                    mode = PPUState::HBlank;
-
+                    set_mode(HBLANK);
                     if (fetcher.get_mode() == FetchMode::Window)
                         window_line_y++;
 
-                    if (check_stat(EnableHBlankInt) && allow_interrupt)
+                    if ((status & HBLANK_STAT_INT_BIT) && allow_interrupt)
                         bus.request_interrupt(INT_LCD_STAT_BIT);
 
                     continue;
@@ -467,9 +501,6 @@ namespace GB
             cycles++;
 
             check_ly_lyc(allow_interrupt);
-
-            set_stat(ModeFlag, false);
-            status |= mode & 0x03;
         }
     }
 
@@ -518,8 +549,6 @@ namespace GB
 
     uint8_t PPU::read_oam(uint16_t address) const { return oam[address]; }
 
-    bool PPU::check_stat(uint8_t flags) const { return status & flags; }
-
     void PPU::set_stat(uint8_t flags, bool value)
     {
         if (value)
@@ -530,27 +559,29 @@ namespace GB
 
     bool PPU::stat_any() const
     {
-        if (check_stat(EnableLYCandLYInt))
+        if (status & LYC_LY_STAT_INT_BIT)
         {
-            if (check_stat(LYCandLYCompareType))
+            if (status & LYC_LY_COMPARE_MODE_BIT)
                 return true;
         }
 
-        if (check_stat(EnableOAMInt))
+        uint8_t mode = status & 0x3;
+
+        if (status & OAM_STAT_INT_BIT)
         {
-            if (mode == 2)
+            if (mode == OAM_SEARCH)
                 return true;
         }
 
-        if (check_stat(EnableVBlankInt))
+        if (status & VBLANK_STAT_INT_BIT)
         {
-            if (mode == 1)
+            if (mode == VBLANK)
                 return true;
         }
 
-        if (check_stat(EnableHBlankInt))
+        if (status & HBLANK_STAT_INT_BIT)
         {
-            if (mode == 0)
+            if (mode == HBLANK)
                 return true;
         }
 
@@ -567,10 +598,9 @@ namespace GB
             uint8_t final_dmg_palette = background_palette;
             uint8_t bg_pixel = bg_fifo.clock();
 
-            bool bg_enabled =
-                bus.use_cgb_behavior() ? true : (lcd_control & LCDControlFlags::BGEnable);
+            bool bg_enabled = bus.is_compatibility_mode() ? (lcd_control & BG_ENABLED_BIT) : true;
 
-            if (!bg_enabled || !(render_flags & RenderFlags::Background))
+            if (!bg_enabled)
             {
                 final_pixel = 0;
                 final_palette = 0;
@@ -584,16 +614,22 @@ namespace GB
             bg_color_table[(line_y * LCD_WIDTH) + line_x] =
                 final_pixel | (static_cast<uint16_t>(bg_fifo.attribute) << 8);
 
-            if (bus.use_cgb_behavior())
-                plot_cgb_pixel(line_x, final_pixel, final_palette, false);
+            if (bus.is_compatibility_mode())
+            {
+                uint8_t cgb_pixel = (final_dmg_palette >> (int)(2 * final_pixel)) & 3;
+
+                plot_cgb_pixel(line_x, cgb_pixel, 0, false);
+            }
             else
-                plot_pixel(line_x, final_pixel, final_dmg_palette);
+            {
+                plot_cgb_pixel(line_x, final_pixel, final_palette, false);
+            }
 
             line_x++;
         }
 
-        if ((lcd_control & LCDControlFlags::WindowEnable) && window_draw_flag &&
-            (line_x >= (window_x - 7)) && fetcher.get_mode() == FetchMode::Background)
+        if ((lcd_control & WND_ENABLED_BIT) && window_draw_flag && (line_x >= (window_x - 7)) &&
+            fetcher.get_mode() == FetchMode::Background)
         {
             fetcher.clear_with_mode(FetchMode::Window);
             bg_fifo.clear();
@@ -603,20 +639,26 @@ namespace GB
 
     void PPU::render_objects()
     {
-        if (!(lcd_control & LCDControlFlags::SpriteEnable) ||
-            !(render_flags & RenderFlags::Objects))
+        if (!(lcd_control & OBJECTS_ENABLED_BIT))
             return;
 
-        uint8_t height = (lcd_control & LCDControlFlags::SpriteSize) ? 16 : 8;
+        uint8_t height = (lcd_control & OBJECT_SIZE_BIT) ? 16 : 8;
 
         for (auto i = 0; i < num_obj_on_scanline; ++i)
         {
             auto &object = objects_on_scanline[(num_obj_on_scanline - 1) - i];
 
-            uint8_t palette =
-                (object.attributes & AttributeFlags::Palette) ? object_palette_1 : object_palette_0;
-            uint8_t cgb_palette = (object.attributes & AttributeFlags::PaletteBits);
-            uint16_t bank = 0x2000 * ((object.attributes & AttributeFlags::BankSelect) >> 3);
+            uint8_t cgb_palette_idx = 0;
+            uint8_t palette = object_palette_0;
+
+            if (object.attributes & OBJ_PALETTE_SELECT_BIT)
+            {
+                cgb_palette_idx = 1;
+                palette = object_palette_1;
+            }
+
+            uint8_t cgb_palette = (object.attributes & CGB_PALETTE_NUM_MASK);
+            uint16_t bank = 0x2000 * ((object.attributes & VRAM_BANK_SELECT_BIT) >> 3);
 
             uint16_t tile_index = 0;
 
@@ -625,7 +667,7 @@ namespace GB
 
             int32_t obj_y = static_cast<int32_t>(object.y) - 16;
 
-            if (object.attributes & AttributeFlags::FlipY)
+            if (object.attributes & TILE_FLIP_Y_BIT)
                 tile_index =
                     (0x8000 & 0x1FFF) + (object.tile * 16) + ((height - (line_y - obj_y) - 1) * 2);
             else
@@ -645,7 +687,7 @@ namespace GB
                     uint8_t high_byte = vram[bank + (tile_index + 1)];
                     uint8_t bit = 7 - (x & 7);
 
-                    if (object.attributes & AttributeFlags::FlipX)
+                    if (object.attributes & TILE_FLIP_X_BIT)
                         bit = x & 7;
 
                     uint8_t low_bit = (low_byte >> bit) & 0x01;
@@ -660,13 +702,23 @@ namespace GB
                     uint16_t bg_attribute =
                         bg_color_table[framebuffer_line_y + framebuffer_line_x] >> 8;
 
-                    bool bg_priority = bg_attribute & AttributeFlags::Priority;
-                    bool oam_priority = object.attributes & AttributeFlags::Priority;
-                    bool master_priority = lcd_control & LCDControlFlags::BGEnable;
+                    bool bg_priority = bg_attribute & PRIORITY_BIT;
+                    bool oam_priority = object.attributes & PRIORITY_BIT;
+                    bool master_priority = lcd_control & MASTER_PRIORITY_BIT;
 
                     bool bg_has_priority = false;
 
-                    if (bus.use_cgb_behavior())
+                    if (bus.is_compatibility_mode())
+                    {
+                        bg_has_priority = bg_pixel && (object.attributes & PRIORITY_BIT);
+
+                        if (!bg_has_priority)
+                        {
+                            uint8_t cgb_pixel = (palette >> (int)(2 * pixel)) & 3;
+                            plot_cgb_pixel(framebuffer_line_x, cgb_pixel, cgb_palette_idx, true);
+                        }
+                    }
+                    else
                     {
                         if (master_priority && bg_pixel)
                             bg_has_priority = oam_priority || bg_priority;
@@ -674,36 +726,9 @@ namespace GB
                         if (!bg_has_priority)
                             plot_cgb_pixel(framebuffer_line_x, pixel, cgb_palette, true);
                     }
-                    else
-                    {
-                        bg_has_priority =
-                            bg_pixel && (object.attributes & AttributeFlags::Priority);
-
-                        if (!bg_has_priority)
-                            plot_pixel(framebuffer_line_x, pixel, palette);
-                    }
                 }
             }
         }
-    }
-
-    void PPU::plot_pixel(uint8_t x_pos, uint8_t final_pixel, uint8_t palette)
-    {
-        size_t framebuffer_line_y = line_y * LCD_WIDTH;
-
-        constexpr std::array<std::array<uint8_t, 4>, 4> LCD_GRAY_PALETTE{{
-            {0xFF, 0xFF, 0xFF, 0xFF},
-            {0xAA, 0xAA, 0xAA, 0xFF},
-            {0x55, 0x55, 0x55, 0xFF},
-            {0x00, 0x00, 0x00, 0xFF},
-        }};
-
-        std::array<uint8_t, 4> color = LCD_GRAY_PALETTE[(palette >> (int)(2 * final_pixel)) & 3];
-
-        auto fb_pixel =
-            std::span<uint8_t>{&framebuffer[(framebuffer_line_y + x_pos) * COLOR_DEPTH], 4};
-
-        std::copy(color.begin(), color.end(), fb_pixel.begin());
     }
 
     void PPU::plot_cgb_pixel(uint8_t x_pos, uint8_t final_pixel, uint8_t palette, bool is_obj)
@@ -739,7 +764,7 @@ namespace GB
 
     void PPU::scan_oam()
     {
-        uint8_t height = (lcd_control & LCDControlFlags::SpriteSize) ? 16 : 8;
+        uint8_t height = (lcd_control & OBJECT_SIZE_BIT) ? 16 : 8;
 
         num_obj_on_scanline = 0;
         objects_on_scanline.fill({});
@@ -759,7 +784,7 @@ namespace GB
             }
         }
 
-        if (object_priority_mode & 0x1 || !bus.use_cgb_behavior())
+        if (object_priority_mode & 0x1)
         {
             std::stable_sort(
                 objects_on_scanline.begin(), objects_on_scanline.begin() + num_obj_on_scanline,
@@ -767,13 +792,20 @@ namespace GB
         }
     }
 
+    void PPU::set_mode(uint8_t mode)
+    {
+        mode &= 0x3;
+        status &= ~0x3;
+        status |= mode;
+    }
+
     void PPU::check_ly_lyc(bool allow_interrupts)
     {
-        set_stat(LYCandLYCompareType, false);
+        set_stat(LYC_LY_COMPARE_MODE_BIT, false);
         if (line_y == line_y_compare)
         {
-            set_stat(LYCandLYCompareType, true);
-            if (check_stat(EnableLYCandLYInt) && allow_interrupts)
+            set_stat(LYC_LY_COMPARE_MODE_BIT, true);
+            if ((status & LYC_LY_STAT_INT_BIT) && allow_interrupts)
                 bus.request_interrupt(INT_LCD_STAT_BIT);
         }
     }

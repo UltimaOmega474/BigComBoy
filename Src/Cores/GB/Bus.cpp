@@ -22,20 +22,18 @@
 namespace GB
 {
     MainBus::MainBus(Core &core) : core(core) {}
+
+    bool MainBus::is_compatibility_mode() const { return (KEY0 & DISABLE_CGB_FUNCTIONS); }
+
     void MainBus::reset()
     {
         KEY0 = 0xC0;
         KEY1 = 0;
         boot_rom_enabled = true;
-        boot_rom.fill(0);
+        boot_rom.clear();
         wram.fill(0);
         hram.fill(0);
         cart = nullptr;
-    }
-
-    bool MainBus::use_cgb_behavior() const
-    {
-        return !(KEY0 & DISABLE_CGB_FUNCTIONS) && (core.console == Console::CGB);
     }
 
     void MainBus::request_interrupt(uint8_t interrupt) { core.cpu.interrupt_flag |= interrupt; }
@@ -55,11 +53,18 @@ namespace GB
         case 0x6:
         case 0x7:
         {
-            if (address < 0x100 && boot_rom_enabled)
-                return boot_rom[address & 0xFF];
-
-            if (cart)
-                return cart->read(address);
+            if (boot_rom_enabled)
+            {
+                if ((address < 0x100) || (address > 0x1FF))
+                    return boot_rom[address];
+                else if (cart)
+                    return cart->read(address);
+            }
+            else
+            {
+                if (cart)
+                    return cart->read(address);
+            }
 
             return 0xFF;
         }
@@ -256,11 +261,18 @@ namespace GB
         case 0x6:
         case 0x7:
         {
-            if (address < 0x100 && boot_rom_enabled)
-                return;
-
-            if (cart)
-                cart->write(address, value);
+            if (boot_rom_enabled)
+            {
+                if ((address < 0x100) || (address > 0x1FF))
+                    return;
+                else if (cart)
+                    cart->write(address, value);
+            }
+            else
+            {
+                if (cart)
+                    cart->write(address, value);
+            }
 
             return;
         }
