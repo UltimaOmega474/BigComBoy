@@ -36,6 +36,7 @@ namespace GB
         bool boot_rom_loaded = false, ready_to_run = false;
 
     public:
+        Console console = Console::CGB;
         Gamepad pad;
         MainBus bus;
         PPU ppu;

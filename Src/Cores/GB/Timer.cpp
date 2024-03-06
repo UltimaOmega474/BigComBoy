@@ -25,10 +25,10 @@ namespace GB
 
     void Timer::reset()
     {
-        div_cycles = 0;
+        div_cycles = 0xAB00;
         tima = 0;
         tma = 0;
-        set_tac(0);
+        set_tac(0xF8);
     }
 
     void Timer::set_tac(uint8_t rate)

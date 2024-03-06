@@ -41,6 +41,7 @@ namespace GB
         MainBus(Core &core);
 
         void reset();
+        bool use_cgb_behavior() const;
         void request_interrupt(uint8_t interrupt);
 
         // bus functions

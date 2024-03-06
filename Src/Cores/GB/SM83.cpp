@@ -637,20 +637,52 @@ namespace GB
     void SM83::reset(uint16_t new_pc)
     {
         master_interrupt_enable = false;
+        double_speed = false;
         halted = false;
         stopped = false;
+        ei_delay = false;
         interrupt_enable = 0;
         interrupt_flag = 0;
-        registers.fill(0);
-        pc = new_pc;
-        sp = 0xFFFE;
-        set_rp(BC, 0x0013);
-        set_rp(DE, 0x00D8);
-        set_rp(HL, 0x014D);
-        set_rp(AF, 0x01B0);
-        set_rp(SP, 0xFFFE);
 
-        registers[A] = 0x11;
+        switch (core.console)
+        {
+        case Console::DMG:
+        {
+            set_flags(N, false);
+            set_flags(Z, true);
+            set_flags(HC | CY, true);
+
+            registers[A] = 0x01;
+            registers[B] = 0x00;
+            registers[C] = 0x13;
+            registers[D] = 0x00;
+            registers[E] = 0xD8;
+            registers[H] = 0x01;
+            registers[L] = 0x4D;
+
+            pc = 0x0100;
+            sp = 0xFFFE;
+
+            break;
+        }
+        case Console::CGB:
+        {
+            set_flags(N | HC | CY, false);
+            set_flags(Z, true);
+
+            registers[A] = 0x11;
+            registers[B] = 0x00;
+            registers[C] = 0x00;
+            registers[D] = 0xFF;
+            registers[E] = 0x56;
+            registers[H] = 0x00;
+            registers[L] = 0x0D;
+
+            pc = 0x0100;
+            sp = 0xFFFE;
+            break;
+        }
+        }
     }
 
     void SM83::step()
@@ -888,7 +920,7 @@ namespace GB
 
     void SM83::op_stop()
     {
-        if (bus.KEY0 == 0x80)
+        if (!core.bus.use_cgb_behavior())
         {
             stopped = true;
             return;

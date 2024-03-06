@@ -306,6 +306,14 @@ namespace GB
             bg_color_table.fill(0);
             objects_on_scanline.fill({});
             mode = PPUState::HBlank;
+
+            vram_bank_select = 0;
+            bg_palette_select = 0;
+            obj_palette_select = 0;
+            object_priority_mode = 0;
+
+            bg_cram.fill(0);
+            obj_cram.fill(0);
         }
 
         window_draw_flag = false;
@@ -314,13 +322,6 @@ namespace GB
         line_y = 0;
         window_line_y = 0;
 
-        vram_bank_select = 0;
-        bg_palette_select = 0;
-        obj_palette_select = 0;
-        object_priority_mode = 0;
-
-        bg_cram.fill(0);
-        obj_cram.fill(0);
         fetcher.reset();
         bg_fifo.clear();
     }
@@ -328,8 +329,13 @@ namespace GB
     void PPU::set_post_boot_state()
     {
         previously_disabled = false;
-        status = 1;
+        status = 0x85;
+        mode = PPUState::VBlank;
         lcd_control = 0x91;
+        screen_scroll_x = 0;
+        screen_scroll_y = 0;
+        line_y = 0;
+        background_palette = 0xFC;
     }
 
     void PPU::step(uint32_t accumulated_cycles)
@@ -558,14 +564,17 @@ namespace GB
         if ((line_x < 160) && bg_fifo.pixels_left())
         {
             uint8_t final_pixel = 0, final_palette = bg_fifo.attribute & 0x7;
+            uint8_t final_dmg_palette = background_palette;
             uint8_t bg_pixel = bg_fifo.clock();
 
-            bool bg_enabled = (bus.KEY0 == 0xC0) ? true : (lcd_control & LCDControlFlags::BGEnable);
+            bool bg_enabled =
+                bus.use_cgb_behavior() ? true : (lcd_control & LCDControlFlags::BGEnable);
 
             if (!bg_enabled || !(render_flags & RenderFlags::Background))
             {
                 final_pixel = 0;
                 final_palette = 0;
+                final_dmg_palette = 0;
             }
             else
             {
@@ -574,7 +583,12 @@ namespace GB
 
             bg_color_table[(line_y * LCD_WIDTH) + line_x] =
                 final_pixel | (static_cast<uint16_t>(bg_fifo.attribute) << 8);
-            plot_cgb_pixel(line_x, final_pixel, final_palette, false);
+
+            if (bus.use_cgb_behavior())
+                plot_cgb_pixel(line_x, final_pixel, final_palette, false);
+            else
+                plot_pixel(line_x, final_pixel, final_dmg_palette);
+
             line_x++;
         }
 
@@ -652,19 +666,44 @@ namespace GB
 
                     bool bg_has_priority = false;
 
-                    if (bus.KEY0 == 0xC0)
+                    if (bus.use_cgb_behavior())
                     {
                         if (master_priority && bg_pixel)
-                        {
                             bg_has_priority = oam_priority || bg_priority;
-                        }
-                    }
 
-                    if (!bg_has_priority)
-                        plot_cgb_pixel(framebuffer_line_x, pixel, cgb_palette, true);
+                        if (!bg_has_priority)
+                            plot_cgb_pixel(framebuffer_line_x, pixel, cgb_palette, true);
+                    }
+                    else
+                    {
+                        bg_has_priority =
+                            bg_pixel && (object.attributes & AttributeFlags::Priority);
+
+                        if (!bg_has_priority)
+                            plot_pixel(framebuffer_line_x, pixel, palette);
+                    }
                 }
             }
         }
+    }
+
+    void PPU::plot_pixel(uint8_t x_pos, uint8_t final_pixel, uint8_t palette)
+    {
+        size_t framebuffer_line_y = line_y * LCD_WIDTH;
+
+        constexpr std::array<std::array<uint8_t, 4>, 4> LCD_GRAY_PALETTE{{
+            {0xFF, 0xFF, 0xFF, 0xFF},
+            {0xAA, 0xAA, 0xAA, 0xFF},
+            {0x55, 0x55, 0x55, 0xFF},
+            {0x00, 0x00, 0x00, 0xFF},
+        }};
+
+        std::array<uint8_t, 4> color = LCD_GRAY_PALETTE[(palette >> (int)(2 * final_pixel)) & 3];
+
+        auto fb_pixel =
+            std::span<uint8_t>{&framebuffer[(framebuffer_line_y + x_pos) * COLOR_DEPTH], 4};
+
+        std::copy(color.begin(), color.end(), fb_pixel.begin());
     }
 
     void PPU::plot_cgb_pixel(uint8_t x_pos, uint8_t final_pixel, uint8_t palette, bool is_obj)
@@ -720,7 +759,7 @@ namespace GB
             }
         }
 
-        if (object_priority_mode & 0x1)
+        if (object_priority_mode & 0x1 || !bus.use_cgb_behavior())
         {
             std::stable_sort(
                 objects_on_scanline.begin(), objects_on_scanline.begin() + num_obj_on_scanline,

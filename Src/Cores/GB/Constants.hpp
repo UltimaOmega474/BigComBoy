@@ -22,6 +22,13 @@
 
 namespace GB
 {
+    enum class Console
+    {
+        DMG,
+        CGB
+    };
+
+    constexpr int32_t DISABLE_CGB_FUNCTIONS = 0x4;
     constexpr int32_t LCD_WIDTH = 160;
     constexpr int32_t LCD_HEIGHT = 144;
     constexpr int32_t COLOR_DEPTH = 4;
@@ -58,7 +65,7 @@ namespace GB
         std::array<uint8_t, 8>{0, 1, 1, 1, 1, 1, 1, 0},
     };
 
-    consteval uint32_t RGB555ToUInt(uint32_t r, uint32_t g, uint32_t b)
+    consteval uint16_t RGB555ToUInt(uint16_t r, uint16_t g, uint16_t b)
     {
         r &= 0x1F;
         g &= 0x1F;

@@ -24,13 +24,18 @@ namespace GB
     MainBus::MainBus(Core &core) : core(core) {}
     void MainBus::reset()
     {
-        KEY0 = 0;
+        KEY0 = 0xC0;
         KEY1 = 0;
         boot_rom_enabled = true;
         boot_rom.fill(0);
         wram.fill(0);
         hram.fill(0);
         cart = nullptr;
+    }
+
+    bool MainBus::use_cgb_behavior() const
+    {
+        return !(KEY0 & DISABLE_CGB_FUNCTIONS) && (core.console == Console::CGB);
     }
 
     void MainBus::request_interrupt(uint8_t interrupt) { core.cpu.interrupt_flag |= interrupt; }

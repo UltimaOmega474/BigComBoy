@@ -191,6 +191,7 @@ namespace GB
     private:
         void render_scanline();
         void render_objects();
+        void plot_pixel(uint8_t x_pos, uint8_t final_pixel, uint8_t palette);
         void plot_cgb_pixel(uint8_t x_pos, uint8_t final_pixel, uint8_t palette, bool is_obj);
 
         void scan_oam();
