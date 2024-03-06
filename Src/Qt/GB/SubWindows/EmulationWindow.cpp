@@ -61,7 +61,7 @@ namespace QtFrontend
 
         if (dialog.exec())
         {
-            QString &path = dialog.selectedFiles().first();
+            QString path = dialog.selectedFiles().first();
 
             emulation.boot_rom_path = path.toStdString();
             emit set_boot_path_text(path);
