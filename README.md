@@ -1,11 +1,9 @@
 # Big ComBoy
 
-GameBoy emulator written in C++. 
+Game Boy & Game Boy Color emulator written in C++. 
 
 ## Hardware Compatibility
 
-- [x] DMG
-- [ ] CGB
 - [x] MBC1
 - [ ] MBC1M
 - [x] MBC2

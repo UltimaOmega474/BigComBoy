@@ -29,7 +29,7 @@ namespace GB
         Core &core;
 
     public:
-        bool boot_rom_enabled = true;
+        bool bootstrap_mapped = true;
         uint8_t KEY0 = 0x0, KEY1 = 0;
         uint8_t wram_bank_num = 1;
 

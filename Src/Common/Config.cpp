@@ -45,8 +45,9 @@ namespace Common
     {
         using namespace Input;
         toml::value gb{
-            {"skip_boot_rom", gameboy.emulation.skip_boot_rom},
-            {"boot_rom_path", gameboy.emulation.boot_rom_path},
+            {"console", static_cast<int32_t>(gameboy.emulation.console)},
+            {"dmg_bootstrap", gameboy.emulation.dmg_bootstrap.string()},
+            {"cgb_bootstrap", gameboy.emulation.cgb_bootstrap.string()},
             {"allow_sram_saving", gameboy.emulation.allow_sram_saving},
             {"sram_save_interval", gameboy.emulation.sram_save_interval},
             {"frame_blending", gameboy.video.frame_blending},
@@ -120,10 +121,13 @@ namespace Common
 
         auto &gb = data["gameboy"];
 
-        gameboy.emulation.skip_boot_rom =
-            toml::find_or(gb, "skip_boot_rom", gameboy.emulation.skip_boot_rom);
-        gameboy.emulation.boot_rom_path =
-            toml::find_or(gb, "boot_rom_path", gameboy.emulation.boot_rom_path);
+        gameboy.emulation.console = static_cast<GB::ConsoleType>(
+            toml::find_or(gb, "console", static_cast<int32_t>(gameboy.emulation.console)));
+        gameboy.emulation.dmg_bootstrap =
+            toml::find_or(gb, "dmg_bootstrap", gameboy.emulation.dmg_bootstrap.string());
+        gameboy.emulation.cgb_bootstrap =
+            toml::find_or(gb, "cgb_bootstrap", gameboy.emulation.cgb_bootstrap.string());
+
         gameboy.emulation.allow_sram_saving =
             toml::find_or(gb, "allow_sram_saving", gameboy.emulation.allow_sram_saving);
         gameboy.emulation.sram_save_interval =

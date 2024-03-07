@@ -121,8 +121,8 @@ namespace QtFrontend
 
             cart = std::move(new_cart);
 
-            core.load_boot_rom_from_file(emulation.boot_rom_path);
-            core.initialize(cart.get(), emulation.skip_boot_rom);
+            init_by_console_type();
+
             audio_system.prep_for_playback(core.apu);
 
             state = EmulationState::Running;
@@ -189,7 +189,7 @@ namespace QtFrontend
     void GBEmulatorController::stop_emulation()
     {
         sram_timer->stop();
-        core.initialize(nullptr, true);
+        core.initialize(nullptr);
         cart->save_sram_to_file();
         cart.reset();
         state = EmulationState::Stopped;
@@ -198,10 +198,7 @@ namespace QtFrontend
 
     void GBEmulatorController::reset_emulation()
     {
-        const auto &emulation = Common::Config::Current().gameboy.emulation;
-
-        core.load_boot_rom_from_file(emulation.boot_rom_path);
-        core.initialize(cart.get(), emulation.skip_boot_rom);
+        init_by_console_type();
         audio_system.prep_for_playback(core.apu);
     }
 
@@ -213,6 +210,30 @@ namespace QtFrontend
 
         if (sram_timer->interval() != interval_seconds)
             sram_timer->setInterval(interval_seconds);
+    }
+
+    void GBEmulatorController::init_by_console_type()
+    {
+        const auto &emulation = Common::Config::Current().gameboy.emulation;
+
+        switch (emulation.console)
+        {
+        case GB::ConsoleType::AutoSelect:
+        {
+            core.initialize(cart.get());
+            break;
+        }
+        case GB::ConsoleType::DMG:
+        {
+            core.initialize_with_bootstrap(cart.get(), emulation.console, emulation.dmg_bootstrap);
+            break;
+        }
+        case GB::ConsoleType::CGB:
+        {
+            core.initialize_with_bootstrap(cart.get(), emulation.console, emulation.cgb_bootstrap);
+            break;
+        }
+        }
     }
 
     void GBEmulatorController::update_textures()

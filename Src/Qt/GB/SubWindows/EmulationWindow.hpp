@@ -26,6 +26,8 @@ namespace Ui
     class EmulationWindow;
 }
 
+class QAbstractButton;
+
 namespace QtFrontend
 {
     class EmulationWindow : public QWidget
@@ -41,9 +43,9 @@ namespace QtFrontend
 
         Q_SLOT void apply_changes();
         Q_SLOT void select_bootrom();
-        Q_SLOT void set_skip_boot(bool checked);
         Q_SLOT void set_allow_sram(bool checked);
         Q_SLOT void change_interval(int32_t value);
+        Q_SLOT void set_console(QAbstractButton *btn);
         Q_SLOT void boot_path_changed(const QString &path);
 
         Q_SIGNAL void set_boot_path_text(const QString &text);

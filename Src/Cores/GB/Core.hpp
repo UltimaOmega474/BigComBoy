@@ -31,17 +31,11 @@
 
 namespace GB
 {
-    enum class ConsoleType
-    {
-        DMG,
-        CGB,
-    };
-
     class Core
     {
         uint32_t cycle_count = 0;
         bool ready_to_run = false;
-        std::vector<uint8_t> boot_rom{};
+        std::vector<uint8_t> bootstrap{};
 
     public:
         Gamepad pad;
@@ -53,11 +47,13 @@ namespace GB
         DMAController dma;
         Core();
 
-        void initialize(Cartridge *cart, bool skip_boot_rom);
+        void initialize(Cartridge *cart);
+        void initialize_with_bootstrap(Cartridge *cart, ConsoleType console,
+                                       std::filesystem::path bootstrap_path);
         void run_for_frames(uint32_t frames);
         void run_for_cycles(uint32_t cycles);
         void tick_subcomponents(uint8_t cycles);
-        void load_boot_rom_from_file(std::filesystem::path path);
+        void load_bootstrap(std::filesystem::path path);
 
         uint8_t read_bootrom(uint16_t address);
     };

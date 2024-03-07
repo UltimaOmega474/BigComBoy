@@ -751,8 +751,8 @@ namespace GB
             color |= bg_cram[select_color + 1] << 8;
         }
 
-        auto fb_pixel =
-            std::span<uint8_t>{&framebuffer[(framebuffer_line_y + x_pos) * COLOR_DEPTH], 4};
+        auto fb_pixel = std::span<uint8_t>{
+            &framebuffer[(framebuffer_line_y + x_pos) * FRAMEBUFFER_COLOR_CHANNELS], 4};
 
         auto r = color & 0x1F;
         auto g = (color >> 5) & 0x1F;

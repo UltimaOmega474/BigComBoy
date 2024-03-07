@@ -17,9 +17,12 @@
 */
 
 #include "EmulationWindow.hpp"
+#include "Cores/GB/Constants.hpp"
 #include "ui_EmulationWindow.h"
 #include <QFileDialog>
 #include <QPushButton>
+#include <QRadioButton>
+#include <array>
 
 namespace QtFrontend
 {
@@ -28,18 +31,38 @@ namespace QtFrontend
           emulation(Common::Config::Current().gameboy.emulation)
     {
         ui->setupUi(this);
-        connect(ui->skip_boot_btn, &QCheckBox::clicked, this, &EmulationWindow::set_skip_boot);
+
+        connect(ui->console_btn_group, &QButtonGroup::buttonClicked, this,
+                &EmulationWindow::set_console);
+
+        connect(ui->gb_browse_btn, &QPushButton::clicked, this, &EmulationWindow::select_bootrom);
+        connect(ui->gb_boot_path, &QLineEdit::textChanged, this,
+                &EmulationWindow::boot_path_changed);
+        connect(this, &EmulationWindow::set_boot_path_text, ui->gb_boot_path, &QLineEdit::setText);
+
+        connect(ui->gbc_browse_btn, &QPushButton::clicked, this, &EmulationWindow::select_bootrom);
+        connect(ui->gbc_boot_path, &QLineEdit::textChanged, this,
+                &EmulationWindow::boot_path_changed);
+        connect(this, &EmulationWindow::set_boot_path_text, ui->gbc_boot_path, &QLineEdit::setText);
+
         connect(ui->allow_sram, &QCheckBox::clicked, this, &EmulationWindow::set_allow_sram);
-        connect(ui->browse_btn, &QPushButton::clicked, this, &EmulationWindow::select_bootrom);
-        connect(this, &EmulationWindow::set_boot_path_text, ui->boot_path, &QLineEdit::setText);
         connect(ui->sram_interval, &QSpinBox::valueChanged, this,
                 &EmulationWindow::change_interval);
-        connect(ui->boot_path, &QLineEdit::textChanged, this, &EmulationWindow::boot_path_changed);
 
-        ui->skip_boot_btn->setChecked(emulation.skip_boot_rom);
         ui->allow_sram->setChecked(emulation.allow_sram_saving);
         ui->sram_interval->setValue(emulation.sram_save_interval);
-        ui->boot_path->setText(QString::fromStdString(emulation.boot_rom_path));
+
+        std::array<QRadioButton *, 3> btns{
+
+            ui->gb_btn,
+            ui->gbc_btn,
+            ui->auto_btn,
+        };
+
+        btns[static_cast<size_t>(emulation.console)]->setChecked(true);
+
+        ui->gb_boot_path->setText(QString::fromStdString(emulation.dmg_bootstrap));
+        ui->gbc_boot_path->setText(QString::fromStdString(emulation.cgb_bootstrap));
     }
 
     EmulationWindow::~EmulationWindow()
@@ -63,20 +86,46 @@ namespace QtFrontend
         {
             QString path = dialog.selectedFiles().first();
 
-            emulation.boot_rom_path = path.toStdString();
-            emit set_boot_path_text(path);
+            if (sender() == ui->gb_browse_btn)
+            {
+                emulation.dmg_bootstrap = path.toStdString();
+                ui->gb_boot_path->setText(path);
+            }
+            else
+            {
+
+                emulation.cgb_bootstrap = path.toStdString();
+                ui->gbc_boot_path->setText(path);
+            }
         }
     }
-
-    void EmulationWindow::set_skip_boot(bool checked) { emulation.skip_boot_rom = checked; }
 
     void EmulationWindow::set_allow_sram(bool checked) { emulation.allow_sram_saving = checked; }
 
     void EmulationWindow::change_interval(int32_t value) { emulation.sram_save_interval = value; }
 
+    void EmulationWindow::set_console(QAbstractButton *btn)
+    {
+        if (btn == ui->auto_btn)
+        {
+            emulation.console = GB::ConsoleType::AutoSelect;
+        }
+        else if (btn == ui->gb_btn)
+        {
+            emulation.console = GB::ConsoleType::DMG;
+        }
+        else if (btn == ui->gbc_btn)
+        {
+            emulation.console = GB::ConsoleType::CGB;
+        }
+    }
+
     void EmulationWindow::boot_path_changed(const QString &path)
     {
-        emulation.boot_rom_path = path.toStdString();
+        if (sender() == ui->gb_boot_path)
+            emulation.dmg_bootstrap = path.toStdString();
+        else
+            emulation.cgb_bootstrap = path.toStdString();
     }
 
 }

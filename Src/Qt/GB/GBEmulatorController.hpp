@@ -86,6 +86,7 @@ namespace QtFrontend
         Q_SIGNAL void on_hide();
 
     private:
+        void init_by_console_type();
         void update_textures();
     };
 }

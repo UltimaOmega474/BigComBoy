@@ -17,6 +17,7 @@
 */
 
 #pragma once
+#include "Cores/GB/Constants.hpp"
 #include "Input/InputDevice.hpp"
 #include <array>
 #include <cinttypes>
@@ -43,11 +44,12 @@ namespace Common
 
         struct EmulationData
         {
-            bool skip_boot_rom = true;
+            GB::ConsoleType console = GB::ConsoleType::AutoSelect;
+            std::filesystem::path dmg_bootstrap;
+            std::filesystem::path cgb_bootstrap;
+
             bool allow_sram_saving = true;
             int32_t sram_save_interval = 30;
-            std::string boot_rom_path;
-
         } emulation;
 
         struct AudioData

@@ -29,7 +29,7 @@ namespace GB
     {
         KEY0 = 0;
         KEY1 = 0;
-        boot_rom_enabled = true;
+        bootstrap_mapped = true;
         wram.fill(0);
         hram.fill(0);
         cart = new_cart;
@@ -52,7 +52,7 @@ namespace GB
         case 0x6:
         case 0x7:
         {
-            if (boot_rom_enabled)
+            if (bootstrap_mapped)
             {
                 if ((address < 0x100) || (address > 0x1FF))
                     return core.read_bootrom(address);
@@ -207,7 +207,7 @@ namespace GB
                 case 0x4F:
                     return core.ppu.vram_bank_select | 0xFE;
                 case 0x50:
-                    return boot_rom_enabled;
+                    return bootstrap_mapped;
                 case 0x55:
                     return core.dma.get_dma_status();
                 case 0x68:
@@ -260,7 +260,7 @@ namespace GB
         case 0x6:
         case 0x7:
         {
-            if (boot_rom_enabled)
+            if (bootstrap_mapped)
             {
                 if ((address < 0x100) || (address > 0x1FF))
                     return;
@@ -476,7 +476,7 @@ namespace GB
                 }
                 case 0x4C:
                 {
-                    if (boot_rom_enabled)
+                    if (bootstrap_mapped)
                     {
                         KEY0 = value;
                     }
@@ -495,7 +495,7 @@ namespace GB
                 }
                 case 0x50:
                 {
-                    boot_rom_enabled = false;
+                    bootstrap_mapped = false;
                     return;
                 }
                 case 0x51:
@@ -545,7 +545,7 @@ namespace GB
                 }
                 case 0x6C:
                 {
-                    if (boot_rom_enabled)
+                    if (bootstrap_mapped)
                         core.ppu.object_priority_mode = value & 0x1;
                     break;
                 }

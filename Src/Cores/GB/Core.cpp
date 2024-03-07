@@ -25,10 +25,10 @@ namespace GB
 {
     Core::Core() : bus(*this), ppu(bus), timer(*this), cpu(*this, bus), dma(*this) {}
 
-    void Core::initialize(Cartridge *cart, bool skip_boot_rom)
+    void Core::initialize(Cartridge *cart)
     {
         ready_to_run = cart ? true : false;
-
+        bootstrap.clear();
         apu.reset();
         ppu.reset();
         timer.reset();
@@ -36,34 +36,69 @@ namespace GB
         bus.reset(cart);
         dma.reset();
 
-        uint16_t starting_pc = 0x0000;
+        if (ready_to_run)
+        {
+            bus.bootstrap_mapped = false;
+
+            if (cart->header.cgb_support)
+            {
+                bus.KEY0 = cart->header.cgb_support;
+                ppu.object_priority_mode = 0;
+            }
+            else
+            {
+                bus.KEY0 = 0x04;
+                ppu.object_priority_mode = 1;
+
+                ppu.set_compatibility_palette(PaletteID::BG, LCD_GRAY);
+                ppu.set_compatibility_palette(PaletteID::OBJ1, LCD_GRAY);
+                ppu.set_compatibility_palette(PaletteID::OBJ2, LCD_GRAY);
+            }
+
+            cpu.reset(0x0100);
+            ppu.set_post_boot_state();
+        }
+    }
+
+    void Core::initialize_with_bootstrap(Cartridge *cart, ConsoleType console,
+                                         std::filesystem::path bootstrap_path)
+    {
+        ready_to_run = cart ? true : false;
+        bootstrap.clear();
+        apu.reset();
+        ppu.reset();
+        timer.reset();
+        pad.reset();
+        bus.reset(cart);
+        dma.reset();
 
         if (ready_to_run)
         {
-            if (skip_boot_rom || (boot_rom.size() < 0x100))
+            load_bootstrap(bootstrap_path);
+            switch (console)
             {
-                if (cart->header.cgb_support)
-                {
-                    bus.KEY0 = cart->header.cgb_support;
-                    ppu.object_priority_mode = 0;
-                }
-                else
-                {
-                    bus.KEY0 = 0x04;
-                    ppu.object_priority_mode = 1;
+            case ConsoleType::DMG:
+            {
+                bus.KEY0 = 0x04;
+                ppu.object_priority_mode = 1;
 
-                    ppu.set_compatibility_palette(PaletteID::BG, LCD_GRAY);
-                    ppu.set_compatibility_palette(PaletteID::OBJ1, LCD_GRAY);
-                    ppu.set_compatibility_palette(PaletteID::OBJ2, LCD_GRAY);
-                }
-
-                bus.boot_rom_enabled = false;
-                starting_pc = 0x0100;
-                ppu.set_post_boot_state();
+                ppu.set_compatibility_palette(PaletteID::BG, LCD_GRAY);
+                ppu.set_compatibility_palette(PaletteID::OBJ1, LCD_GRAY);
+                ppu.set_compatibility_palette(PaletteID::OBJ2, LCD_GRAY);
+                break;
             }
-        }
+            case ConsoleType::CGB:
+            {
+                bus.KEY0 = cart->header.cgb_support;
+                ppu.object_priority_mode = 0;
+                break;
+            }
+            default:
+                return;
+            }
 
-        cpu.reset(starting_pc);
+            cpu.reset(0x0);
+        }
     }
 
     void Core::run_for_frames(uint32_t frames)
@@ -103,7 +138,7 @@ namespace GB
         }
     }
 
-    void Core::load_boot_rom_from_file(std::filesystem::path path)
+    void Core::load_bootstrap(std::filesystem::path path)
     {
         std::ifstream rom(path, std::ios::binary | std::ios::ate);
 
@@ -114,14 +149,14 @@ namespace GB
             if (len == 0)
                 return;
 
-            boot_rom.clear();
-            boot_rom.resize(len);
+            bootstrap.clear();
+            bootstrap.resize(len);
 
             rom.seekg(0);
-            rom.read(reinterpret_cast<char *>(boot_rom.data()), len);
+            rom.read(reinterpret_cast<char *>(bootstrap.data()), len);
             rom.close();
         }
     }
 
-    uint8_t Core::read_bootrom(uint16_t address) { return boot_rom[address]; }
+    uint8_t Core::read_bootrom(uint16_t address) { return bootstrap[address]; }
 }
