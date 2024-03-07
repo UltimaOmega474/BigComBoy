@@ -109,10 +109,16 @@ namespace QtFrontend
     {
         auto new_cart = GB::Cartridge::from_file(path);
 
+        if (cart)
+        {
+            cart->save_sram_to_file();
+            cart.reset();
+        }
+
         if (new_cart)
         {
             const auto &emulation = Common::Config::Current().gameboy.emulation;
-            cart.reset();
+
             cart = std::move(new_cart);
 
             core.load_boot_rom_from_file(emulation.boot_rom_path);
