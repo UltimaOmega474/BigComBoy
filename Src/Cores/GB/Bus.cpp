@@ -25,15 +25,14 @@ namespace GB
 
     bool MainBus::is_compatibility_mode() const { return (KEY0 & DISABLE_CGB_FUNCTIONS); }
 
-    void MainBus::reset()
+    void MainBus::reset(Cartridge *new_cart)
     {
         KEY0 = 0;
         KEY1 = 0;
         boot_rom_enabled = true;
-        boot_rom.clear();
         wram.fill(0);
         hram.fill(0);
-        cart = nullptr;
+        cart = new_cart;
     }
 
     void MainBus::request_interrupt(uint8_t interrupt) { core.cpu.interrupt_flag |= interrupt; }
@@ -56,7 +55,7 @@ namespace GB
             if (boot_rom_enabled)
             {
                 if ((address < 0x100) || (address > 0x1FF))
-                    return boot_rom[address];
+                    return core.read_bootrom(address);
                 else if (cart)
                     return cart->read(address);
             }

@@ -115,9 +115,8 @@ namespace QtFrontend
             cart.reset();
             cart = std::move(new_cart);
 
-            core.reset();
             core.load_boot_rom_from_file(emulation.boot_rom_path);
-            core.set_cartridge(cart.get(), emulation.skip_boot_rom);
+            core.initialize(cart.get(), emulation.skip_boot_rom);
             audio_system.prep_for_playback(core.apu);
 
             state = EmulationState::Running;
@@ -184,7 +183,7 @@ namespace QtFrontend
     void GBEmulatorController::stop_emulation()
     {
         sram_timer->stop();
-        core.reset();
+        core.initialize(nullptr, true);
         cart->save_sram_to_file();
         cart.reset();
         state = EmulationState::Stopped;
@@ -195,9 +194,8 @@ namespace QtFrontend
     {
         const auto &emulation = Common::Config::Current().gameboy.emulation;
 
-        core.reset();
         core.load_boot_rom_from_file(emulation.boot_rom_path);
-        core.set_cartridge(cart.get(), emulation.skip_boot_rom);
+        core.initialize(cart.get(), emulation.skip_boot_rom);
         audio_system.prep_for_playback(core.apu);
     }
 

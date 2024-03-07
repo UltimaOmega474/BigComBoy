@@ -25,50 +25,45 @@ namespace GB
 {
     Core::Core() : bus(*this), ppu(bus), timer(*this), cpu(*this, bus), dma(*this) {}
 
-    void Core::set_cartridge(Cartridge *cart, bool skip_boot_rom)
+    void Core::initialize(Cartridge *cart, bool skip_boot_rom)
     {
         ready_to_run = cart ? true : false;
 
-        bus.cart = cart;
-
-        if (skip_boot_rom || !boot_rom_loaded)
-        {
-            if (cart->header.cgb_support)
-            {
-                bus.KEY0 = cart->header.cgb_support;
-                ppu.object_priority_mode = 0;
-            }
-            else
-            {
-                bus.KEY0 = 0x04;
-                ppu.object_priority_mode = 1;
-
-                ppu.set_compatibility_palette(PaletteID::BG, LCD_GRAY);
-                ppu.set_compatibility_palette(PaletteID::OBJ1, LCD_GRAY);
-                ppu.set_compatibility_palette(PaletteID::OBJ2, LCD_GRAY);
-            }
-            bus.boot_rom_enabled = false;
-            cpu.reset(0x100);
-            ppu.set_post_boot_state();
-        }
-        else
-        {
-            cpu.reset(0x0);
-        }
-    }
-
-    void Core::reset()
-    {
         apu.reset();
         ppu.reset();
         timer.reset();
         pad.reset();
-        bus.reset();
-        cpu.reset(0);
+        bus.reset(cart);
         dma.reset();
 
-        ready_to_run = false;
-        boot_rom_loaded = false;
+        uint16_t starting_pc = 0x0000;
+
+        if (ready_to_run)
+        {
+            if (skip_boot_rom || (boot_rom.size() < 0x100))
+            {
+                if (cart->header.cgb_support)
+                {
+                    bus.KEY0 = cart->header.cgb_support;
+                    ppu.object_priority_mode = 0;
+                }
+                else
+                {
+                    bus.KEY0 = 0x04;
+                    ppu.object_priority_mode = 1;
+
+                    ppu.set_compatibility_palette(PaletteID::BG, LCD_GRAY);
+                    ppu.set_compatibility_palette(PaletteID::OBJ1, LCD_GRAY);
+                    ppu.set_compatibility_palette(PaletteID::OBJ2, LCD_GRAY);
+                }
+
+                bus.boot_rom_enabled = false;
+                starting_pc = 0x0100;
+                ppu.set_post_boot_state();
+            }
+        }
+
+        cpu.reset(starting_pc);
     }
 
     void Core::run_for_frames(uint32_t frames)
@@ -112,8 +107,6 @@ namespace GB
     {
         std::ifstream rom(path, std::ios::binary | std::ios::ate);
 
-        boot_rom_loaded = false;
-
         if (rom)
         {
             auto len = rom.tellg();
@@ -121,14 +114,14 @@ namespace GB
             if (len == 0)
                 return;
 
-            bus.boot_rom.clear();
-            bus.boot_rom.resize(len);
+            boot_rom.clear();
+            boot_rom.resize(len);
 
             rom.seekg(0);
-            rom.read(reinterpret_cast<char *>(bus.boot_rom.data()), len);
+            rom.read(reinterpret_cast<char *>(boot_rom.data()), len);
             rom.close();
-
-            boot_rom_loaded = true;
         }
     }
+
+    uint8_t Core::read_bootrom(uint16_t address) { return boot_rom[address]; }
 }

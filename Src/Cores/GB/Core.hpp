@@ -27,6 +27,7 @@
 #include "Timer.hpp"
 #include <cinttypes>
 #include <filesystem>
+#include <vector>
 
 namespace GB
 {
@@ -39,7 +40,8 @@ namespace GB
     class Core
     {
         uint32_t cycle_count = 0;
-        bool boot_rom_loaded = false, ready_to_run = false;
+        bool ready_to_run = false;
+        std::vector<uint8_t> boot_rom{};
 
     public:
         Gamepad pad;
@@ -51,12 +53,13 @@ namespace GB
         DMAController dma;
         Core();
 
-        void set_cartridge(Cartridge *cart, bool skip_boot_rom);
-        void reset();
+        void initialize(Cartridge *cart, bool skip_boot_rom);
         void run_for_frames(uint32_t frames);
         void run_for_cycles(uint32_t cycles);
         void tick_subcomponents(uint8_t cycles);
         void load_boot_rom_from_file(std::filesystem::path path);
+
+        uint8_t read_bootrom(uint16_t address);
     };
 
 }

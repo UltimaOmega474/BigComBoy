@@ -19,7 +19,6 @@
 #pragma once
 #include <array>
 #include <cinttypes>
-#include <vector>
 
 namespace GB
 {
@@ -36,14 +35,14 @@ namespace GB
 
         std::array<uint8_t, 32768> wram{};
         std::array<uint8_t, 127> hram{};
-        std::vector<uint8_t> boot_rom{};
 
         Cartridge *cart = nullptr;
+
         MainBus(Core &core);
 
         bool is_compatibility_mode() const;
 
-        void reset();
+        void reset(Cartridge *new_cart);
         void request_interrupt(uint8_t interrupt);
 
         uint8_t read(uint16_t address);
