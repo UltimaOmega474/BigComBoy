@@ -381,6 +381,7 @@ namespace GB
             window_draw_flag = false;
             num_obj_on_scanline = 0;
             cycles = 0;
+            extra_cycles = 0;
             line_y = 0;
             window_line_y = 0;
 
@@ -402,6 +403,7 @@ namespace GB
 
             case HBLANK:
             {
+
                 if (cycles == (204 - extra_cycles))
                 {
                     cycles = 0;

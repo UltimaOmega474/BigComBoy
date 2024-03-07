@@ -29,23 +29,24 @@ namespace GB
     {
         ready_to_run = cart ? true : false;
 
-        if (cart->header.cgb_support)
-        {
-            bus.KEY0 = cart->header.cgb_support;
-            ppu.object_priority_mode = 0;
-        }
-        else
-        {
-            bus.KEY0 = 0x04;
-            ppu.object_priority_mode = 1;
-
-            ppu.set_compatibility_palette(PaletteID::BG, LCD_GRAY);
-            ppu.set_compatibility_palette(PaletteID::OBJ1, LCD_GRAY);
-            ppu.set_compatibility_palette(PaletteID::OBJ2, LCD_GRAY);
-        }
+        bus.cart = cart;
 
         if (skip_boot_rom || !boot_rom_loaded)
         {
+            if (cart->header.cgb_support)
+            {
+                bus.KEY0 = cart->header.cgb_support;
+                ppu.object_priority_mode = 0;
+            }
+            else
+            {
+                bus.KEY0 = 0x04;
+                ppu.object_priority_mode = 1;
+
+                ppu.set_compatibility_palette(PaletteID::BG, LCD_GRAY);
+                ppu.set_compatibility_palette(PaletteID::OBJ1, LCD_GRAY);
+                ppu.set_compatibility_palette(PaletteID::OBJ2, LCD_GRAY);
+            }
             bus.boot_rom_enabled = false;
             cpu.reset(0x100);
             ppu.set_post_boot_state();
@@ -62,7 +63,7 @@ namespace GB
         ppu.reset();
         timer.reset();
         pad.reset();
-        bus.reset(nullptr);
+        bus.reset();
         cpu.reset(0);
         dma.reset();
 

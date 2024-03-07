@@ -27,7 +27,7 @@ namespace GB
 
     void MainBus::reset()
     {
-        KEY0 = 0xC0;
+        KEY0 = 0;
         KEY1 = 0;
         boot_rom_enabled = true;
         boot_rom.clear();
@@ -424,7 +424,8 @@ namespace GB
                 }
                 case 0x41:
                 {
-                    core.ppu.status = value & 0xF8;
+                    core.ppu.status &= 0x3;
+                    core.ppu.status |= value & 0xF8;
                     return;
                 }
 
