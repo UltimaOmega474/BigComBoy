@@ -142,7 +142,7 @@ namespace GB
             if (can_tick)
                 core.tick_subcomponents(4);
 
-            core.ppu.write_vram(dst_address, data);
+            core.ppu.write_vram(dst_address & 0x1FFF, data);
 
             src_address++;
             dst_address++;
