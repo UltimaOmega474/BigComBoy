@@ -61,8 +61,8 @@ namespace QtFrontend
 
         btns[static_cast<size_t>(emulation.console)]->setChecked(true);
 
-        ui->gb_boot_path->setText(QString::fromStdString(emulation.dmg_bootstrap));
-        ui->gbc_boot_path->setText(QString::fromStdString(emulation.cgb_bootstrap));
+        ui->gb_boot_path->setText(QString::fromStdString(emulation.dmg_bootstrap.string()));
+        ui->gbc_boot_path->setText(QString::fromStdString(emulation.cgb_bootstrap.string()));
     }
 
     EmulationWindow::~EmulationWindow()
