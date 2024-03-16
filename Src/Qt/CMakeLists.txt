@@ -17,6 +17,8 @@ set(QT_SOURCES
 	GB/SubWindows/VideoWindow.ui
 	GB/SubWindows/AudioWindow.cpp
 	GB/SubWindows/AudioWindow.ui
+	GB/Debuggers/Disassembler.cpp
+	GB/Debuggers/Disassembler.ui
 )
 
 set(CMAKE_AUTOUIC ON)
