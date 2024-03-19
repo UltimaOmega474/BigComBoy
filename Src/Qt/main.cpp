@@ -41,10 +41,10 @@ int main(int argc, char *argv[])
     atexit(SDL_Quit);
     atexit(save_config);
 
-    // QtFrontend::MainWindow w;
-    //  w.show();
+    QtFrontend::MainWindow w;
+    w.show();
 
-    QtFrontend::Disassembler disasm;
-    disasm.show();
+    //    QtFrontend::Disassembler disasm;
+    //   disasm.show();
     return a.exec();
 }
