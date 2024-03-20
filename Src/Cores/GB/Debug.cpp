@@ -18,7 +18,6 @@
 
 #include "Debug.hpp"
 #include "SM83.hpp"
-#include <cstdint>
 #include <format>
 #include <utility>
 
@@ -29,28 +28,23 @@ namespace GB
         uint8_t x = buffer[0] >> 6;
 
         std::string ins;
+
         switch (x)
         {
         case 0:
-        {
             ins = decode_x0(buffer);
             break;
-        }
         case 1:
-        {
             ins = decode_x1(buffer);
             break;
-        }
         case 2:
-        {
             ins = decode_x2(buffer);
             break;
-        }
         case 3:
-        {
             ins = decode_x3(buffer);
             break;
-        }
+        default:
+            return;
         }
 
         instruction_history.push_back(std::move(ins));
@@ -59,43 +53,28 @@ namespace GB
     std::string Debugger::decode_x0(std::array<uint8_t, 3> &buffer)
     {
         uint8_t z = buffer[0] & 0x7;
+
         switch (z)
         {
         case 0:
-        {
             return decode_x0_z0(buffer);
-        }
         case 1:
-        {
             return decode_x0_z1(buffer);
-        }
         case 2:
-        {
             return decode_x0_z2(buffer);
-        }
         case 3:
-        {
             return decode_x0_z3(buffer);
-        }
         case 4:
-        {
             return decode_x0_z4(buffer);
-        }
         case 5:
-        {
             return decode_x0_z5(buffer);
-        }
         case 6:
-        {
             return decode_x0_z6(buffer);
-        }
         case 7:
-        {
             return decode_x0_z7(buffer);
+        default:
+            return {};
         }
-        }
-
-        return {};
     }
 
     std::string Debugger::decode_x1(std::array<uint8_t, 3> &buffer)
@@ -117,7 +96,32 @@ namespace GB
         return std::format("{} {}", alu_to_str(y), r_to_str(z));
     }
 
-    std::string Debugger::decode_x3(std::array<uint8_t, 3> &buffer) { return {}; }
+    std::string Debugger::decode_x3(std::array<uint8_t, 3> &buffer)
+    {
+        uint8_t z = buffer[0] & 0x7;
+
+        switch (z)
+        {
+        case 0:
+            return decode_x3_z0(buffer);
+        case 1:
+            return decode_x3_z1(buffer);
+        case 2:
+            return decode_x3_z2(buffer);
+        case 3:
+            return decode_x3_z3(buffer);
+        case 4:
+            return decode_x3_z4(buffer);
+        case 5:
+            return decode_x3_z5(buffer);
+        case 6:
+            return decode_x3_z6(buffer);
+        case 7:
+            return decode_x3_z7(buffer);
+        default:
+            return {};
+        }
+    }
 
     std::string Debugger::decode_x0_z0(std::array<uint8_t, 3> &buffer)
     {
@@ -138,7 +142,6 @@ namespace GB
         case 6:
         case 7:
             return std::format("jr {}, {}", cc_to_str(y - 4), d_to_str(buffer[1]));
-
         default:
             return {};
         }
@@ -271,6 +274,198 @@ namespace GB
         }
     }
 
+    std::string Debugger::decode_x3_z0(std::array<uint8_t, 3> &buffer)
+    {
+        uint8_t y = (buffer[0] >> 3) & 0x7;
+
+        switch (y)
+        {
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+            return std::format("ret {}", cc_to_str(y));
+        case 4:
+            return std::format("ld ($FF00 + {}), a", n_to_str(buffer[1]));
+        case 5:
+            return std::format("add sp, {}", d_to_str(buffer[1]));
+        case 6:
+            return std::format("ld a, ($FF00 + {})", n_to_str(buffer[1]));
+        case 7:
+            return std::format("ld hl, sp+{}", d_to_str(buffer[1]));
+        default:
+            return {};
+        }
+    }
+
+    std::string Debugger::decode_x3_z1(std::array<uint8_t, 3> &buffer)
+    {
+        uint8_t y = (buffer[0] >> 3) & 0x7;
+        uint8_t p = y >> 1;
+        uint8_t q = y & 0x1;
+
+        switch (q)
+        {
+        case 0:
+        {
+            return std::format("pop {}", rp_to_str(p, true));
+        }
+        case 1:
+        {
+            switch (p)
+            {
+            case 0:
+                return std::format("ret");
+            case 1:
+                return std::format("reti");
+            case 2:
+                return std::format("jp hl");
+            case 3:
+                return std::format("ld sp, hl");
+            default:
+                return {};
+            }
+        }
+        default:
+            return {};
+        }
+    }
+
+    std::string Debugger::decode_x3_z2(std::array<uint8_t, 3> &buffer)
+    {
+        uint8_t y = (buffer[0] >> 3) & 0x7;
+
+        switch (y)
+        {
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+            return std::format("jp {}, {}", cc_to_str(y), nn_to_str(buffer));
+
+        case 4:
+            return std::format("ld ($FF00+c), a");
+        case 5:
+            return std::format("ld ({}), a", nn_to_str(buffer));
+        case 6:
+            return std::format("ld a, ($FF00+c)");
+        case 7:
+            return std::format("ld a, ({})", nn_to_str(buffer));
+        default:
+            return {};
+        }
+    }
+
+    std::string Debugger::decode_x3_z3(std::array<uint8_t, 3> &buffer)
+    {
+        uint8_t y = (buffer[0] >> 3) & 0x7;
+
+        switch (y)
+        {
+        case 0:
+            return std::format("jp {}", nn_to_str(buffer));
+        case 1:
+            return decode_cb(buffer[0]);
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+            return std::format("illegal opcode {}", n_to_str(buffer[0]));
+        case 6:
+            return std::format("di");
+        case 7:
+            return std::format("ei");
+        default:
+            return {};
+        }
+    }
+
+    std::string Debugger::decode_x3_z4(std::array<uint8_t, 3> &buffer)
+    {
+        uint8_t y = (buffer[0] >> 3) & 0x7;
+
+        switch (y)
+        {
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+            return std::format("call {}, {}", cc_to_str(y), nn_to_str(buffer));
+        case 4:
+        case 5:
+        case 6:
+        case 7:
+            return std::format("illegal opcode {}", n_to_str(buffer[0]));
+        default:
+            return {};
+        }
+    }
+
+    std::string Debugger::decode_x3_z5(std::array<uint8_t, 3> &buffer)
+    {
+        uint8_t y = (buffer[0] >> 3) & 0x7;
+        uint8_t p = y >> 1;
+        uint8_t q = y & 0x1;
+
+        switch (q)
+        {
+        case 0:
+        {
+            return std::format("push {}", rp_to_str(p, true));
+        }
+        case 1:
+        {
+            switch (p)
+            {
+            case 0:
+                return std::format("call {}", nn_to_str(buffer));
+            case 1:
+            case 2:
+            case 3:
+                return std::format("illegal opcode {}", n_to_str(buffer[0]));
+            default:
+                return {};
+            }
+        }
+        default:
+            return {};
+        }
+    }
+
+    std::string Debugger::decode_x3_z6(std::array<uint8_t, 3> &buffer)
+    {
+        uint8_t y = (buffer[0] >> 3) & 0x7;
+
+        return std::format("{} {}", alu_to_str(y), n_to_str(buffer[1]));
+    }
+
+    std::string Debugger::decode_x3_z7(std::array<uint8_t, 3> &buffer)
+    {
+        uint8_t y = (buffer[0] >> 3) & 0x7;
+        return std::format("rst {}", n_to_str(y * 8));
+    }
+
+    std::string Debugger::decode_cb(uint8_t opcode)
+    {
+        uint8_t x = opcode >> 6;
+        uint8_t y = (opcode >> 3) & 0x7;
+        uint8_t z = opcode & 0x7;
+
+        switch (x)
+        {
+        case 0:
+            return std::format("{} {}", rot_to_str(y), r_to_str(z));
+        case 1:
+            return std::format("bit {} {}", y, r_to_str(z));
+        case 2:
+            return std::format("res {} {}", y, r_to_str(z));
+        case 3:
+            return std::format("set {} {}", y, r_to_str(z));
+        default:
+            return {};
+        }
+    }
+
     std::string Debugger::r_to_str(uint8_t r)
     {
         switch (r & 0x7)
@@ -387,18 +582,18 @@ namespace GB
 
     std::string Debugger::nn_to_str(std::array<uint8_t, 3> &buffer)
     {
-        uint16_t high = buffer[1];
-        uint16_t low = buffer[2];
+        uint16_t low = buffer[1];
+        uint16_t high = buffer[2];
 
         uint16_t combined = low | (high << 8);
 
-        return std::format("${:#x}", combined);
+        return std::format("${:x}", combined);
     }
 
-    std::string Debugger::n_to_str(uint8_t n) { return std::format("{:#x}", n); }
+    std::string Debugger::n_to_str(uint8_t n) { return std::format("{:x}", n); }
 
     std::string Debugger::d_to_str(uint8_t d)
     {
-        return std::format("{:#x}", static_cast<int8_t>(d));
+        return std::format("{:x}", static_cast<int8_t>(d));
     }
 }

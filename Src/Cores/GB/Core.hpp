@@ -21,6 +21,7 @@
 #include "Bus.hpp"
 #include "Cartridge.hpp"
 #include "DMA.hpp"
+#include "Debug.hpp"
 #include "PPU.hpp"
 #include "Pad.hpp"
 #include "SM83.hpp"
@@ -45,6 +46,7 @@ namespace GB
         Timer timer;
         SM83 cpu;
         DMAController dma;
+        Debugger debugger;
         Core();
 
         void initialize(Cartridge *cart);

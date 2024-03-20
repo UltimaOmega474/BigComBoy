@@ -109,6 +109,7 @@ namespace GB
             {
                 dma.tick();
                 cpu.step();
+                debugger.push_op_to_history(cpu.fetched_bytes);
             }
 
             if (cycle_count >= CYCLES_PER_FRAME)

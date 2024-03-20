@@ -74,6 +74,9 @@ namespace GB
         uint16_t sp = 0xFFFE, pc = 0;
         std::array<uint8_t, 8> registers{};
 
+        size_t fetched_count = 0;
+        std::array<uint8_t, 3> fetched_bytes{};
+
         SM83(Core &core, MainBus &bus);
 
         void reset(uint16_t new_pc);
@@ -81,6 +84,8 @@ namespace GB
         void service_interrupts();
 
     private:
+        uint8_t fetch(uint16_t address);
+        uint16_t fetch_uint16(uint16_t address);
         uint8_t read(uint16_t address);
         uint16_t read_uint16(uint16_t address);
         void write(uint16_t address, uint8_t value);

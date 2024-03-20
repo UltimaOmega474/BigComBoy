@@ -652,6 +652,9 @@ namespace GB
         interrupt_enable = 0;
         interrupt_flag = 0;
 
+        fetched_count = 0;
+        fetched_bytes.fill(0);
+
         if (bus.is_compatibility_mode())
         {
             set_flags(N, false);
@@ -696,7 +699,10 @@ namespace GB
             ei_delay = false;
         }
 
-        auto opcode = read(pc);
+        fetched_count = 0;
+        fetched_bytes.fill(0);
+
+        auto opcode = fetch(pc);
 
         if (halted)
             return;
@@ -769,6 +775,24 @@ namespace GB
                 interrupt_flag &= ~INT_JOYPAD_BIT;
             }
         }
+    }
+
+    uint8_t SM83::fetch(uint16_t address)
+    {
+        uint8_t read_value = read(address);
+
+        if (fetched_count < 3)
+            fetched_bytes[fetched_count++] = read_value;
+
+        return read_value;
+    }
+
+    uint16_t SM83::fetch_uint16(uint16_t address)
+    {
+        uint8_t low = fetch(address);
+        uint8_t hi = fetch(address + 1);
+
+        return (static_cast<uint16_t>(hi) << 8) | static_cast<uint16_t>(low);
     }
 
     uint8_t SM83::read(uint16_t address)
@@ -914,7 +938,7 @@ namespace GB
 
     void SM83::op_ld_u16_sp()
     {
-        auto addr = read_uint16(pc + 1);
+        auto addr = fetch_uint16(pc + 1);
 
         write_uint16(addr, sp);
         pc += 3;
@@ -939,7 +963,7 @@ namespace GB
 
     void SM83::op_jr_i8()
     {
-        int8_t off = static_cast<int8_t>(read(pc + 1));
+        int8_t off = static_cast<int8_t>(fetch(pc + 1));
 
         pc += 2;
         pc += off;
@@ -1054,14 +1078,14 @@ namespace GB
 
     void SM83::op_jp_u16()
     {
-        pc = read_uint16(pc + 1);
+        pc = fetch_uint16(pc + 1);
         core.tick_subcomponents(4);
     }
 
     void SM83::op_call_u16()
     {
         auto saved_pc = pc + 3;
-        auto addr = read_uint16(pc + 1);
+        auto addr = fetch_uint16(pc + 1);
         core.tick_subcomponents(4);
         push_sp(saved_pc);
         pc = addr;
@@ -1071,7 +1095,7 @@ namespace GB
     {
         // todo: implement the 0xCB table.
         // gb.tickSubcomponents(8);
-        auto opcode = read(pc + 1);
+        auto opcode = fetch(pc + 1);
 
         (this->*cb_opcodes.at(opcode))();
         pc += 2;
@@ -1079,7 +1103,7 @@ namespace GB
 
     void SM83::op_ld_ff00_u8_a()
     {
-        auto off = read(pc + 1);
+        auto off = fetch(pc + 1);
         write(0xFF00 + off, registers[A]);
 
         pc += 2;
@@ -1094,7 +1118,7 @@ namespace GB
 
     void SM83::op_add_sp_i8()
     {
-        int16_t off = static_cast<int8_t>(read(pc + 1));
+        int16_t off = static_cast<int8_t>(fetch(pc + 1));
         uint16_t sp32 = sp;
         uint16_t res32 = (sp32 + off);
 
@@ -1114,14 +1138,14 @@ namespace GB
 
     void SM83::op_ld_u16_a()
     {
-        auto addr = read_uint16(pc + 1);
+        auto addr = fetch_uint16(pc + 1);
         write(addr, registers[A]);
         pc += 3;
     }
 
     void SM83::op_ld_a_ff00_u8()
     {
-        uint16_t off = read(pc + 1);
+        uint16_t off = fetch(pc + 1);
 
         registers[A] = read(0xFF00 + off);
 
@@ -1151,7 +1175,7 @@ namespace GB
 
     void SM83::op_ld_hl_sp_i8()
     {
-        int16_t off = static_cast<int8_t>(read(pc + 1));
+        int16_t off = static_cast<int8_t>(fetch(pc + 1));
         uint16_t sp32 = sp;
         uint16_t res32 = (sp32 + off);
         set_rp(HL, static_cast<uint16_t>(res32 & 0xFFFF));
@@ -1171,7 +1195,7 @@ namespace GB
 
     void SM83::op_ld_a_u16()
     {
-        auto addr = read_uint16(pc + 1);
+        auto addr = fetch_uint16(pc + 1);
         registers[A] = read(addr);
 
         pc += 3;
@@ -1190,7 +1214,7 @@ namespace GB
 
     template <RegisterPair rp> inline void SM83::op_ld_rp_u16()
     {
-        uint16_t combine = read_uint16(pc + 1);
+        uint16_t combine = fetch_uint16(pc + 1);
 
         set_rp(rp, combine);
         pc += 3;
@@ -1314,7 +1338,7 @@ namespace GB
     {
         if (get_flag(cc) == boolean_ver)
         {
-            int8_t off = static_cast<int8_t>(read(pc + 1));
+            int8_t off = static_cast<int8_t>(fetch(pc + 1));
 
             pc += 2;
             pc += off;
@@ -1409,11 +1433,11 @@ namespace GB
     {
         if constexpr (r == HL_ADDR)
         {
-            write(get_rp(HL), read(pc + 1));
+            write(get_rp(HL), fetch(pc + 1));
         }
         else
         {
-            registers[r] = read(pc + 1);
+            registers[r] = fetch(pc + 1);
         }
 
         pc += 2;
@@ -1467,7 +1491,7 @@ namespace GB
         }
         else if constexpr (r == U8)
         {
-            right = static_cast<uint16_t>(read(pc + 1));
+            right = static_cast<uint16_t>(fetch(pc + 1));
             ++pc;
         }
         else
@@ -1500,7 +1524,7 @@ namespace GB
         }
         else if constexpr (r == U8)
         {
-            right = static_cast<int16_t>(read(pc + 1));
+            right = static_cast<int16_t>(fetch(pc + 1));
             ++pc;
         }
         else
@@ -1532,7 +1556,7 @@ namespace GB
         }
         else if constexpr (r == U8)
         {
-            right = read(pc + 1);
+            right = fetch(pc + 1);
             ++pc;
         }
         else
@@ -1559,7 +1583,7 @@ namespace GB
         }
         else if constexpr (r == U8)
         {
-            right = read(pc + 1);
+            right = fetch(pc + 1);
             ++pc;
         }
         else
@@ -1586,7 +1610,7 @@ namespace GB
         }
         else if constexpr (r == U8)
         {
-            right = read(pc + 1);
+            right = fetch(pc + 1);
             ++pc;
         }
         else
@@ -1613,7 +1637,7 @@ namespace GB
         }
         else if constexpr (r == U8)
         {
-            right = read(pc + 1);
+            right = fetch(pc + 1);
             ++pc;
         }
         else
@@ -1660,7 +1684,7 @@ namespace GB
     {
         if (get_flag(cc) == boolean_ver)
         {
-            pc = read_uint16(pc + 1);
+            pc = fetch_uint16(pc + 1);
             core.tick_subcomponents(4);
             return;
         }
@@ -1675,7 +1699,7 @@ namespace GB
         if (get_flag(cc) == boolean_ver)
         {
             auto saved_pc = pc + 3;
-            auto addr = read_uint16(pc + 1);
+            auto addr = fetch_uint16(pc + 1);
             core.tick_subcomponents(4);
             push_sp(saved_pc);
             pc = addr;

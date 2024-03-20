@@ -51,6 +51,17 @@ namespace GB
         static std::string decode_x0_z6(std::array<uint8_t, 3> &buffer);
         static std::string decode_x0_z7(std::array<uint8_t, 3> &buffer);
 
+        static std::string decode_x3_z0(std::array<uint8_t, 3> &buffer);
+        static std::string decode_x3_z1(std::array<uint8_t, 3> &buffer);
+        static std::string decode_x3_z2(std::array<uint8_t, 3> &buffer);
+        static std::string decode_x3_z3(std::array<uint8_t, 3> &buffer);
+        static std::string decode_x3_z4(std::array<uint8_t, 3> &buffer);
+        static std::string decode_x3_z5(std::array<uint8_t, 3> &buffer);
+        static std::string decode_x3_z6(std::array<uint8_t, 3> &buffer);
+        static std::string decode_x3_z7(std::array<uint8_t, 3> &buffer);
+
+        static std::string decode_cb(uint8_t opcode);
+
         static std::string r_to_str(uint8_t r);
         static std::string rp_to_str(uint8_t rp, bool is_table2);
         static std::string cc_to_str(uint8_t cc);
