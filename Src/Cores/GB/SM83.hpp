@@ -74,7 +74,7 @@ namespace GB
         uint16_t sp = 0xFFFE, pc = 0;
         std::array<uint8_t, 8> registers{};
 
-        size_t fetched_count = 0;
+        uint8_t fetched_count = 0;
         std::array<uint8_t, 3> fetched_bytes{};
 
         SM83(Core &core, MainBus &bus);

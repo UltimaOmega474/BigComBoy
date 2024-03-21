@@ -8,5 +8,5 @@ add_library(GB STATIC
 	APU.cpp
 	Bus.cpp
 	DMA.cpp
-	Debug.cpp
+	Disassembler.cpp
 )

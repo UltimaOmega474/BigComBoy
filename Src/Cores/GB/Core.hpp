@@ -21,7 +21,7 @@
 #include "Bus.hpp"
 #include "Cartridge.hpp"
 #include "DMA.hpp"
-#include "Debug.hpp"
+#include "Disassembler.hpp"
 #include "PPU.hpp"
 #include "Pad.hpp"
 #include "SM83.hpp"
@@ -46,14 +46,17 @@ namespace GB
         Timer timer;
         SM83 cpu;
         DMAController dma;
-        Debugger debugger;
+        Disassembler disassembler;
+
+        bool enable_debug_tools = false;
+
         Core();
 
         void initialize(Cartridge *cart);
         void initialize_with_bootstrap(Cartridge *cart, ConsoleType console,
                                        std::filesystem::path bootstrap_path);
         void run_for_frames(uint32_t frames);
-        void run_for_cycles(uint32_t cycles);
+        void step_instruction(uint32_t times);
         void tick_subcomponents(uint8_t cycles);
         void load_bootstrap(std::filesystem::path path);
 

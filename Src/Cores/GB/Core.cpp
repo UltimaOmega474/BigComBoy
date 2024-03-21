@@ -103,25 +103,35 @@ namespace GB
 
     void Core::run_for_frames(uint32_t frames)
     {
-        while (frames-- && ready_to_run)
+        if (!ready_to_run)
+            return;
+        while (frames--)
         {
-            while (cycle_count < CYCLES_PER_FRAME && !cpu.stopped)
-            {
-                dma.tick();
-                cpu.step();
-                debugger.push_op_to_history(cpu.fetched_bytes);
-            }
+            while (cycle_count < CYCLES_PER_FRAME)
+                step_instruction(1);
 
             if (cycle_count >= CYCLES_PER_FRAME)
                 cycle_count -= CYCLES_PER_FRAME;
         }
     }
 
-    void Core::run_for_cycles(uint32_t cycles)
+    void Core::step_instruction(uint32_t times)
     {
-        cycle_count = 0;
-        while (cycle_count < cycles && !cpu.stopped)
-            cpu.step();
+        for (size_t i = 0; i < times; ++i)
+        {
+            if (!cpu.stopped)
+            {
+                dma.tick();
+                cpu.step();
+
+                if (enable_debug_tools)
+                {
+                    disassembler.push_instruction(cpu.pc - cpu.fetched_count, cpu.fetched_count,
+                                                  cpu.fetched_bytes);
+                    disassembler.scan_next_instructions(cpu.pc, bus);
+                }
+            }
+        }
     }
 
     void Core::tick_subcomponents(uint8_t cycles)
