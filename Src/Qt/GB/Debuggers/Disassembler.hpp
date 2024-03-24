@@ -17,21 +17,30 @@
 */
 
 #pragma once
-#include <QWidget>
+#include <QDialog>
 
 namespace Ui
 {
     class Disassembler;
 }
 
+namespace GB
+{
+    class Core;
+}
+
 namespace QtFrontend
 {
-    class Disassembler : public QWidget
+    class GBEmulatorController;
+    class Disassembler : public QDialog
     {
         Ui::Disassembler *ui = nullptr;
+        GBEmulatorController *gb_emulator = nullptr;
 
     public:
-        explicit Disassembler(QWidget *parent = nullptr);
+        explicit Disassembler(QWidget *parent, GBEmulatorController *gb_emulator);
         ~Disassembler() override;
+
+        Q_SLOT void update_data();
     };
 }

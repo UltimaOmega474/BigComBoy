@@ -44,14 +44,22 @@ namespace QtFrontend
 
     EmulationState GBEmulatorController::get_state() const { return state; }
 
+    QMutex *GBEmulatorController::get_mutex() { return &core_mutex; }
+
+    GB::Core &GBEmulatorController::get_core() { return core; }
+
     void GBEmulatorController::update()
     {
         using namespace std::chrono_literals;
 
         if (state == EmulationState::Running && audio_system.should_continue())
         {
+            core_mutex.lock();
             core.run_for_frames(1);
+            core_mutex.unlock();
             update_textures();
+
+            emit on_update_debuggers();
         }
     }
 

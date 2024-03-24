@@ -20,7 +20,7 @@
      <x>0</x>
      <y>0</y>
      <width>639</width>
-     <height>22</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -55,9 +55,18 @@
     <addaction name="actionAudio"/>
     <addaction name="actionInput"/>
    </widget>
+   <widget class="QMenu" name="menuDebug">
+    <property name="title">
+     <string>Debug</string>
+    </property>
+    <addaction name="actionDisassembler"/>
+    <addaction name="actionRegisterViewer"/>
+    <addaction name="actionMemoryViewer"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEmulation"/>
    <addaction name="menuSettings"/>
+   <addaction name="menuDebug"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionLoad">
@@ -111,6 +120,21 @@
   <action name="actionInput">
    <property name="text">
     <string>Input</string>
+   </property>
+  </action>
+  <action name="actionDisassembler">
+   <property name="text">
+    <string>Disassembler</string>
+   </property>
+  </action>
+  <action name="actionRegisterViewer">
+   <property name="text">
+    <string>RegisterViewer</string>
+   </property>
+  </action>
+  <action name="actionMemoryViewer">
+   <property name="text">
+    <string>MemoryViewer</string>
    </property>
   </action>
  </widget>

@@ -21,6 +21,7 @@
 #include "Common/Math.hpp"
 #include "Cores/GB/Core.hpp"
 #include "GL/Renderer.hpp"
+#include <QMutex>
 #include <QObject>
 #include <QThread>
 #include <QTimer>
@@ -51,6 +52,7 @@ namespace QtFrontend
 
         EmulationState state = EmulationState::Stopped;
 
+        QMutex core_mutex;
         GB::Core core{};
         std::unique_ptr<GB::Cartridge> cart;
         AudioSystem audio_system{};
@@ -68,6 +70,8 @@ namespace QtFrontend
         GBEmulatorController &operator=(GBEmulatorController &&) = delete;
 
         EmulationState get_state() const;
+        QMutex *get_mutex();
+        GB::Core &get_core();
 
         void update();
         void draw_scene(GL::Renderer *renderer, float screen_width, float screen_height);
@@ -84,6 +88,7 @@ namespace QtFrontend
         Q_SIGNAL void on_load_fail(const QString &message, int timeout = 0);
         Q_SIGNAL void on_show();
         Q_SIGNAL void on_hide();
+        Q_SIGNAL void on_update_debuggers();
 
     private:
         void init_by_console_type();

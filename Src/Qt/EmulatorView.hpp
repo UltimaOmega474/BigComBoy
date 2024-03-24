@@ -72,6 +72,9 @@ namespace QtFrontend
     public:
         EmulatorView(QWidget *parent);
         ~EmulatorView() override;
+
+        GBEmulatorController *gb_controller() const;
+
         void set_window(MainWindow *main_window);
         void showEvent(QShowEvent *ev) override;
         void hideEvent(QHideEvent *ev) override;

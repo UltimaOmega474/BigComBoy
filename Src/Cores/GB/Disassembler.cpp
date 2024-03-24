@@ -61,13 +61,17 @@ namespace GB
         }
     }
 
+    const std::deque<Instruction> &Disassembler::get_history() const { return history; }
+
+    const std::vector<Instruction> &Disassembler::get_upcoming() const { return future; }
+
     void Disassembler::set_limits(uint8_t history_limit, uint8_t future_limit)
     {
         max_history = history_limit;
         max_future = future_limit;
 
         while (history.size() > max_history)
-            history.pop();
+            history.pop_front();
 
         if (future.size() > max_future)
             future.resize(max_future);
@@ -76,7 +80,7 @@ namespace GB
     void Disassembler::clear()
     {
         while (history.size())
-            history.pop();
+            history.pop_front();
 
         future.clear();
     }
@@ -90,10 +94,10 @@ namespace GB
             .program_counter = pc,
         };
 
-        history.push(std::move(ins));
+        history.push_back(std::move(ins));
 
         if (history.size() > max_history)
-            history.pop();
+            history.pop_front();
     }
 
     void Disassembler::scan_next_instructions(uint16_t pc, MainBus &bus)

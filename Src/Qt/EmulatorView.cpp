@@ -193,6 +193,8 @@ namespace QtFrontend
 
     EmulatorView::~EmulatorView() { thread->stop(); }
 
+    GBEmulatorController *EmulatorView::gb_controller() const { return thread->gb_controller; }
+
     void EmulatorView::set_window(MainWindow *main_window)
     {
         connect(main_window, &MainWindow::on_rom_loaded, thread->gb_controller,

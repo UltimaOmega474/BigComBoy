@@ -19,6 +19,7 @@
 #pragma once
 #include <array>
 #include <cinttypes>
+#include <deque>
 #include <queue>
 #include <string>
 #include <vector>
@@ -36,13 +37,16 @@ namespace GB
 
     class Disassembler
     {
-        std::queue<Instruction> history;
+        std::deque<Instruction> history;
         std::vector<Instruction> future;
 
         uint8_t max_history = 10, max_future = 5;
 
     public:
         static std::string DecodeInstruction(const std::array<uint8_t, 3> &bytes);
+
+        const std::deque<Instruction> &get_history() const;
+        const std::vector<Instruction> &get_upcoming() const;
 
         void set_limits(uint8_t history_limit, uint8_t future_limit);
         void clear();
