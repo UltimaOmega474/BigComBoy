@@ -934,7 +934,7 @@ namespace GB
             bus.KEY1 = double_speed << 7;
         }
 
-        pc++;
+        pc += 2;
     }
 
     void SM83::op_jr_i8()
