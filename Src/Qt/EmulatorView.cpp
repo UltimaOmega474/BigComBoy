@@ -87,10 +87,10 @@ namespace QtFrontend
             gb_controller = new GBEmulatorController();
             gb_controller->moveToThread(this);
 
-            connect(gb_controller, &GBEmulatorController::on_show,
-                    dynamic_cast<QWidget *>(parent()), &QWidget::show);
-            connect(gb_controller, &GBEmulatorController::on_hide,
-                    dynamic_cast<QWidget *>(parent()), &QWidget::hide);
+            connect(gb_controller, &GBEmulatorController::show, dynamic_cast<QWidget *>(parent()),
+                    &QWidget::show);
+            connect(gb_controller, &GBEmulatorController::hide, dynamic_cast<QWidget *>(parent()),
+                    &QWidget::hide);
             connect(this, &EmulatorThread::on_post_input, gb_controller,
                     &GBEmulatorController::copy_input);
             connect(&input_timer, &QTimer::timeout, this, &EmulatorThread::update_input);
@@ -199,9 +199,9 @@ namespace QtFrontend
     {
         connect(main_window, &MainWindow::on_rom_loaded, thread->gb_controller,
                 &GBEmulatorController::start_rom);
-        connect(thread->gb_controller, &GBEmulatorController::on_load_success, main_window,
+        connect(thread->gb_controller, &GBEmulatorController::load_success, main_window,
                 &MainWindow::rom_load_success);
-        connect(thread->gb_controller, &GBEmulatorController::on_load_fail, main_window,
+        connect(thread->gb_controller, &GBEmulatorController::load_fail, main_window,
                 &MainWindow::rom_load_fail);
         connect(thread, &EmulatorThread::on_update_fps_display, main_window->get_fps_counter(),
                 &QLabel::setText);

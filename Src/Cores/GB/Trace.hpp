@@ -16,32 +16,33 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "Common/Config.hpp"
-#include "MainWindow.hpp"
-#include "Paths.hpp"
-#include <QApplication>
-#include <cstdlib>
-#include <filesystem>
-#define SDL_MAIN_HANDLED
-#include <SDL.h>
+#pragma once
+#include <array>
+#include <cinttypes>
+#include <deque>
+#include <span>
+#include <string>
 
-#ifdef WIN32
-#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
-#endif
-
-void save_config() { Common::Config::Current().write_to_file(QtFrontend::Paths::ConfigLocation()); }
-
-int main(int argc, char *argv[])
+namespace GB
 {
-    QApplication a(argc, argv);
-    SDL_Init(SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO);
-    Common::Config::Current().read_from_file(QtFrontend::Paths::ConfigLocation());
+    struct Instruction
+    {
+        uint16_t pc = 0;
+        uint8_t len = 0;
+        std::array<uint8_t, 3> bytes{};
+    };
 
-    atexit(SDL_Quit);
-    atexit(save_config);
+    class TraceLogger
+    {
+        int32_t max_history = 10000;
+        std::deque<Instruction> history;
 
-    QtFrontend::MainWindow w;
-    w.show();
+    public:
+        std::deque<Instruction> &get_history();
+        int32_t get_line_limit() const;
+        void set_limit(int32_t lines);
 
-    return a.exec();
+        void clear();
+        void push_instruction(uint16_t pc, uint8_t len, std::span<uint8_t, 3> bytes);
+    };
 }

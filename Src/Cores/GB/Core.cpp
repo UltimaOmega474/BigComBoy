@@ -124,11 +124,10 @@ namespace GB
                 dma.tick();
                 cpu.step();
 
-                if (enable_debug_tools)
+                if (enable_logging && cpu.fetched_count)
                 {
-                    disassembler.push_instruction(cpu.pc - cpu.fetched_count, cpu.fetched_count,
-                                                  cpu.fetched_bytes);
-                    disassembler.scan_next_instructions(cpu.pc, bus);
+                    logger.push_instruction(cpu.pc - cpu.fetched_count, cpu.fetched_count,
+                                            cpu.fetched_bytes);
                 }
             }
         }

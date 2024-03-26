@@ -17,32 +17,11 @@
 */
 
 #include "Disassembler.hpp"
-#include "Bus.hpp"
-#include "SM83.hpp"
 #include <format>
 
 namespace GB
 {
-    std::array<uint8_t, 256> OPCODE_SIZES{
-        1, 3, 1, 1, 1, 1, 2, 1, 3, 1, 1, 1, 1, 1, 2, 1, // 0x00 - 0x0F
-        1, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1, // 0x10 - 0x1F
-        2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1, // 0x20 - 0x2F
-        2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1, // 0x30 - 0x3F
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x40 - 0x4F
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x50 - 0x5F
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x60 - 0x6F
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x70 - 0x7F
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x80 - 0x8F
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x90 - 0x9F
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0xA0 - 0xAF
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0xB0 - 0xBF
-        1, 1, 3, 3, 3, 1, 2, 1, 1, 1, 3, 2, 3, 3, 2, 1, // 0xC0 - 0xCF
-        1, 1, 3, 0, 3, 1, 2, 1, 1, 1, 3, 0, 3, 0, 2, 1, // 0xD0 - 0xDF
-        2, 1, 1, 0, 0, 1, 2, 1, 2, 1, 3, 0, 0, 0, 2, 1, // 0xE0 - 0xEF
-        2, 1, 1, 1, 0, 1, 2, 1, 2, 1, 3, 1, 0, 0, 2, 1, // 0xF0 - 0xFF
-    };
-
-    std::string Disassembler::DecodeInstruction(const std::array<uint8_t, 3> &bytes)
+    std::string DecodeInstruction(std::span<uint8_t, 3> bytes)
     {
         uint8_t x = bytes[0] >> 6;
 
@@ -61,74 +40,7 @@ namespace GB
         }
     }
 
-    const std::deque<Instruction> &Disassembler::get_history() const { return history; }
-
-    const std::vector<Instruction> &Disassembler::get_upcoming() const { return future; }
-
-    void Disassembler::set_limits(uint8_t history_limit, uint8_t future_limit)
-    {
-        max_history = history_limit;
-        max_future = future_limit;
-
-        while (history.size() > max_history)
-            history.pop_front();
-
-        if (future.size() > max_future)
-            future.resize(max_future);
-    }
-
-    void Disassembler::clear()
-    {
-        while (history.size())
-            history.pop_front();
-
-        future.clear();
-    }
-
-    void Disassembler::push_instruction(uint16_t pc, uint8_t len,
-                                        const std::array<uint8_t, 3> &bytes)
-    {
-        Instruction ins{
-            .len = len,
-            .bytes = bytes,
-            .program_counter = pc,
-        };
-
-        history.push_back(std::move(ins));
-
-        if (history.size() > max_history)
-            history.pop_front();
-    }
-
-    void Disassembler::scan_next_instructions(uint16_t pc, MainBus &bus)
-    {
-        future.clear();
-
-        for (size_t i = 0; i < max_future; ++i)
-        {
-            uint16_t starting_pc = pc;
-            std::array<uint8_t, 3> bytes{
-                bus.read(pc++),
-                0,
-                0,
-            };
-
-            uint8_t len = OPCODE_SIZES[bytes[0]];
-
-            for (size_t j = 1; j < len; j++)
-                bytes[j] = bus.read(pc++);
-
-            Instruction ins{
-                .len = len,
-                .bytes = bytes,
-                .program_counter = starting_pc,
-            };
-
-            future.push_back(std::move(ins));
-        }
-    }
-
-    std::string Disassembler::DecodeX0(const std::array<uint8_t, 3> &bytes)
+    std::string DecodeX0(std::span<uint8_t, 3> bytes)
     {
         uint8_t z = bytes[0] & 0x7;
 
@@ -155,7 +67,7 @@ namespace GB
         }
     }
 
-    std::string Disassembler::DecodeX1(const std::array<uint8_t, 3> &bytes)
+    std::string DecodeX1(std::span<uint8_t, 3> bytes)
     {
         uint8_t y = (bytes[0] >> 3) & 0x7;
         uint8_t z = bytes[0] & 0x7;
@@ -166,7 +78,7 @@ namespace GB
         return std::format("ld {}, {}", RToStr(y), RToStr(z));
     }
 
-    std::string Disassembler::DecodeX2(const std::array<uint8_t, 3> &bytes)
+    std::string DecodeX2(std::span<uint8_t, 3> bytes)
     {
         uint8_t y = (bytes[0] >> 3) & 0x7;
         uint8_t z = bytes[0] & 0x7;
@@ -174,7 +86,7 @@ namespace GB
         return std::format("{} {}", ALUToStr(y), RToStr(z));
     }
 
-    std::string Disassembler::DecodeX3(const std::array<uint8_t, 3> &bytes)
+    std::string DecodeX3(std::span<uint8_t, 3> bytes)
     {
         uint8_t z = bytes[0] & 0x7;
 
@@ -201,7 +113,7 @@ namespace GB
         }
     }
 
-    std::string Disassembler::DecodeX0Z0(const std::array<uint8_t, 3> &bytes)
+    std::string DecodeX0Z0(std::span<uint8_t, 3> bytes)
     {
         uint8_t y = (bytes[0] >> 3) & 0x7;
 
@@ -225,7 +137,7 @@ namespace GB
         }
     }
 
-    std::string Disassembler::DecodeX0Z1(const std::array<uint8_t, 3> &bytes)
+    std::string DecodeX0Z1(std::span<uint8_t, 3> bytes)
     {
         uint8_t y = (bytes[0] >> 3) & 0x7;
         uint8_t p = y >> 1;
@@ -242,7 +154,7 @@ namespace GB
         }
     }
 
-    std::string Disassembler::DecodeX0Z2(const std::array<uint8_t, 3> &bytes)
+    std::string DecodeX0Z2(std::span<uint8_t, 3> bytes)
     {
         uint8_t y = (bytes[0] >> 3) & 0x7;
         uint8_t p = y >> 1;
@@ -287,7 +199,7 @@ namespace GB
         }
     }
 
-    std::string Disassembler::DecodeX0Z3(const std::array<uint8_t, 3> &bytes)
+    std::string DecodeX0Z3(std::span<uint8_t, 3> bytes)
     {
         uint8_t y = (bytes[0] >> 3) & 0x7;
         uint8_t p = y >> 1;
@@ -304,28 +216,28 @@ namespace GB
         }
     }
 
-    std::string Disassembler::DecodeX0Z4(const std::array<uint8_t, 3> &bytes)
+    std::string DecodeX0Z4(std::span<uint8_t, 3> bytes)
     {
         uint8_t y = (bytes[0] >> 3) & 0x7;
 
         return std::format("inc {}", RToStr(y));
     }
 
-    std::string Disassembler::DecodeX0Z5(const std::array<uint8_t, 3> &bytes)
+    std::string DecodeX0Z5(std::span<uint8_t, 3> bytes)
     {
         uint8_t y = (bytes[0] >> 3) & 0x7;
 
         return std::format("dec {}", RToStr(y));
     }
 
-    std::string Disassembler::DecodeX0Z6(const std::array<uint8_t, 3> &bytes)
+    std::string DecodeX0Z6(std::span<uint8_t, 3> bytes)
     {
         uint8_t y = (bytes[0] >> 3) & 0x7;
 
         return std::format("ld {}, {}", RToStr(y), NToStr(bytes[1]));
     }
 
-    std::string Disassembler::DecodeX0Z7(const std::array<uint8_t, 3> &bytes)
+    std::string DecodeX0Z7(std::span<uint8_t, 3> bytes)
     {
         uint8_t y = (bytes[0] >> 3) & 0x7;
 
@@ -352,7 +264,7 @@ namespace GB
         }
     }
 
-    std::string Disassembler::DecodeX3Z0(const std::array<uint8_t, 3> &bytes)
+    std::string DecodeX3Z0(std::span<uint8_t, 3> bytes)
     {
         uint8_t y = (bytes[0] >> 3) & 0x7;
 
@@ -376,7 +288,7 @@ namespace GB
         }
     }
 
-    std::string Disassembler::DecodeX3Z1(const std::array<uint8_t, 3> &bytes)
+    std::string DecodeX3Z1(std::span<uint8_t, 3> bytes)
     {
         uint8_t y = (bytes[0] >> 3) & 0x7;
         uint8_t p = y >> 1;
@@ -409,7 +321,7 @@ namespace GB
         }
     }
 
-    std::string Disassembler::DecodeX3Z2(const std::array<uint8_t, 3> &bytes)
+    std::string DecodeX3Z2(std::span<uint8_t, 3> bytes)
     {
         uint8_t y = (bytes[0] >> 3) & 0x7;
 
@@ -434,7 +346,7 @@ namespace GB
         }
     }
 
-    std::string Disassembler::DecodeX3Z3(const std::array<uint8_t, 3> &bytes)
+    std::string DecodeX3Z3(std::span<uint8_t, 3> bytes)
     {
         uint8_t y = (bytes[0] >> 3) & 0x7;
 
@@ -458,7 +370,7 @@ namespace GB
         }
     }
 
-    std::string Disassembler::DecodeX3Z4(const std::array<uint8_t, 3> &bytes)
+    std::string DecodeX3Z4(std::span<uint8_t, 3> bytes)
     {
         uint8_t y = (bytes[0] >> 3) & 0x7;
 
@@ -479,7 +391,7 @@ namespace GB
         }
     }
 
-    std::string Disassembler::DecodeX3Z5(const std::array<uint8_t, 3> &bytes)
+    std::string DecodeX3Z5(std::span<uint8_t, 3> bytes)
     {
         uint8_t y = (bytes[0] >> 3) & 0x7;
         uint8_t p = y >> 1;
@@ -510,20 +422,20 @@ namespace GB
         }
     }
 
-    std::string Disassembler::DecodeX3Z6(const std::array<uint8_t, 3> &bytes)
+    std::string DecodeX3Z6(std::span<uint8_t, 3> bytes)
     {
         uint8_t y = (bytes[0] >> 3) & 0x7;
 
         return std::format("{} {}", ALUToStr(y), NToStr(bytes[1]));
     }
 
-    std::string Disassembler::DecodeX3Z7(const std::array<uint8_t, 3> &bytes)
+    std::string DecodeX3Z7(std::span<uint8_t, 3> bytes)
     {
         uint8_t y = (bytes[0] >> 3) & 0x7;
         return std::format("rst {}", NToStr(y * 8));
     }
 
-    std::string Disassembler::DecodeCB(uint8_t opcode)
+    std::string DecodeCB(uint8_t opcode)
     {
         uint8_t x = opcode >> 6;
         uint8_t y = (opcode >> 3) & 0x7;
@@ -544,7 +456,7 @@ namespace GB
         }
     }
 
-    std::string Disassembler::RToStr(uint8_t r)
+    std::string RToStr(uint8_t r)
     {
         switch (r & 0x7)
         {
@@ -570,7 +482,7 @@ namespace GB
         }
     }
 
-    std::string Disassembler::RPToStr(uint8_t rp, bool is_table2)
+    std::string RPToStr(uint8_t rp, bool is_table2)
     {
         switch (rp & 0x3)
         {
@@ -588,7 +500,7 @@ namespace GB
         }
     }
 
-    std::string Disassembler::CCToStr(uint8_t cc)
+    std::string CCToStr(uint8_t cc)
     {
         switch (cc & 0x3)
         {
@@ -606,7 +518,7 @@ namespace GB
         }
     }
 
-    std::string Disassembler::ALUToStr(uint8_t alu)
+    std::string ALUToStr(uint8_t alu)
     {
         switch (alu & 0x7)
         {
@@ -632,7 +544,7 @@ namespace GB
         }
     }
 
-    std::string Disassembler::ROTToStr(uint8_t rot)
+    std::string ROTToStr(uint8_t rot)
     {
         switch (rot & 0x7)
         {
@@ -658,7 +570,7 @@ namespace GB
         }
     }
 
-    std::string Disassembler::NNToStr(const std::array<uint8_t, 3> &bytes)
+    std::string NNToStr(std::span<uint8_t, 3> bytes)
     {
         uint16_t low = bytes[1];
         uint16_t high = bytes[2];
@@ -668,10 +580,7 @@ namespace GB
         return std::format("${:04X}", combined);
     }
 
-    std::string Disassembler::NToStr(uint8_t n) { return std::format("{:02X}", n); }
+    std::string NToStr(uint8_t n) { return std::format("{:02X}", n); }
 
-    std::string Disassembler::DToStr(uint8_t d)
-    {
-        return std::format("{:02X}", static_cast<int8_t>(d));
-    }
+    std::string DToStr(uint8_t d) { return std::format("{:02X}", static_cast<int8_t>(d)); }
 }

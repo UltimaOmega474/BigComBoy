@@ -24,7 +24,7 @@
 #include "Input/DeviceRegistry.hpp"
 #include "Input/SDLControllerDevice.hpp"
 #include "KeyboardDevice.hpp"
-#include "Qt/GB/Debuggers/Disassembler.hpp"
+#include "Qt/GB/Debuggers/TraceLogWindow.hpp"
 #include "ui_MainWindow.h"
 #include <QFileDialog>
 #include <QKeyEvent>
@@ -139,22 +139,22 @@ namespace QtFrontend
         }
     }
 
-    void MainWindow::open_disassmbler()
+    void MainWindow::open_trace_logger()
     {
-        if (!disassembler && emulator_widget->gb_controller())
+        if (!trace_window && emulator_widget->gb_controller())
         {
-            disassembler = new Disassembler(this, emulator_widget->gb_controller());
-            connect(disassembler, &QDialog::finished, this, &MainWindow::clear_disassembler_ptr);
+            trace_window = new TraceLogWindow(this, emulator_widget->gb_controller());
+            connect(trace_window, &QDialog::finished, this, &MainWindow::clear_trace_ptr);
         }
 
-        disassembler->show();
-        disassembler->raise();
-        disassembler->activateWindow();
+        trace_window->show();
+        trace_window->raise();
+        trace_window->activateWindow();
     }
 
     void MainWindow::clear_settings_ptr() { settings = nullptr; }
 
-    void MainWindow::clear_disassembler_ptr() { disassembler = nullptr; }
+    void MainWindow::clear_trace_ptr() { trace_window = nullptr; }
 
     void MainWindow::rom_load_success(const QString &message, int timeout)
     {
@@ -182,7 +182,7 @@ namespace QtFrontend
         connect(ui->actionVideo, &QAction::triggered, this, &MainWindow::open_gb_settings);
         connect(ui->actionAudio, &QAction::triggered, this, &MainWindow::open_gb_settings);
         connect(ui->actionInput, &QAction::triggered, this, &MainWindow::open_gb_settings);
-        connect(ui->actionDisassembler, &QAction::triggered, this, &MainWindow::open_disassmbler);
+        connect(ui->actionTraceLogger, &QAction::triggered, this, &MainWindow::open_trace_logger);
     }
 
     void MainWindow::reload_recent_roms()

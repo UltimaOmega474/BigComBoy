@@ -17,30 +17,33 @@
 */
 
 #pragma once
+#include "Cores/GB/Trace.hpp"
 #include <QDialog>
+#include <cinttypes>
+#include <deque>
 
 namespace Ui
 {
-    class Disassembler;
-}
-
-namespace GB
-{
-    class Core;
+    class TraceLogWindow;
 }
 
 namespace QtFrontend
 {
     class GBEmulatorController;
-    class Disassembler : public QDialog
+
+    class TraceLogWindow : public QDialog
     {
-        Ui::Disassembler *ui = nullptr;
+        Ui::TraceLogWindow *ui = nullptr;
         GBEmulatorController *gb_emulator = nullptr;
+        QString label_text;
 
     public:
-        explicit Disassembler(QWidget *parent, GBEmulatorController *gb_emulator);
-        ~Disassembler() override;
+        explicit TraceLogWindow(QWidget *parent, GBEmulatorController *gb_emulator);
+        ~TraceLogWindow() override;
 
-        Q_SLOT void update_data();
+        Q_SLOT void update_trace_log(std::deque<GB::Instruction> &logger);
+
+    private:
+        void connect_slots();
     };
 }

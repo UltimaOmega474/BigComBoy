@@ -20,7 +20,7 @@
      <x>0</x>
      <y>0</y>
      <width>639</width>
-     <height>24</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -59,7 +59,7 @@
     <property name="title">
      <string>Debug</string>
     </property>
-    <addaction name="actionDisassembler"/>
+    <addaction name="actionTraceLogger"/>
     <addaction name="actionRegisterViewer"/>
     <addaction name="actionMemoryViewer"/>
    </widget>
@@ -122,14 +122,14 @@
     <string>Input</string>
    </property>
   </action>
-  <action name="actionDisassembler">
+  <action name="actionTraceLogger">
    <property name="text">
-    <string>Disassembler</string>
+    <string>Trace Logger</string>
    </property>
   </action>
   <action name="actionRegisterViewer">
    <property name="text">
-    <string>RegisterViewer</string>
+    <string>Register Viewer</string>
    </property>
   </action>
   <action name="actionMemoryViewer">

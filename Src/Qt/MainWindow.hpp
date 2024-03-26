@@ -39,7 +39,7 @@ namespace QtFrontend
 {
     class EmulatorView;
     class SettingsWindow;
-    class Disassembler;
+    class TraceLogWindow;
 
     class MainWindow : public QMainWindow
     {
@@ -47,7 +47,7 @@ namespace QtFrontend
 
         Ui::MainWindow *ui = nullptr;
         SettingsWindow *settings = nullptr;
-        Disassembler *disassembler = nullptr;
+        TraceLogWindow *trace_window = nullptr;
         EmulatorView *emulator_widget = nullptr;
 
         std::vector<std::unique_ptr<Input::InputDevice>> controllers;
@@ -76,10 +76,10 @@ namespace QtFrontend
         Q_SLOT void open_rom_file_browser();
         Q_SLOT void open_rom_from_recents(QAction *action);
         Q_SLOT void open_gb_settings();
-        Q_SLOT void open_disassmbler();
+        Q_SLOT void open_trace_logger();
 
         Q_SLOT void clear_settings_ptr();
-        Q_SLOT void clear_disassembler_ptr();
+        Q_SLOT void clear_trace_ptr();
         Q_SLOT void rom_load_success(const QString &message, int timeout = 0);
         Q_SLOT void rom_load_fail(const QString &message, int timeout = 0);
 

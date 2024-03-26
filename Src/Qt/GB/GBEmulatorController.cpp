@@ -58,8 +58,6 @@ namespace QtFrontend
             core.run_for_frames(1);
             core_mutex.unlock();
             update_textures();
-
-            emit on_update_debuggers();
         }
     }
 
@@ -126,9 +124,7 @@ namespace QtFrontend
         if (new_cart)
         {
             const auto &emulation = Common::Config::Current().gameboy.emulation;
-
             cart = std::move(new_cart);
-
             init_by_console_type();
 
             audio_system.prep_for_playback(core.apu);
@@ -140,12 +136,12 @@ namespace QtFrontend
             sram_timer->stop();
             sram_timer->start(interval_seconds);
 
-            emit on_load_success(QString::fromStdString(path.string()));
-            emit on_show();
+            emit load_success(QString::fromStdString(path.string()));
+            emit show();
         }
         else
         {
-            emit on_load_fail(QString::fromStdString(path.string()));
+            emit load_fail(QString::fromStdString(path.string()));
         }
     }
 
@@ -201,13 +197,34 @@ namespace QtFrontend
         cart->save_sram_to_file();
         cart.reset();
         state = EmulationState::Stopped;
-        emit on_hide();
+        emit hide();
     }
 
     void GBEmulatorController::reset_emulation()
     {
         init_by_console_type();
         audio_system.prep_for_playback(core.apu);
+    }
+
+    void GBEmulatorController::step_frame()
+    {
+        core_mutex.lock();
+        core.run_for_frames(1);
+        core_mutex.unlock();
+        update_textures();
+
+        emit upload_trace_log(core.logger.get_history());
+    }
+
+    void GBEmulatorController::step_instruction(uint32_t count)
+    {
+        state = EmulationState::Paused;
+        core_mutex.lock();
+        core.step_instruction(count);
+        core_mutex.unlock();
+        update_textures();
+
+        emit upload_trace_log(core.logger.get_history());
     }
 
     void GBEmulatorController::save_sram()
@@ -218,6 +235,18 @@ namespace QtFrontend
 
         if (sram_timer->interval() != interval_seconds)
             sram_timer->setInterval(interval_seconds);
+    }
+
+    void GBEmulatorController::begin_trace()
+    {
+        core.enable_logging = true;
+        core.logger.clear();
+    }
+
+    void GBEmulatorController::end_trace()
+    {
+        core.enable_logging = false;
+        emit upload_trace_log(core.logger.get_history());
     }
 
     void GBEmulatorController::init_by_console_type()

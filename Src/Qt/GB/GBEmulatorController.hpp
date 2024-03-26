@@ -82,13 +82,18 @@ namespace QtFrontend
         Q_SLOT void set_pause(bool checked);
         Q_SLOT void stop_emulation();
         Q_SLOT void reset_emulation();
+        Q_SLOT void step_frame();
+        Q_SLOT void step_instruction(uint32_t count);
         Q_SLOT void save_sram();
+        Q_SLOT void begin_trace();
+        Q_SLOT void end_trace();
 
-        Q_SIGNAL void on_load_success(const QString &message, int timeout = 0);
-        Q_SIGNAL void on_load_fail(const QString &message, int timeout = 0);
-        Q_SIGNAL void on_show();
-        Q_SIGNAL void on_hide();
-        Q_SIGNAL void on_update_debuggers();
+        Q_SIGNAL void load_success(const QString &message, int timeout = 0);
+        Q_SIGNAL void load_fail(const QString &message, int timeout = 0);
+        Q_SIGNAL void show();
+        Q_SIGNAL void hide();
+        Q_SIGNAL void update_debuggers();
+        Q_SIGNAL void upload_trace_log(std::deque<GB::Instruction> &logger);
 
     private:
         void init_by_console_type();

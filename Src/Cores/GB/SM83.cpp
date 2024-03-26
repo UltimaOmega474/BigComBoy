@@ -701,11 +701,12 @@ namespace GB
 
         fetched_count = 0;
         fetched_bytes.fill(0);
-
-        auto opcode = fetch(pc);
-
         if (halted)
+        {
+            read(pc);
             return;
+        }
+        auto opcode = fetch(pc);
 
         (this->*opcodes.at(opcode))();
     }

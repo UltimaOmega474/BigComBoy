@@ -9,4 +9,5 @@ add_library(GB STATIC
 	Bus.cpp
 	DMA.cpp
 	Disassembler.cpp
+	Trace.cpp
 )

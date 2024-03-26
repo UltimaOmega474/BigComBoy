@@ -19,74 +19,62 @@
 #pragma once
 #include <array>
 #include <cinttypes>
-#include <deque>
-#include <queue>
+#include <span>
 #include <string>
-#include <vector>
 
 namespace GB
 {
-    class MainBus;
-
-    struct Instruction
-    {
-        uint8_t len = 0;
-        std::array<uint8_t, 3> bytes;
-        uint16_t program_counter = 0;
+    constexpr std::array<uint8_t, 256> OPCODE_SIZES{
+        1, 3, 1, 1, 1, 1, 2, 1, 3, 1, 1, 1, 1, 1, 2, 1, // 0x00 - 0x0F
+        1, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1, // 0x10 - 0x1F
+        2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1, // 0x20 - 0x2F
+        2, 3, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1, // 0x30 - 0x3F
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x40 - 0x4F
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x50 - 0x5F
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x60 - 0x6F
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x70 - 0x7F
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x80 - 0x8F
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0x90 - 0x9F
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0xA0 - 0xAF
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 0xB0 - 0xBF
+        1, 1, 3, 3, 3, 1, 2, 1, 1, 1, 3, 2, 3, 3, 2, 1, // 0xC0 - 0xCF
+        1, 1, 3, 0, 3, 1, 2, 1, 1, 1, 3, 0, 3, 0, 2, 1, // 0xD0 - 0xDF
+        2, 1, 1, 0, 0, 1, 2, 1, 2, 1, 3, 0, 0, 0, 2, 1, // 0xE0 - 0xEF
+        2, 1, 1, 1, 0, 1, 2, 1, 2, 1, 3, 1, 0, 0, 2, 1, // 0xF0 - 0xFF
     };
 
-    class Disassembler
-    {
-        std::deque<Instruction> history;
-        std::vector<Instruction> future;
+    std::string DecodeInstruction(std::span<uint8_t, 3> bytes);
+    std::string DecodeX0(std::span<uint8_t, 3> bytes);
+    std::string DecodeX1(std::span<uint8_t, 3> bytes);
+    std::string DecodeX2(std::span<uint8_t, 3> bytes);
+    std::string DecodeX3(std::span<uint8_t, 3> bytes);
 
-        uint8_t max_history = 10, max_future = 5;
+    std::string DecodeX0Z0(std::span<uint8_t, 3> bytes);
+    std::string DecodeX0Z1(std::span<uint8_t, 3> bytes);
+    std::string DecodeX0Z2(std::span<uint8_t, 3> bytes);
+    std::string DecodeX0Z3(std::span<uint8_t, 3> bytes);
+    std::string DecodeX0Z4(std::span<uint8_t, 3> bytes);
+    std::string DecodeX0Z5(std::span<uint8_t, 3> bytes);
+    std::string DecodeX0Z6(std::span<uint8_t, 3> bytes);
+    std::string DecodeX0Z7(std::span<uint8_t, 3> bytes);
 
-    public:
-        static std::string DecodeInstruction(const std::array<uint8_t, 3> &bytes);
+    std::string DecodeX3Z0(std::span<uint8_t, 3> bytes);
+    std::string DecodeX3Z1(std::span<uint8_t, 3> bytes);
+    std::string DecodeX3Z2(std::span<uint8_t, 3> bytes);
+    std::string DecodeX3Z3(std::span<uint8_t, 3> bytes);
+    std::string DecodeX3Z4(std::span<uint8_t, 3> bytes);
+    std::string DecodeX3Z5(std::span<uint8_t, 3> bytes);
+    std::string DecodeX3Z6(std::span<uint8_t, 3> bytes);
+    std::string DecodeX3Z7(std::span<uint8_t, 3> bytes);
 
-        const std::deque<Instruction> &get_history() const;
-        const std::vector<Instruction> &get_upcoming() const;
+    std::string DecodeCB(uint8_t opcode);
 
-        void set_limits(uint8_t history_limit, uint8_t future_limit);
-        void clear();
-        void push_instruction(uint16_t pc, uint8_t len, const std::array<uint8_t, 3> &bytes);
-        void scan_next_instructions(uint16_t pc, MainBus &bus);
-
-    private:
-        static std::string DecodeX0(const std::array<uint8_t, 3> &bytes);
-        static std::string DecodeX1(const std::array<uint8_t, 3> &bytes);
-        static std::string DecodeX2(const std::array<uint8_t, 3> &bytes);
-        static std::string DecodeX3(const std::array<uint8_t, 3> &bytes);
-
-        static std::string DecodeX0Z0(const std::array<uint8_t, 3> &bytes);
-        static std::string DecodeX0Z1(const std::array<uint8_t, 3> &bytes);
-        static std::string DecodeX0Z2(const std::array<uint8_t, 3> &bytes);
-        static std::string DecodeX0Z3(const std::array<uint8_t, 3> &bytes);
-        static std::string DecodeX0Z4(const std::array<uint8_t, 3> &bytes);
-        static std::string DecodeX0Z5(const std::array<uint8_t, 3> &bytes);
-        static std::string DecodeX0Z6(const std::array<uint8_t, 3> &bytes);
-        static std::string DecodeX0Z7(const std::array<uint8_t, 3> &bytes);
-
-        static std::string DecodeX3Z0(const std::array<uint8_t, 3> &bytes);
-        static std::string DecodeX3Z1(const std::array<uint8_t, 3> &bytes);
-        static std::string DecodeX3Z2(const std::array<uint8_t, 3> &bytes);
-        static std::string DecodeX3Z3(const std::array<uint8_t, 3> &bytes);
-        static std::string DecodeX3Z4(const std::array<uint8_t, 3> &bytes);
-        static std::string DecodeX3Z5(const std::array<uint8_t, 3> &bytes);
-        static std::string DecodeX3Z6(const std::array<uint8_t, 3> &bytes);
-        static std::string DecodeX3Z7(const std::array<uint8_t, 3> &bytes);
-
-        static std::string DecodeCB(uint8_t opcode);
-
-        static std::string RToStr(uint8_t r);
-        static std::string RPToStr(uint8_t rp, bool is_table2);
-        static std::string CCToStr(uint8_t cc);
-        static std::string ALUToStr(uint8_t alu);
-        static std::string ROTToStr(uint8_t rot);
-        static std::string NNToStr(const std::array<uint8_t, 3> &bytes);
-        static std::string NToStr(uint8_t n);
-        static std::string DToStr(uint8_t d);
-    };
-
+    std::string RToStr(uint8_t r);
+    std::string RPToStr(uint8_t rp, bool is_table2);
+    std::string CCToStr(uint8_t cc);
+    std::string ALUToStr(uint8_t alu);
+    std::string ROTToStr(uint8_t rot);
+    std::string NNToStr(std::span<uint8_t, 3> bytes);
+    std::string NToStr(uint8_t n);
+    std::string DToStr(uint8_t d);
 }

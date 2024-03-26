@@ -21,11 +21,11 @@
 #include "Bus.hpp"
 #include "Cartridge.hpp"
 #include "DMA.hpp"
-#include "Disassembler.hpp"
 #include "PPU.hpp"
 #include "Pad.hpp"
 #include "SM83.hpp"
 #include "Timer.hpp"
+#include "Trace.hpp"
 #include <cinttypes>
 #include <filesystem>
 #include <vector>
@@ -46,9 +46,8 @@ namespace GB
         Timer timer;
         SM83 cpu;
         DMAController dma;
-        Disassembler disassembler;
-
-        bool enable_debug_tools = false;
+        TraceLogger logger;
+        bool enable_logging = false;
 
         Core();
 
