@@ -1,0 +1,54 @@
+name: Windows Build
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install dependencies from vcpkg manifest
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: "9de2e978bdfec6bb7852cc1d6ecf375c923c485c"
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3.3.0
+        with:
+          version: 6.6
+          cache: true
+
+      - name: Configure
+        run: cmake -B build -DVCPKG_TARGET_TRIPLET=x64-windows -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+
+      - name: Build Release Package
+        run: |
+          cmake --build build -t BigComBoy --config Release
+          windeployqt --no-translations --no-quick-import --no-opengl-sw --no-system-d3d-compiler --skip-plugin-types generic,iconengines,imageformats,networkinformation,tls bin/Release/
+
+      - name: Create Zip Archive
+        run: tar -c -f "BigComBoy_Release.zip" -C bin/Release **
+
+      - name: "Upload Artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows Build
+          path: bin/Release/
+
+      - uses: benjlevesque/short-sha@v2.2
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          prerelease: false
+          automatic_release_tag: "latest"
+          title: "Latest Development Build - ${{ env.SHA }}"
+          files: BigComBoy_DevBuild.zip
