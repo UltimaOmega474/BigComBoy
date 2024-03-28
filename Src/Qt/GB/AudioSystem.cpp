@@ -39,7 +39,11 @@ namespace QtFrontend
 
     AudioSystem &AudioSystem::operator=(AudioSystem &&other) noexcept
     {
-        std::swap(*this, other);
+        opened = other.opened;
+        obtained = other.obtained;
+        audio_device = other.audio_device;
+        std::swap(samples, other.samples);
+        other.audio_device = 0;
 
         return *this;
     }

@@ -24,14 +24,15 @@ Windows and MacOS are currently supported. Linux port is planned but not a prior
 
 A C++ compiler that supports C++20 along with CMake is required.
 
-The Following dependencies are required. 
+The following external dependencies are required. 
 
 - Qt6 
 - fmtlib
 - SDL2
 - GLEW
+- toml11 (Included as a submodule)
 
-Install them using your favorite package manager on your platform of choice. (Windows users should consider using vcpkg)
+Install them using your favorite package manager on your platform of choice. Windows users should consider using vcpkg.
 
 Use the provided CMakeLists to configure. The frontend can be built via the BigComBoy target. The GB target contains the emulator core and has no external dependencies required for use.
 
@@ -53,4 +54,6 @@ Use the provided CMakeLists to configure. The frontend can be built via the BigC
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-See LICENSE.txt for the full GPLv3 License.
+See LICENSE.txt for the full GPLv3 License. 
+
+Big ComBoy also uses a number of third party libraries, see THIRD-PARTY.txt for more info.
