@@ -44,14 +44,15 @@ namespace QtFrontend
     {
         Q_OBJECT
 
-        Ui::MainWindow *ui = nullptr;
-        SettingsWindow *settings = nullptr;
-        EmulatorView *emulator_widget = nullptr;
-
+        QTimer input_timer;
         std::vector<std::unique_ptr<Input::InputDevice>> controllers;
         std::unique_ptr<Input::InputDevice> keyboard;
-        QTimer input_timer;
+
+        Ui::MainWindow *ui;
+        SettingsWindow *settings = nullptr;
+
         QLabel *fps_counter = nullptr;
+        EmulatorView *emulator_widget;
 
     public:
         explicit MainWindow(QWidget *parent = nullptr);

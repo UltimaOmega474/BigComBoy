@@ -16,29 +16,30 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "GraphicsObjects.hpp"
+#include "GLFunctions.hpp"
 #include <array>
 #include <fmt/format.h>
 
-namespace GL
+namespace QtFrontend
 {
-    GLuint CreateVAO()
+    GLuint GLFunctions::create_vao()
     {
         GLuint vao = 0;
         glGenVertexArrays(1, &vao);
         return vao;
     }
 
-    void SetVAOElement(GLuint vao, GLuint index, GLint num_components, GLenum component_type,
-                       GLboolean normalize, GLsizei stride, GLvoid *offset)
+    void GLFunctions::set_vao_element(GLuint vao, GLuint index, GLint num_components,
+                                      GLenum component_type, GLboolean normalize, GLsizei stride,
+                                      GLvoid *offset)
     {
         glVertexAttribPointer(index, num_components, component_type, normalize, stride, offset);
         glEnableVertexAttribArray(index);
     }
 
-    void DestroyVAO(GLuint vao) { glDeleteVertexArrays(1, &vao); }
+    void GLFunctions::destroy_vao(GLuint vao) { glDeleteVertexArrays(1, &vao); }
 
-    GLuint CreateTexture(GLsizei width, GLsizei height)
+    GLuint GLFunctions::create_texture(GLsizei width, GLsizei height)
     {
         GLuint texture = 0;
         glGenTextures(1, &texture);
@@ -53,18 +54,27 @@ namespace GL
         return texture;
     }
 
-    void UpdateTextureData(GLuint texture, GLsizei width, GLsizei height, std::span<uint8_t> pixels)
+    void GLFunctions::update_texture_data(GLuint texture, GLsizei width, GLsizei height,
+                                          std::span<uint8_t> pixels)
     {
         glBindTexture(GL_TEXTURE_2D, texture);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE,
                         pixels.data());
     }
 
-    void DestroyTexture(GLuint texture) { glDeleteTextures(1, &texture); }
+    void GLFunctions::set_texture_filter(GLuint texture, GLint min_mag_filter)
+    {
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min_mag_filter);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, min_mag_filter);
+    }
 
-    void DestroyBuffer(GLuint buffer) { glDeleteBuffers(1, &buffer); }
+    void GLFunctions::destroy_texture(GLuint texture) { glDeleteTextures(1, &texture); }
 
-    std::optional<GLuint> CreateShaderProgram(GLenum shader_stage, std::string_view source)
+    void GLFunctions::destroy_buffer(GLuint buffer) { glDeleteBuffers(1, &buffer); }
+
+    std::optional<GLuint> GLFunctions::create_shader_program(GLenum shader_stage,
+                                                             std::string_view source)
     {
         const char *data = source.data();
 
@@ -87,7 +97,7 @@ namespace GL
         return program;
     }
 
-    std::optional<GLuint> CreatePipeline(GLuint vertex_shader, GLuint fragment_shader)
+    std::optional<GLuint> GLFunctions::create_pipeline(GLuint vertex_shader, GLuint fragment_shader)
     {
         if (!vertex_shader || !fragment_shader)
             return {};
@@ -100,13 +110,13 @@ namespace GL
         return pipeline;
     }
 
-    void BindSamplerToTextureSlot(GLuint shader, std::string_view name, GLint slot)
+    void GLFunctions::bind_sampler(GLuint shader, std::string_view name, GLint slot)
     {
         auto location = glGetUniformLocation(shader, name.data());
         glUniform1i(location, slot);
     }
 
-    void DestroyPipeline(GLuint pipeline)
+    void GLFunctions::destroy_pipeline(GLuint pipeline)
     {
         std::array<GLuint, 2> programs{};
         GLsizei count = 0;

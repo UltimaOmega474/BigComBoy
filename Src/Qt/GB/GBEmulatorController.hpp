@@ -20,7 +20,6 @@
 #include "AudioSystem.hpp"
 #include "Common/Math.hpp"
 #include "Cores/GB/Core.hpp"
-#include "GL/Renderer.hpp"
 #include <QObject>
 #include <QThread>
 #include <QTimer>
@@ -50,13 +49,10 @@ namespace QtFrontend
         Q_OBJECT
 
         EmulationState state = EmulationState::Stopped;
-
         GB::Core core{};
         std::unique_ptr<GB::Cartridge> cart;
         AudioSystem audio_system{};
 
-        std::array<GLuint, FRAMES> textures{};
-        std::array<std::array<uint8_t, 160 * 144 * 4>, FRAMES> framebuffers{};
         QTimer *sram_timer = nullptr;
 
     public:
@@ -68,9 +64,9 @@ namespace QtFrontend
         GBEmulatorController &operator=(GBEmulatorController &&) = delete;
 
         EmulationState get_state() const;
+        GB::Core &get_core();
 
-        void update();
-        void draw_scene(GL::Renderer *renderer, float screen_width, float screen_height);
+        bool try_run_frame();
         void process_input(std::array<bool, 8> &buttons);
 
         Q_SLOT void start_rom(std::filesystem::path path);
@@ -87,6 +83,5 @@ namespace QtFrontend
 
     private:
         void init_by_console_type();
-        void update_textures();
     };
 }

@@ -17,10 +17,15 @@
 */
 
 #pragma once
+#include "Cores/GB/Constants.hpp"
+#include "SwapChain.hpp"
+#include <QOpenGLWidget>
 #include <QThread>
 #include <QTimer>
 #include <QWidget>
+#include <array>
 #include <atomic>
+#include <chrono>
 #include <mutex>
 
 namespace GL
@@ -33,50 +38,54 @@ namespace QtFrontend
 {
     class MainWindow;
     class GBEmulatorController;
+    class GLFunctions;
+    class Renderer;
 
     class EmulatorThread : public QThread
     {
         Q_OBJECT
 
-        std::atomic_bool running = false;
-        std::mutex rendering;
-
-        GL::Context *context = nullptr;
-        GL::Renderer *renderer = nullptr;
-        bool initialized = false;
+        std::atomic_bool running = true;
 
     public:
         QTimer input_timer;
         GBEmulatorController *gb_controller = nullptr;
+        SwapChain<GB::LCD_WIDTH * GB::LCD_HEIGHT * 4> image_buffer;
 
         EmulatorThread(QObject *parent);
         ~EmulatorThread() override;
 
         void stop();
-        void create_resources(void *window_handle);
-
-        void resize(int w, int h);
         void run() override;
 
         void update_input();
         Q_SIGNAL void on_update_fps_display(const QString &text);
         Q_SIGNAL void on_post_input(std::array<bool, 8> input);
+        Q_SIGNAL void update_textures();
     };
 
-    class EmulatorView : public QWidget
+    class EmulatorView : public QOpenGLWidget
     {
         Q_OBJECT
         EmulatorThread *thread = nullptr;
         MainWindow *window = nullptr;
 
+        GLFunctions *functions = nullptr;
+        Renderer *renderer = nullptr;
+        float scaled_width = 0.0, scaled_height = 0.0;
+        std::array<GLuint, 2> textures{};
+        std::array<std::array<uint8_t, GB::LCD_WIDTH * GB::LCD_HEIGHT * 4>, 2> framebuffers{};
+
     public:
-        EmulatorView(QWidget *parent);
+        EmulatorView(MainWindow *parent);
         ~EmulatorView() override;
-        void set_window(MainWindow *main_window);
         void showEvent(QShowEvent *ev) override;
         void hideEvent(QHideEvent *ev) override;
-        void resizeEvent(QResizeEvent *ev) override;
+        void initializeGL() override;
+        void resizeGL(int w, int h) override;
+        void paintGL() override;
 
-        QPaintEngine *paintEngine() const override { return nullptr; }
+        void connect_slots();
+        Q_SLOT void update_textures();
     };
 }

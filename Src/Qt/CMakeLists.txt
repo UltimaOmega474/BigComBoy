@@ -5,8 +5,13 @@ set(QT_SOURCES
 	MainWindow.ui
 	KeyboardDevice.cpp
 	EmulatorView.cpp
+
+	OGL/GLFunctions.cpp
+	OGL/Renderer.cpp
+
 	GB/GBEmulatorController.cpp
 	GB/AudioSystem.cpp
+
 	GB/SubWindows/SettingsWindow.cpp
 	GB/SubWindows/SettingsWindow.ui
 	GB/SubWindows/EmulationWindow.cpp
@@ -24,7 +29,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
 find_package(QT NAMES Qt6 REQUIRED COMPONENTS Widgets)
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets OpenGLWidgets)
 
 if(APPLE)
 	set(MACOSX_BUNDLE_ICON_FILE bcb)
@@ -54,12 +59,12 @@ target_include_directories(BigComBoy PRIVATE ${MAIN_INCLUDE_DIR})
 
 target_link_libraries(BigComBoy PRIVATE
 	Qt6::Widgets
+	Qt6::OpenGLWidgets
 	toml11
 	fmt::fmt
 	GB
 	Common
 	SDL2::SDL2
-	GL
 	Input
 )
 

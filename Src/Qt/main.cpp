@@ -20,6 +20,7 @@
 #include "MainWindow.hpp"
 #include "Paths.hpp"
 #include <QApplication>
+#include <QSurfaceFormat>
 #include <cstdlib>
 #include <filesystem>
 #define SDL_MAIN_HANDLED
@@ -33,6 +34,14 @@ void save_config() { Common::Config::Current().write_to_file(QtFrontend::Paths::
 
 int main(int argc, char *argv[])
 {
+    QSurfaceFormat format;
+    format.setDepthBufferSize(24);
+    format.setStencilBufferSize(8);
+    format.setVersion(4, 1);
+    format.setProfile(QSurfaceFormat::CoreProfile);
+    format.setSwapInterval(0);
+    QSurfaceFormat::setDefaultFormat(format);
+
     QApplication a(argc, argv);
     SDL_Init(SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO);
     Common::Config::Current().read_from_file(QtFrontend::Paths::ConfigLocation());

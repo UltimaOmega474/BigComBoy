@@ -17,23 +17,17 @@
 */
 
 #pragma once
-#include "DrawingFunctions.hpp"
-#include "GraphicsObjects.hpp"
-
-#ifdef __APPLE__
-#include <OpenGL/OpenGL.h>
-#include <OpenGL/gl3.h>
-#else
-#include <GL/glew.h>
-#endif
+#include <QOpenGLFunctions_4_1_Core>
 #include <array>
 #include <cinttypes>
 
-namespace GL
+namespace QtFrontend
 {
+    class GLFunctions;
     constexpr size_t MAX_IMAGES_PER_FRAME = 32;
     constexpr size_t VERTICES_PER_IMAGE = 4;
     constexpr size_t INDICES_PER_IMAGE = 6;
+
     struct Color
     {
         float r = 0, g = 0, b = 0, a = 0;
@@ -55,9 +49,10 @@ namespace GL
         std::array<Vertex, VERTICES_PER_IMAGE * MAX_IMAGES_PER_FRAME> vertices{};
         std::array<uint32_t, INDICES_PER_IMAGE * MAX_IMAGES_PER_FRAME> indices{};
         std::array<float, 16> matrix{};
+        GLFunctions *glfn = nullptr;
 
     public:
-        Renderer();
+        Renderer(GLFunctions *functions);
         Renderer(const Renderer &) = delete;
         Renderer(Renderer &&) = default;
         Renderer &operator=(const Renderer &) = delete;

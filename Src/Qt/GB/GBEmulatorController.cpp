@@ -18,70 +18,32 @@
 
 #include "GBEmulatorController.hpp"
 #include "Common/Config.hpp"
-#include "GL/Renderer.hpp"
 #include "Input/DeviceRegistry.hpp"
 
 namespace QtFrontend
 {
     GBEmulatorController::GBEmulatorController() : QObject(nullptr), sram_timer(new QTimer(this))
     {
-        for (auto &texture : textures)
-        {
-            texture = GL::CreateTexture(GB::LCD_WIDTH, GB::LCD_HEIGHT);
-        }
-
         connect(sram_timer, &QTimer::timeout, this, &GBEmulatorController::save_sram);
     }
 
-    GBEmulatorController::~GBEmulatorController()
-    {
-        for (auto texture : textures)
-        {
-            GL::DestroyTexture(texture);
-        }
-        sram_timer->stop();
-    }
+    GBEmulatorController::~GBEmulatorController() { sram_timer->stop(); }
 
     EmulationState GBEmulatorController::get_state() const { return state; }
 
-    void GBEmulatorController::update()
+    GB::Core &GBEmulatorController::get_core() { return core; }
+
+    bool GBEmulatorController::try_run_frame()
     {
         using namespace std::chrono_literals;
 
         if (state == EmulationState::Running && audio_system.should_continue())
         {
             core.run_for_frames(1);
-            update_textures();
+            return true;
         }
-    }
 
-    void GBEmulatorController::draw_scene(GL::Renderer *renderer, float screen_width,
-                                          float screen_height)
-    {
-        if (state == EmulationState::Stopped)
-            return;
-
-        const auto use_frame_blending = Common::Config::Current().gameboy.video.frame_blending;
-
-        auto [final_width, final_height] = Common::Math::FitToAspectRatio(
-            screen_width, screen_height, GB::LCD_WIDTH, GB::LCD_HEIGHT);
-
-        float final_x = screen_width / 2.0f - (final_width / 2);
-
-        GL::SetAlphaBlend();
-
-        renderer->draw_image(textures[0], final_x, 0, final_width, final_height);
-
-        if (use_frame_blending)
-        {
-            float alpha = 0.5f;
-            for (size_t i = 1; i < textures.size(); ++i)
-            {
-                auto fbtexture = textures[i];
-                auto color = GL::Color{1.0f, 1.0f, 1.0f, alpha};
-                renderer->draw_image(fbtexture, final_x, 0, final_width, final_height, color);
-            }
-        }
+        return false;
     }
 
     void GBEmulatorController::process_input(std::array<bool, 8> &buttons)
@@ -234,26 +196,5 @@ namespace QtFrontend
             break;
         }
         }
-    }
-
-    void GBEmulatorController::update_textures()
-    {
-        const auto &config = Common::Config::Current().gameboy.video;
-
-        if (config.frame_blending)
-        {
-            for (size_t i = (framebuffers.size() - 1); i > 0; --i)
-            {
-                framebuffers[i] = framebuffers[i - 1];
-
-                GL::UpdateTextureData(textures[i], GB::LCD_WIDTH, GB::LCD_HEIGHT, framebuffers[i]);
-
-                GL::SetTextureFilter(textures[i], config.smooth_scaling ? GL_LINEAR : GL_NEAREST);
-            }
-        }
-
-        framebuffers[0] = core.ppu.framebuffer_complete;
-        GL::UpdateTextureData(textures[0], GB::LCD_WIDTH, GB::LCD_HEIGHT, framebuffers[0]);
-        GL::SetTextureFilter(textures[0], config.smooth_scaling ? GL_LINEAR : GL_NEAREST);
     }
 }

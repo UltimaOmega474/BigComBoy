@@ -27,9 +27,8 @@ A C++ compiler that supports C++20 along with CMake is required.
 The following external dependencies are required. 
 
 - Qt6 
-- fmtlib
+- {fmt}
 - SDL2
-- GLEW
 - toml11 (Included as a submodule)
 
 Install them using your favorite package manager on your platform of choice. Windows users should consider using vcpkg.

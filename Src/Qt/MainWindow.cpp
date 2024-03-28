@@ -36,9 +36,8 @@
 namespace QtFrontend
 {
     MainWindow::MainWindow(QWidget *parent)
-        : QMainWindow(parent), ui(new Ui::MainWindow), emulator_widget(new EmulatorView(this)),
-          keyboard(std::make_unique<KeyboardDevice>()), input_timer(),
-          fps_counter(new QLabel(tr("--")))
+        : QMainWindow(parent), input_timer(), keyboard(std::make_unique<KeyboardDevice>()),
+          ui(new Ui::MainWindow), fps_counter(new QLabel(tr("--")))
     {
         ui->setupUi(this);
         ui->menuLoad_Recent->setEnabled(false);
@@ -50,16 +49,17 @@ namespace QtFrontend
 
         Input::DeviceRegistry::RegisterDevice(keyboard.get());
         reload_controllers();
-        emulator_widget->set_window(this);
-        connect_slots();
         reload_recent_roms();
 
         const auto &config = Common::Config::Current();
         resize(config.wsize_x, config.wsize_y);
         menuBar()->setNativeMenuBar(true);
 
+        emulator_widget = new EmulatorView(this);
         setCentralWidget(emulator_widget);
         centralWidget()->hide();
+
+        connect_slots();
     }
 
     MainWindow::~MainWindow()

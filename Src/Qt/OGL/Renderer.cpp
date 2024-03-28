@@ -18,9 +18,10 @@
 
 #include "Renderer.hpp"
 #include "Common/Math.hpp"
+#include "GLFunctions.hpp"
 #include <string_view>
 
-namespace GL
+namespace QtFrontend
 {
     using namespace std::string_view_literals;
 
@@ -64,7 +65,7 @@ namespace GL
         "\tFragColor = texture(DiffuseTexture, TextureUV) * VColor;\n"
         "}"sv;
 
-    Renderer::Renderer()
+    Renderer::Renderer(GLFunctions *functions) : glfn(functions)
     {
         for (int i = 0; i < MAX_IMAGES_PER_FRAME; ++i)
         {
@@ -78,39 +79,43 @@ namespace GL
         }
 
         std::optional<GLuint> vtx =
-            GL::CreateShaderProgram(GL_VERTEX_SHADER, DEFAULT_VERTEX_SHADER);
+            glfn->create_shader_program(GL_VERTEX_SHADER, DEFAULT_VERTEX_SHADER);
         std::optional<GLuint> frag =
-            GL::CreateShaderProgram(GL_FRAGMENT_SHADER, DEFAULT_FRAGMENT_SHADER);
+            glfn->create_shader_program(GL_FRAGMENT_SHADER, DEFAULT_FRAGMENT_SHADER);
 
-        pipeline = GL::CreatePipeline(vtx.value_or(0), frag.value_or(0)).value_or(0);
+        pipeline = glfn->create_pipeline(vtx.value_or(0), frag.value_or(0)).value_or(0);
 
         auto vtx_size = static_cast<GLsizei>(sizeof(Vertex) * vertices.size());
-        vertex_buffer = GL::CreateBuffer<Vertex>(GL_ARRAY_BUFFER, vtx_size, vertices);
+        vertex_buffer = glfn->create_buffer<Vertex>(GL_ARRAY_BUFFER, vtx_size, vertices);
 
         auto idx_size = static_cast<GLsizei>(sizeof(uint32_t) * indices.size());
-        index_buffer = GL::CreateBuffer<uint32_t>(GL_ELEMENT_ARRAY_BUFFER, idx_size, indices);
+        index_buffer = glfn->create_buffer<uint32_t>(GL_ELEMENT_ARRAY_BUFFER, idx_size, indices);
 
-        vao = GL::CreateVAO();
-        glBindVertexArray(vao);
-        glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
-        GL::SetVAOElement(vao, 0, 2, GL_FLOAT, false, sizeof(Vertex), static_cast<GLvoid *>(0));
-        GL::SetVAOElement(vao, 1, 2, GL_FLOAT, false, sizeof(Vertex),
-                          reinterpret_cast<GLvoid *>(offsetof(Vertex, u)));
+        vao = glfn->create_vao();
+        glfn->glBindVertexArray(vao);
+        glfn->glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
+        glfn->set_vao_element(vao, 0, 2, GL_FLOAT, false, sizeof(Vertex), static_cast<GLvoid *>(0));
+        glfn->set_vao_element(vao, 1, 2, GL_FLOAT, false, sizeof(Vertex),
+                              reinterpret_cast<GLvoid *>(offsetof(Vertex, u)));
 
-        GL::SetVAOElement(vao, 2, 4, GL_FLOAT, true, sizeof(Vertex),
-                          reinterpret_cast<GLvoid *>(offsetof(Vertex, color)));
+        glfn->set_vao_element(vao, 2, 4, GL_FLOAT, true, sizeof(Vertex),
+                              reinterpret_cast<GLvoid *>(offsetof(Vertex, color)));
 
         auto mtx_size = static_cast<GLsizei>(sizeof(float) * matrix.size());
-        uniform_buffer = GL::CreateBuffer<float>(GL_UNIFORM_BUFFER, mtx_size, matrix);
+        uniform_buffer = glfn->create_buffer<float>(GL_UNIFORM_BUFFER, mtx_size, matrix);
+
+        glfn->glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glfn->glEnable(GL_BLEND);
+        glfn->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
 
     Renderer::~Renderer()
     {
-        GL::DestroyBuffer(uniform_buffer);
-        GL::DestroyVAO(vao);
-        GL::DestroyBuffer(vertex_buffer);
-        GL::DestroyBuffer(index_buffer);
-        GL::DestroyPipeline(pipeline);
+        glfn->destroy_buffer(uniform_buffer);
+        glfn->destroy_vao(vao);
+        glfn->destroy_buffer(vertex_buffer);
+        glfn->destroy_buffer(index_buffer);
+        glfn->destroy_pipeline(pipeline);
     }
 
     void Renderer::reset_state(float screen_width, float screen_height)
@@ -119,7 +124,9 @@ namespace GL
         index_offset = 0;
 
         Common::Math::OrthroProject(matrix, 0, screen_width, 0, screen_height, 0, 1);
-        GL::UpdateBufferData<float>(uniform_buffer, GL_UNIFORM_BUFFER, matrix);
+        glfn->update_buffer_data<float>(uniform_buffer, GL_UNIFORM_BUFFER, matrix);
+
+        glfn->glClear(GL_COLOR_BUFFER_BIT);
     }
 
     void Renderer::draw_image(GLuint texture, float x, float y, float width, float height,
@@ -142,16 +149,19 @@ namespace GL
         }
         vertex_offset += 4;
 
-        GL::UpdateBufferData<Vertex>(vertex_buffer, GL_ARRAY_BUFFER, vertices);
+        glfn->update_buffer_data<Vertex>(vertex_buffer, GL_ARRAY_BUFFER, vertices);
 
-        glBindProgramPipeline(pipeline);
-        glBindBufferBase(GL_UNIFORM_BUFFER, 0, uniform_buffer);
-        GL::BindTextureToSlot(0, texture);
-        glBindVertexArray(vao);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer);
+        glfn->glBindProgramPipeline(pipeline);
+        glfn->glBindBufferBase(GL_UNIFORM_BUFFER, 0, uniform_buffer);
 
-        glDrawElements(GL_TRIANGLES, INDICES_PER_IMAGE, GL_UNSIGNED_INT,
-                       reinterpret_cast<void *>(index_offset * sizeof(uint32_t)));
+        glfn->glActiveTexture(GL_TEXTURE0);
+        glfn->glBindTexture(GL_TEXTURE_2D, texture);
+
+        glfn->glBindVertexArray(vao);
+        glfn->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer);
+
+        glfn->glDrawElements(GL_TRIANGLES, INDICES_PER_IMAGE, GL_UNSIGNED_INT,
+                             reinterpret_cast<void *>(index_offset * sizeof(uint32_t)));
 
         index_offset += 6;
     }

@@ -58,39 +58,4 @@ namespace Common::Math
         matrix[14] = 0.0f;
         matrix[15] = 1.0f;
     }
-
-    void AlphaComposite(std::span<uint8_t> b, std::span<uint8_t> a, std::span<uint8_t> out,
-                        size_t width, size_t height, size_t bit_depth)
-    {
-        auto cvt = [](int c) -> float
-        {
-            return (float)c / 255.0f;
-        };
-
-        for (int y = 0; y < height; ++y)
-        {
-            for (int x = 0; x < width; ++x)
-            {
-                auto i = ((y * width) * 4) + (x * 4);
-                auto ar = cvt(a[i]);
-                auto ag = cvt(a[i + 1]);
-                auto ab = cvt(a[i + 2]);
-                auto aa = cvt(a[i + 3]);
-                auto br = cvt(b[i]);
-                auto bg = cvt(b[i + 1]);
-                auto bb = cvt(b[i + 2]);
-                auto ba = cvt(b[i + 3]);
-
-                auto cr = ar + br * (1.0f - aa);
-                auto cg = ag + bg * (1.0f - aa);
-                auto cb = ab + bb * (1.0f - aa);
-                auto ca = aa + ba * (1.0f - aa);
-
-                out[i] = cr * 255.0f;
-                out[i + 1] = cg * 255.0f;
-                out[i + 2] = cb * 255.0f;
-                out[i + 3] = ca * 255.0f;
-            }
-        }
-    }
 }
