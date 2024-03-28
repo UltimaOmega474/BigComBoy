@@ -10,3 +10,8 @@ find_package(GLEW CONFIG REQUIRED)
 
 add_subdirectory(Src)
 add_subdirectory(External/toml11)
+
+configure_file(LICENSE.txt ${CMAKE_SOURCE_DIR}/bin/Release/LICENSE.txt COPYONLY)
+configure_file(LICENSE.txt ${CMAKE_SOURCE_DIR}/bin/Debug/LICENSE.txt COPYONLY)
+configure_file(THIRD-PARTY.txt ${CMAKE_SOURCE_DIR}/bin/Release/THIRD-PARTY.txt COPYONLY)
+configure_file(THIRD-PARTY.txt ${CMAKE_SOURCE_DIR}/bin/Debug/THIRD-PARTY.txt COPYONLY)
