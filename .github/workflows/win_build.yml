@@ -36,7 +36,7 @@ jobs:
           windeployqt --no-translations --no-quick-import --no-opengl-sw --no-system-d3d-compiler --no-compiler-runtime --skip-plugin-types generic,iconengines,imageformats,networkinformation,tls bin/Release/
 
       - name: Create Zip Archive
-        run: tar -cz -f "BigComBoy_DevBuild.zip" -C bin/Release **
+        run: powershell Compress-Archive bin/Release/* "BigComBoy_DevBuild.zip"
 
       - name: "Upload Artifact"
         uses: actions/upload-artifact@v4
