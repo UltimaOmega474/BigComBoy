@@ -5,6 +5,7 @@ set(QT_SOURCES
 	MainWindow.ui
 	KeyboardDevice.cpp
 	EmulatorView.cpp
+	Style.cpp
 
 	OGL/GLFunctions.cpp
 	OGL/Renderer.cpp

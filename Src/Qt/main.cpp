@@ -19,6 +19,7 @@
 #include "Common/Config.hpp"
 #include "MainWindow.hpp"
 #include "Paths.hpp"
+#include "Style.hpp"
 #include <QApplication>
 #include <QSurfaceFormat>
 #include <cstdlib>
@@ -30,7 +31,7 @@
 #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 #endif
 
-void save_config() { Common::Config::Current().write_to_file(QtFrontend::Paths::ConfigLocation()); }
+void SaveConfig() { Common::Config::Current().write_to_file(QtFrontend::Paths::ConfigLocation()); }
 
 int main(int argc, char *argv[])
 {
@@ -47,7 +48,9 @@ int main(int argc, char *argv[])
     Common::Config::Current().read_from_file(QtFrontend::Paths::ConfigLocation());
 
     atexit(SDL_Quit);
-    atexit(save_config);
+    atexit(SaveConfig);
+
+    QtFrontend::ApplyColorPalette(QtFrontend::StyleColor::DefaultDark());
 
     QtFrontend::MainWindow w;
     w.show();
