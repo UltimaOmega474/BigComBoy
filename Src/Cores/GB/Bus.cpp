@@ -203,7 +203,7 @@ namespace GB
                 case 0x4C:
                     return KEY0;
                 case 0x4D:
-                    return KEY1;
+                    return is_compatibility_mode() ? 0xFF : KEY1;
                 case 0x4F:
                     return core.ppu.vram_bank_select | 0xFE;
                 case 0x50:

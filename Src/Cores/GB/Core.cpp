@@ -47,7 +47,7 @@ namespace GB
             }
             else
             {
-                bus.KEY0 = 0x04;
+                bus.KEY0 = DISABLE_CGB_FUNCTIONS;
                 ppu.object_priority_mode = 1;
 
                 ppu.set_compatibility_palette(PaletteID::BG, LCD_GRAY);
@@ -78,7 +78,7 @@ namespace GB
 
             if (console == ConsoleType::DMG)
             {
-                bus.KEY0 = 0x04;
+                bus.KEY0 = DISABLE_CGB_FUNCTIONS;
                 ppu.object_priority_mode = 1;
 
                 ppu.set_compatibility_palette(PaletteID::BG, LCD_GRAY);
