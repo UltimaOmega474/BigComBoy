@@ -24,7 +24,8 @@ namespace GB
 {
     class Core;
     class MainBus;
-    enum Register
+
+    enum class Register
     {
         B = 0,
         C = 1,
@@ -35,31 +36,22 @@ namespace GB
         HL_ADDR = 6,
         F = 6,
         A = 7,
-        // for ALU opcodes that take an immediate value
-        U8,
+        U8 = 8, // for ALU opcodes that take an immediate value
     };
 
-    enum RegisterPair
+    enum class RegisterPair
     {
-        BC = 0,
+        BC,
         DE,
         HL,
         SP,
         AF,
     };
 
-    enum CPUFlags
-    {
-        Z = 128,
-        N = 64,
-        HC = 32,
-        CY = 16,
-        // unused, always 0
-        B3 = 8,
-        B2 = 4,
-        B1 = 2,
-        B0 = 1
-    };
+    constexpr uint8_t FLAG_Z = 128;
+    constexpr uint8_t FLAG_N = 64;
+    constexpr uint8_t FLAG_HC = 32;
+    constexpr uint8_t FLAG_CY = 16;
 
     class SM83
     {
@@ -92,8 +84,8 @@ namespace GB
         void push_sp(uint16_t value);
         uint16_t pop_sp();
 
-        void set_flags(uint8_t flagBits, bool set);
-        bool get_flag(CPUFlags flagBit) const;
+        void set_flags(uint8_t flags, bool set);
+        bool get_flag(uint8_t flag) const;
         uint16_t get_rp(RegisterPair index) const;
         void set_rp(RegisterPair index, uint16_t value);
 
@@ -131,7 +123,7 @@ namespace GB
         template <RegisterPair rp> void op_dec_rp();
 
         template <RegisterPair rp, int16_t displacement> void op_ld_rp_a();
-        template <CPUFlags cc, bool boolean_ver> void op_jr_cc_i8();
+        template <uint8_t cc, bool boolean_ver> void op_jr_cc_i8();
         template <RegisterPair rp> void op_add_hl_rp();
         template <Register r> void op_inc_r();
         template <Register r> void op_dec_r();
@@ -147,9 +139,9 @@ namespace GB
         template <Register r> void op_cp_a_r();
 
         template <bool enable_interrupts> void op_ret();
-        template <CPUFlags cc, bool boolean_ver> void op_ret_cc();
-        template <CPUFlags cc, bool boolean_ver> void op_jp_cc_u16();
-        template <CPUFlags cc, bool boolean_ver> void op_call_cc_u16();
+        template <uint8_t cc, bool boolean_ver> void op_ret_cc();
+        template <uint8_t cc, bool boolean_ver> void op_jp_cc_u16();
+        template <uint8_t cc, bool boolean_ver> void op_call_cc_u16();
 
         template <RegisterPair rp> void op_pop_rp();
         template <RegisterPair rp> void op_push_rp();
