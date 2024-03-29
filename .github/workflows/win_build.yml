@@ -48,7 +48,7 @@ jobs:
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          prerelease: false
+          prerelease: true
           automatic_release_tag: "latest"
-          title: "Latest Development Build - ${{ env.SHA }}"
+          title: "Windows Development Build - ${{ env.SHA }}"
           files: BigComBoy_DevBuild.zip
