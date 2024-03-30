@@ -20,21 +20,16 @@
 #include <array>
 #include <cinttypes>
 
-namespace GB
-{
+namespace GB {
     class Cartridge;
     class Core;
-    class MainBus
-    {
+
+    class MainBus {
         Core &core;
 
     public:
         bool bootstrap_mapped = true;
         uint8_t KEY0 = 0x0, KEY1 = 0;
-        uint8_t wram_bank_num = 1;
-
-        std::array<uint8_t, 32768> wram{};
-        std::array<uint8_t, 127> hram{};
 
         Cartridge *cart = nullptr;
 
@@ -47,5 +42,11 @@ namespace GB
 
         uint8_t read(uint16_t address);
         void write(uint16_t address, uint8_t value);
+
+    private:
+        uint8_t wram_bank_num = 1;
+
+        std::array<uint8_t, 32768> wram{};
+        std::array<uint8_t, 127> hram{};
     };
 }

@@ -48,15 +48,16 @@ namespace GB {
         case 0x6:
         case 0x7: {
             if (bootstrap_mapped) {
-                if ((address < 0x100) || (address > 0x1FF))
+                if ((address < 0x100) || (address > 0x1FF)) {
                     return core.read_bootrom(address);
-                else if (cart)
+                } else if (cart) {
                     return cart->read(address);
+                }
             } else {
-                if (cart)
+                if (cart) {
                     return cart->read(address);
+                }
             }
-
             return 0xFF;
         }
 
@@ -66,17 +67,20 @@ namespace GB {
         }
         case 0xA:
         case 0xB: {
-            if (cart)
+            if (cart) {
                 return cart->read_ram(address & 0x1FFF);
-
+            }
             return 0xFF;
         }
-        case 0xC:
+        case 0xC: {
             return wram[address & (address & 0xFFF)];
-        case 0xD:
+        }
+        case 0xD: {
             return wram[(wram_bank_num * 0x1000) + (address & 0xFFF)];
-        case 0xE:
+        }
+        case 0xE: {
             return wram[address & (address & 0xFFF)];
+        }
         case 0xF: {
             auto hram_page = address >> 8;
 
@@ -92,14 +96,15 @@ namespace GB {
 
                 switch (io_address) {
                 // Input
-                case 0x00:
+                case 0x00: {
                     return core.pad.get_pad_state();
+                }
 
                 // Serial Port
                 case 0x01:
+                case 0x02: {
                     return 0xFF;
-                case 0x02:
-                    return 0xFF;
+                }
 
                 // Timer
                 case 0x04:
@@ -157,57 +162,47 @@ namespace GB {
                 case 0x3C:
                 case 0x3D:
                 case 0x3E:
-                case 0x3F:
+                case 0x3F: {
                     return core.apu.read_wave_ram(io_address - 0x30);
+                }
 
-                // ppu registers
+                // PPU Registers
                 case 0x40:
-                    return core.ppu.lcd_control;
                 case 0x41:
-                    return core.ppu.status;
                 case 0x42:
-                    return core.ppu.screen_scroll_y;
                 case 0x43:
-                    return core.ppu.screen_scroll_x;
                 case 0x44:
-                    return core.ppu.line_y;
                 case 0x45:
-                    return core.ppu.line_y_compare;
                 case 0x46:
-                    return 0xFF; // dma start address
                 case 0x47:
-                    return core.ppu.background_palette;
                 case 0x48:
-                    return core.ppu.object_palette_0;
                 case 0x49:
-                    return core.ppu.object_palette_1;
                 case 0x4A:
-                    return core.ppu.window_y;
                 case 0x4B:
-                    return core.ppu.window_x;
-                case 0x4C:
-                    return KEY0;
-                case 0x4D:
-                    return is_compatibility_mode() ? 0xFF : KEY1;
                 case 0x4F:
-                    return core.ppu.vram_bank_select | 0xFE;
-                case 0x50:
-                    return bootstrap_mapped;
-                case 0x55:
-                    return core.dma.get_dma_status();
                 case 0x68:
-                    return core.ppu.bg_palette_select;
                 case 0x69:
-                    return core.ppu.read_bg_palette();
-
                 case 0x6A:
-                    return core.ppu.obj_palette_select;
                 case 0x6B:
-                    return core.ppu.read_obj_palette();
-                case 0x6C:
-                    return core.ppu.object_priority_mode;
-                case 0x70:
+                case 0x6C: {
+                    return core.ppu.read_register(io_address);
+                }
+
+                case 0x4C: {
+                    return KEY0;
+                }
+                case 0x4D: {
+                    return is_compatibility_mode() ? 0xFF : KEY1;
+                }
+                case 0x50: {
+                    return bootstrap_mapped;
+                }
+                case 0x55: {
+                    return core.dma.get_dma_status();
+                }
+                case 0x70: {
                     return wram_bank_num;
+                }
                 }
 
                 if ((address >= 0xFF80) && (address <= 0xFFFE)) {
@@ -240,13 +235,15 @@ namespace GB {
         case 0x6:
         case 0x7: {
             if (bootstrap_mapped) {
-                if ((address < 0x100) || (address > 0x1FF))
+                if ((address < 0x100) || (address > 0x1FF)) {
                     return;
-                else if (cart)
+                } else if (cart) {
                     cart->write(address, value);
+                }
             } else {
-                if (cart)
+                if (cart) {
                     cart->write(address, value);
+                }
             }
 
             return;
@@ -260,22 +257,23 @@ namespace GB {
 
         case 0xA:
         case 0xB: {
-            if (cart)
+            if (cart) {
                 cart->write_ram(address & 0x1FFF, value);
+            }
             return;
         }
 
         case 0xC: {
             wram[address & (address & 0xFFF)] = value;
-            break;
+            return;
         }
         case 0xD: {
             wram[(wram_bank_num * 0x1000) + (address & 0xFFF)] = value;
-            break;
+            return;
         }
         case 0xE: {
             wram[address & (address & 0xFFF)] = value;
-            break;
+            return;
         }
 
         case 0xF: {
@@ -365,118 +363,69 @@ namespace GB {
                 }
 
                 // PPU Registers
-                case 0x40: {
-                    core.ppu.lcd_control = value;
-                    return;
-                }
-                case 0x41: {
-                    core.ppu.status &= 0x3;
-                    core.ppu.status |= value & 0xF8;
-                    return;
-                }
-
-                case 0x42: {
-                    core.ppu.screen_scroll_y = value;
-                    return;
-                }
-                case 0x43: {
-                    core.ppu.screen_scroll_x = value;
-                    return;
-                }
-                case 0x45: {
-                    core.ppu.line_y_compare = value;
-                    return;
-                }
-                case 0x46: {
-                    core.ppu.instant_dma(value);
-                    return; // dma start address
-                }
-                case 0x47: {
-                    core.ppu.background_palette = value;
-                    return;
-                }
-                case 0x48: {
-                    core.ppu.object_palette_0 = value;
-                    return;
-                }
-                case 0x49: {
-                    core.ppu.object_palette_1 = value;
+                case 0x40:
+                case 0x41:
+                case 0x42:
+                case 0x43:
+                case 0x45:
+                case 0x46:
+                case 0x47:
+                case 0x48:
+                case 0x49:
+                case 0x4A:
+                case 0x4B:
+                case 0x4F:
+                case 0x68:
+                case 0x69:
+                case 0x6A:
+                case 0x6B:
+                case 0x6C: {
+                    core.ppu.write_register(io_address, value);
                     return;
                 }
 
-                case 0x4A: {
-                    core.ppu.window_y = value;
-                    return;
-                }
-                case 0x4B: {
-                    core.ppu.window_x = value;
-                    return;
-                }
                 case 0x4C: {
                     if (bootstrap_mapped) {
                         KEY0 = value;
                     }
-                    break;
+                    return;
                 }
+
                 case 0x4D: {
                     KEY1 &= ~0x1;
                     KEY1 |= value & 0x1;
-                    break;
+                    return;
                 }
-                case 0x4F: {
-                    core.ppu.vram_bank_select = value & 0x1;
-                    break;
-                }
+
                 case 0x50: {
                     bootstrap_mapped = false;
                     return;
                 }
                 case 0x51: {
                     core.dma.set_hdma1(value);
-                    break;
+                    return;
                 }
                 case 0x52: {
                     core.dma.set_hdma2(value);
-                    break;
+                    return;
                 }
                 case 0x53: {
                     core.dma.set_hdma3(value);
-                    break;
+                    return;
                 }
                 case 0x54: {
                     core.dma.set_hdma4(value);
-                    break;
+                    return;
                 }
                 case 0x55: {
                     core.dma.set_dma_control(value);
-                    break;
-                }
-                case 0x68: {
-                    core.ppu.bg_palette_select = value;
-                    break;
-                }
-                case 0x69: {
-                    core.ppu.write_bg_palette(value);
-                    break;
-                }
-                case 0x6A: {
-                    core.ppu.obj_palette_select = value;
-                    break;
-                }
-                case 0x6B: {
-                    core.ppu.write_obj_palette(value);
-                    break;
-                }
-                case 0x6C: {
-                    if (bootstrap_mapped)
-                        core.ppu.object_priority_mode = value & 0x1;
-                    break;
+                    return;
                 }
 
                 case 0x70: {
                     value &= 0x7;
                     wram_bank_num = value ? value : 1;
-                    break;
+                    return;
                 }
                 }
 

@@ -19,24 +19,12 @@
 #pragma once
 #include <cinttypes>
 
-namespace GB
-{
+namespace GB {
     class Core;
 
-    enum class DMAType
-    {
-        GDMA,
-        HDMA
-    };
+    enum class DMAType { GDMA, HDMA };
 
-    class DMAController
-    {
-        Core &core;
-        bool active = false, is_mode0 = false;
-        uint8_t current_length = 0x7F;
-        uint16_t src_address = 0, dst_address = 0;
-        DMAType type = DMAType::GDMA;
-
+    class DMAController {
     public:
         DMAController(Core &core) : core(core) {}
         void reset();
@@ -57,5 +45,11 @@ namespace GB
 
     private:
         void transfer_block();
+
+        Core &core;
+        bool active = false, is_mode0 = false;
+        uint8_t current_length = 0x7F;
+        uint16_t src_address = 0, dst_address = 0;
+        DMAType type = DMAType::GDMA;
     };
 }

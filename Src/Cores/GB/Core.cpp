@@ -39,19 +39,20 @@ namespace GB {
         dma.reset();
 
         if (ready_to_run) {
-            bus.bootstrap_mapped = false;
 
             if (cart->header.cgb_support == 0x80 || cart->header.cgb_support == 0xC0) {
                 bus.KEY0 = cart->header.cgb_support;
-                ppu.object_priority_mode = 0;
+                ppu.write_register(0x6C, 0);
             } else {
                 bus.KEY0 = DISABLE_CGB_FUNCTIONS;
-                ppu.object_priority_mode = 1;
+                ppu.write_register(0x6C, 1);
 
                 ppu.set_compatibility_palette(PaletteID::BG, LCD_GRAY);
                 ppu.set_compatibility_palette(PaletteID::OBJ1, LCD_GRAY);
                 ppu.set_compatibility_palette(PaletteID::OBJ2, LCD_GRAY);
             }
+
+            bus.bootstrap_mapped = false;
 
             cpu.reset(0x0100);
             ppu.set_post_boot_state();
@@ -74,7 +75,7 @@ namespace GB {
 
             if (console == ConsoleType::DMG) {
                 bus.KEY0 = DISABLE_CGB_FUNCTIONS;
-                ppu.object_priority_mode = 1;
+                ppu.write_register(0x6C, 1);
 
                 ppu.set_compatibility_palette(PaletteID::BG, LCD_GRAY);
                 ppu.set_compatibility_palette(PaletteID::OBJ1, LCD_GRAY);

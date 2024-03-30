@@ -28,11 +28,9 @@
 #include <QWindow>
 #include <fmt/format.h>
 
-namespace QtFrontend
-{
+namespace QtFrontend {
     EmulatorThread::EmulatorThread(QObject *parent)
-        : QThread(parent), input_timer(), gb_controller(new GBEmulatorController)
-    {
+        : QThread(parent), input_timer(), gb_controller(new GBEmulatorController) {
         connect(gb_controller, &GBEmulatorController::on_show,
                 dynamic_cast<QOpenGLWidget *>(parent), &QWidget::show);
         connect(gb_controller, &GBEmulatorController::on_hide,
@@ -46,16 +44,14 @@ namespace QtFrontend
         input_timer.start(1);
     }
 
-    EmulatorThread::~EmulatorThread()
-    {
+    EmulatorThread::~EmulatorThread() {
         input_timer.stop();
         stop();
 
         if (!wait(500))
             terminate();
 
-        if (gb_controller)
-        {
+        if (gb_controller) {
             delete gb_controller;
             gb_controller = nullptr;
         }
@@ -63,8 +59,7 @@ namespace QtFrontend
 
     void EmulatorThread::stop() { running = false; }
 
-    void EmulatorThread::run()
-    {
+    void EmulatorThread::run() {
         auto accumulator = std::chrono::nanoseconds::zero();
         auto last_timer_time = std::chrono::steady_clock::now();
         auto last_callback_time = std::chrono::steady_clock::now();
@@ -74,13 +69,11 @@ namespace QtFrontend
         size_t next = 0;
         double current_average = 0;
 
-        while (running)
-        {
+        while (running) {
             using namespace std::chrono_literals;
             QCoreApplication::processEvents();
 
-            if (gb_controller->get_state() != EmulationState::Stopped)
-            {
+            if (gb_controller->get_state() != EmulationState::Stopped) {
                 using namespace std::chrono_literals;
                 auto time_now = std::chrono::steady_clock::now();
                 auto delta = time_now - last_timer_time;
@@ -91,8 +84,7 @@ namespace QtFrontend
                 last_timer_time = time_now;
                 accumulator += delta;
 
-                if (accumulator >= interval)
-                {
+                if (accumulator >= interval) {
                     auto time_now = std::chrono::steady_clock::now();
                     auto delta = time_now - last_callback_time;
                     last_callback_time = time_now;
@@ -100,8 +92,7 @@ namespace QtFrontend
                     samples[next++] = static_cast<double>(
                         std::chrono::duration_cast<std::chrono::microseconds>(delta).count());
 
-                    if (next == samples.size())
-                    {
+                    if (next == samples.size()) {
                         next = 0;
 
                         current_average = std::accumulate(samples.begin(), samples.end(), 0) /
@@ -114,28 +105,25 @@ namespace QtFrontend
                     emit on_update_fps_display(QString::fromStdString(
                         fmt::format("FPS:{} Avg:{:05.2f}ms", fps, current_average)));
 
-                    if (gb_controller->try_run_frame())
-                    {
-                        image_buffer.next_rendering_image() =
-                            gb_controller->get_core().ppu.framebuffer_complete;
+                    if (gb_controller->try_run_frame()) {
+                        auto &image = image_buffer.next_rendering_image();
+                        auto ppu_image = gb_controller->get_core().ppu.framebuffer();
+
+                        std::copy(ppu_image.begin(), ppu_image.end(), image.begin());
 
                         emit update_textures();
                     }
 
                     accumulator -= interval;
                 }
-            }
-            else
-            {
+            } else {
                 accumulator = 0ns;
             }
         }
     }
 
-    void EmulatorThread::update_input()
-    {
-        if (gb_controller)
-        {
+    void EmulatorThread::update_input() {
+        if (gb_controller) {
             std::array<bool, 8> buttons{};
             gb_controller->process_input(buttons);
             emit on_post_input(buttons);
@@ -144,8 +132,7 @@ namespace QtFrontend
 
     EmulatorView::EmulatorView(MainWindow *parent)
         : QOpenGLWidget(parent), thread(new EmulatorThread(this)), window(parent),
-          functions(new GLFunctions)
-    {
+          functions(new GLFunctions) {
         float ratio = static_cast<float>(screen()->devicePixelRatio());
         scaled_width = static_cast<float>(width()) * ratio;
         scaled_height = static_cast<float>(height()) * ratio;
@@ -154,26 +141,22 @@ namespace QtFrontend
         thread->start();
     }
 
-    EmulatorView::~EmulatorView()
-    {
+    EmulatorView::~EmulatorView() {
         thread->stop();
 
-        if (functions)
-        {
+        if (functions) {
             delete functions;
             functions = nullptr;
         }
     }
 
-    void EmulatorView::showEvent(QShowEvent *ev)
-    {
+    void EmulatorView::showEvent(QShowEvent *ev) {
         window->get_reset_action()->setDisabled(false);
         window->get_pause_action()->setDisabled(false);
         window->get_stop_action()->setDisabled(false);
     }
 
-    void EmulatorView::hideEvent(QHideEvent *ev)
-    {
+    void EmulatorView::hideEvent(QHideEvent *ev) {
         window->get_pause_action()->setChecked(false);
 
         window->get_reset_action()->setDisabled(true);
@@ -181,8 +164,7 @@ namespace QtFrontend
         window->get_stop_action()->setDisabled(true);
     }
 
-    void EmulatorView::initializeGL()
-    {
+    void EmulatorView::initializeGL() {
         functions->initializeOpenGLFunctions();
 
         renderer = new Renderer(functions);
@@ -191,15 +173,13 @@ namespace QtFrontend
             texture = functions->create_texture(GB::LCD_WIDTH, GB::LCD_HEIGHT);
     }
 
-    void EmulatorView::resizeGL(int w, int h)
-    {
+    void EmulatorView::resizeGL(int w, int h) {
         float ratio = static_cast<float>(screen()->devicePixelRatio());
         scaled_width = static_cast<float>(w) * ratio;
         scaled_height = static_cast<float>(h) * ratio;
     }
 
-    void EmulatorView::paintGL()
-    {
+    void EmulatorView::paintGL() {
         renderer->reset_state(scaled_width, scaled_height);
 
         const auto use_frame_blending = Common::Config::Current().gameboy.video.frame_blending;
@@ -211,11 +191,9 @@ namespace QtFrontend
 
         renderer->draw_image(textures[0], final_x, 0, final_width, final_height);
 
-        if (use_frame_blending)
-        {
+        if (use_frame_blending) {
             float alpha = 0.5f;
-            for (size_t i = 1; i < textures.size(); ++i)
-            {
+            for (size_t i = 1; i < textures.size(); ++i) {
                 auto fbtexture = textures[i];
                 auto color = Color{1.0f, 1.0f, 1.0f, alpha};
                 renderer->draw_image(fbtexture, final_x, 0, final_width, final_height, color);
@@ -223,8 +201,7 @@ namespace QtFrontend
         }
     }
 
-    void EmulatorView::connect_slots()
-    {
+    void EmulatorView::connect_slots() {
         connect(thread, &EmulatorThread::on_update_fps_display, window->get_fps_counter(),
                 &QLabel::setText);
 
@@ -249,14 +226,11 @@ namespace QtFrontend
                 &GBEmulatorController::start_rom);
     }
 
-    void EmulatorView::update_textures()
-    {
+    void EmulatorView::update_textures() {
         const auto &config = Common::Config::Current().gameboy.video;
 
-        if (config.frame_blending)
-        {
-            for (size_t i = (framebuffers.size() - 1); i > 0; --i)
-            {
+        if (config.frame_blending) {
+            for (size_t i = (framebuffers.size() - 1); i > 0; --i) {
                 framebuffers[i] = framebuffers[i - 1];
 
                 functions->update_texture_data(textures[i], GB::LCD_WIDTH, GB::LCD_HEIGHT,
