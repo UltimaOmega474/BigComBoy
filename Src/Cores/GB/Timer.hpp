@@ -19,36 +19,30 @@
 #pragma once
 #include <cinttypes>
 
-namespace GB
-{
+namespace GB {
     class Core;
 
-    class Timer
-    {
-        Core &core;
-        uint16_t div_cycles = 0;
-
+    class Timer {
     public:
-        uint8_t tima = 0;
-        uint8_t tma = 0;
-        uint8_t tac = 0;
-        uint32_t tac_rate = 0;
+        Timer(Core *core);
 
-        Timer(Core &core);
+        bool timer_enabled() const;
+        void write_register(uint8_t reg, uint8_t value);
+        uint8_t read_register(uint8_t reg);
         void reset();
+        void update(uint32_t cycles);
+
+    private:
         void set_tac(uint8_t rate);
         void reset_div();
         uint8_t read_div();
-        void update(uint32_t addCycles);
-
-        bool timer_enabled() const;
         void change_div(uint16_t new_div);
 
-    private:
+        Core *core;
+        uint8_t tima = 0;
+        uint8_t tma = 0;
+        uint8_t tac = 0;
+        uint16_t tac_rate = 0;
+        uint16_t div_cycles = 0;
     };
-
-    constexpr bool EdgeFell(uint16_t previous, uint16_t next, uint16_t mask)
-    {
-        return (previous & mask) && (!(next & mask));
-    }
 }

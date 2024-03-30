@@ -22,7 +22,7 @@
 #include <fstream>
 
 namespace GB {
-    Core::Core() : bus(*this), ppu(bus), timer(*this), cpu(this, &bus), dma(*this) {}
+    Core::Core() : bus(*this), ppu(bus), timer(this), cpu(this, &bus), dma(*this) {}
 
     void Core::initialize(Cartridge *cart) {
         if (!cart) {
