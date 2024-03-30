@@ -1,7 +1,7 @@
 BasedOnStyle: LLVM
 IndentWidth: 4
 AllowShortLambdasOnASingleLine: Inline
-BreakBeforeBraces: Allman
+#BreakBeforeBraces: Allman
 AccessModifierOffset: -4
 NamespaceIndentation: All
 FixNamespaceComments: false

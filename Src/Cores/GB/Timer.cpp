@@ -19,20 +19,17 @@
 #include "Timer.hpp"
 #include "Core.hpp"
 
-namespace GB
-{
+namespace GB {
     Timer::Timer(Core &core) : core(core) { set_tac(0); }
 
-    void Timer::reset()
-    {
+    void Timer::reset() {
         div_cycles = 0xAB00;
         tima = 0;
         tma = 0;
         set_tac(0xF8);
     }
 
-    void Timer::set_tac(uint8_t rate)
-    {
+    void Timer::set_tac(uint8_t rate) {
         constexpr uint32_t tac_table[4] = {512, 8, 32, 128};
 
         tac_rate = tac_table[rate & 0x3];
@@ -43,32 +40,24 @@ namespace GB
 
     uint8_t Timer::read_div() { return div_cycles >> 8; }
 
-    void Timer::update(uint32_t cycles)
-    {
-        if (core.cpu.stopped)
-        {
+    void Timer::update(uint32_t cycles) {
+        if (core.cpu.stopped()) {
             change_div(0);
-        }
-        else
-        {
+        } else {
             change_div(div_cycles + cycles);
         }
     }
 
     bool Timer::timer_enabled() const { return tac & 0b100; }
 
-    void Timer::change_div(uint16_t new_div)
-    {
-        if (EdgeFell(div_cycles >> 8, new_div >> 8, core.cpu.double_speed ? 0b100000 : 0b10000))
-        {
+    void Timer::change_div(uint16_t new_div) {
+        if (EdgeFell(div_cycles >> 8, new_div >> 8, core.cpu.double_speed() ? 0b100000 : 0b10000)) {
             core.apu.step_frame_sequencer();
         }
 
-        if (timer_enabled() && EdgeFell(div_cycles, new_div, tac_rate))
-        {
+        if (timer_enabled() && EdgeFell(div_cycles, new_div, tac_rate)) {
             ++tima;
-            if (tima == 0)
-            {
+            if (tima == 0) {
                 tima = tma;
                 core.bus.request_interrupt(0x04);
             }

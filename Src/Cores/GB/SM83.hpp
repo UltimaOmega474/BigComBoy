@@ -20,13 +20,11 @@
 #include <array>
 #include <cinttypes>
 
-namespace GB
-{
+namespace GB {
     class Core;
     class MainBus;
 
-    enum class Register
-    {
+    enum class Register {
         B = 0,
         C = 1,
         D = 2,
@@ -39,8 +37,7 @@ namespace GB
         U8 = 8, // for ALU opcodes that take an immediate value
     };
 
-    enum class RegisterPair
-    {
+    enum class RegisterPair {
         BC,
         DE,
         HL,
@@ -53,37 +50,27 @@ namespace GB
     constexpr uint8_t FLAG_HC = 32;
     constexpr uint8_t FLAG_CY = 16;
 
-    class SM83
-    {
-        using opcode_function = void (SM83::*)();
-        Core &core;
-        MainBus &bus;
-
+    class SM83 {
     public:
-        bool master_interrupt_enable = true, double_speed = false;
-        bool halted = false, stopped = false, ei_delay = false;
         uint8_t interrupt_flag = 0, interrupt_enable = 0;
-        uint16_t sp = 0xFFFE, pc = 0;
-        std::array<uint8_t, 8> registers{};
 
-        SM83(Core &core, MainBus &bus);
+        SM83(Core *core, MainBus *bus);
 
+        bool stopped() const;
+        bool double_speed() const;
         void reset(uint16_t new_pc);
         void step();
-        void service_interrupts();
 
     private:
+        void service_interrupts();
+
         uint8_t read(uint16_t address);
         uint16_t read_uint16(uint16_t address);
         void write(uint16_t address, uint8_t value);
         void write_uint16(uint16_t address, uint16_t value);
 
-        static std::array<SM83::opcode_function, 256> gen_optable();
-        static std::array<SM83::opcode_function, 256> gen_cb_optable();
-        std::array<opcode_function, 256> opcodes, cb_opcodes;
         void push_sp(uint16_t value);
         uint16_t pop_sp();
-
         void set_flags(uint8_t flags, bool set);
         bool get_flag(uint8_t flag) const;
         uint16_t get_rp(RegisterPair index) const;
@@ -160,6 +147,26 @@ namespace GB
         template <uint8_t bit, Register r> void op_bit();
         template <uint8_t bit, Register r> void op_res();
         template <uint8_t bit, Register r> void op_set();
+
+        using opcode_function = void (SM83::*)();
+
+        static std::array<SM83::opcode_function, 256> gen_optable();
+        static std::array<SM83::opcode_function, 256> gen_cb_optable();
+
+        Core *core;
+        MainBus *bus;
+
+        bool master_interrupt_enable_ = true;
+        bool halted_ = false;
+        bool ei_delay_ = false;
+        bool stopped_ = false;
+        bool double_speed_ = false;
+
+        uint16_t sp = 0xFFFF, pc = 0;
+        std::array<uint8_t, 8> registers{};
+
+        std::array<opcode_function, 256> opcodes;
+        std::array<opcode_function, 256> cb_opcodes;
     };
 
 }

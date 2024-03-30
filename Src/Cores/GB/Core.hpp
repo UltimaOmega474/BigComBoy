@@ -29,13 +29,8 @@
 #include <filesystem>
 #include <vector>
 
-namespace GB
-{
-    class Core
-    {
-        uint32_t cycle_count = 0;
-        bool ready_to_run = false;
-        std::vector<uint8_t> bootstrap{};
+namespace GB {
+    class Core {
 
     public:
         Gamepad pad;
@@ -50,12 +45,16 @@ namespace GB
         void initialize(Cartridge *cart);
         void initialize_with_bootstrap(Cartridge *cart, ConsoleType console,
                                        std::filesystem::path bootstrap_path);
-        void run_for_frames(uint32_t frames);
-        void run_for_cycles(uint32_t cycles);
+        void run_for_frames(int32_t frames);
+        void run_for_cycles(int32_t cycles);
         void tick_subcomponents(uint8_t cycles);
         void load_bootstrap(std::filesystem::path path);
 
         uint8_t read_bootrom(uint16_t address);
-    };
 
+    private:
+        bool ready_to_run = false;
+        int32_t cycle_count = 0;
+        std::vector<uint8_t> bootstrap{};
+    };
 }
