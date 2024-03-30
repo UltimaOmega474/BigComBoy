@@ -18,92 +18,96 @@
 
 #include "Pad.hpp"
 
-namespace GB
-{
-    void Gamepad::reset()
-    {
+namespace GB {
+    void Gamepad::reset() {
         dpad = action = 0xFF;
         mode = 0;
     }
 
     void Gamepad::clear_buttons() { dpad = action = 0xFF; }
 
-    void Gamepad::set_pad_state(PadButton btn, bool pressed)
-    {
-        if (pressed)
-        {
-            switch (btn)
-            {
-            case PadButton::Right:
+    void Gamepad::set_pad_state(PadButton btn, bool pressed) {
+        if (pressed) {
+            switch (btn) {
+            case PadButton::Right: {
                 dpad &= ~0x1;
                 break;
-            case PadButton::Left:
+            }
+            case PadButton::Left: {
                 dpad &= ~0x2;
                 break;
-            case PadButton::Up:
+            }
+            case PadButton::Up: {
                 dpad &= ~0x4;
                 break;
-            case PadButton::Down:
+            }
+            case PadButton::Down: {
                 dpad &= ~0x8;
                 break;
+            }
 
-            case PadButton::A:
+            case PadButton::A: {
                 action &= ~0x1;
                 break;
-            case PadButton::B:
+            }
+            case PadButton::B: {
                 action &= ~0x2;
                 break;
-            case PadButton::Select:
+            }
+            case PadButton::Select: {
                 action &= ~0x4;
                 break;
-            case PadButton::Start:
+            }
+            case PadButton::Start: {
                 action &= ~0x8;
                 break;
             }
-        }
-        else
-        {
-            switch (btn)
-            {
-            case PadButton::Right:
+            }
+        } else {
+            switch (btn) {
+            case PadButton::Right: {
                 dpad |= 0x1;
                 break;
-            case PadButton::Left:
+            }
+            case PadButton::Left: {
                 dpad |= 0x2;
                 break;
-            case PadButton::Up:
+            }
+            case PadButton::Up: {
                 dpad |= 0x4;
                 break;
-            case PadButton::Down:
+            }
+            case PadButton::Down: {
                 dpad |= 0x8;
                 break;
+            }
 
-            case PadButton::A:
+            case PadButton::A: {
                 action |= 0x1;
                 break;
-            case PadButton::B:
+            }
+            case PadButton::B: {
                 action |= 0x2;
                 break;
-            case PadButton::Select:
+            }
+            case PadButton::Select: {
                 action |= 0x4;
                 break;
-            case PadButton::Start:
+            }
+            case PadButton::Start: {
                 action |= 0x8;
                 break;
+            }
             }
         }
     }
 
     void Gamepad::select_button_mode(uint8_t value) { mode = value; }
 
-    uint8_t Gamepad::get_pad_state()
-    {
-        if (mode & 0x10)
-        {
+    uint8_t Gamepad::get_pad_state() {
+        if (mode & 0x10) {
             return action;
-        }
-        else
-        {
+        } else {
             return dpad;
         }
     }
