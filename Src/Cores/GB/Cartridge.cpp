@@ -20,30 +20,30 @@
 #include "Constants.hpp"
 #include <fstream>
 
-namespace GB
-{
-    Cartridge::Cartridge(CartHeader &&header) : header(std::move(header)) {}
+namespace GB {
+    Cartridge::Cartridge(CartHeader &&header) : header_(std::move(header)) {}
 
-    std::unique_ptr<Cartridge> Cartridge::from_file(std::filesystem::path rom_path)
-    {
+    const CartHeader &Cartridge::header() const { return header_; }
+
+    std::unique_ptr<Cartridge> Cartridge::from_file(std::filesystem::path rom_path) {
         return std::unique_ptr<Cartridge>(from_file_raw_ptr(std::move(rom_path)));
     }
 
-    Cartridge *Cartridge::from_file_raw_ptr(std::filesystem::path rom_path)
-    {
-        if (!std::filesystem::exists(rom_path))
+    Cartridge *Cartridge::from_file_raw_ptr(std::filesystem::path rom_path) {
+        if (!std::filesystem::exists(rom_path)) {
             return nullptr;
+        }
 
         CartHeader header{};
         header.file_path = std::move(rom_path);
         std::ifstream rom(header.file_path, std::ios::binary | std::ios::ate);
-        if (rom)
-        {
+        if (rom) {
 
             size_t rom_len = rom.tellg();
 
-            if (rom_len < 0x14F)
-                return {};
+            if (rom_len < 0x14F) {
+                return nullptr;
+            }
 
             rom.seekg(0x134);
 
@@ -66,11 +66,10 @@ namespace GB
             rom.read(reinterpret_cast<char *>(&header.checksum), 2);
 
             Cartridge *mbc = nullptr;
-            switch (header.mbc_type)
-            {
+            switch (header.mbc_type) {
             case 0x00: // ROM ONLY
             {
-                mbc = new ROMOnly(std::move(header));
+                mbc = new ROM(std::move(header));
                 break;
             }
             case 0x01: // MBC1
@@ -109,8 +108,7 @@ namespace GB
             }
             }
 
-            if (mbc)
-            {
+            if (mbc) {
                 mbc->init_banks(rom);
                 mbc->load_sram_from_file();
                 rom.close();
@@ -121,10 +119,11 @@ namespace GB
         return nullptr;
     }
 
-    ROMOnly::ROMOnly(CartHeader &&header) : Cartridge(std::move(header)), rom() {}
+    ROM::ROM(CartHeader &&header) : Cartridge(std::move(header)), rom() {}
 
-    void ROMOnly::init_banks(std::ifstream &rom_stream)
-    {
+    void ROM::reset() {}
+
+    void ROM::init_banks(std::ifstream &rom_stream) {
         rom_stream.seekg(0, std::ios::end);
 
         rom.resize(rom_stream.tellg());
@@ -133,20 +132,33 @@ namespace GB
         rom_stream.read(reinterpret_cast<char *>(rom.data()), rom.size());
     }
 
-    uint8_t ROMOnly::read(uint16_t address) { return rom[address]; }
+    uint8_t ROM::read(uint16_t address) { return rom[address]; }
 
-    void ROMOnly::write(uint16_t address, uint8_t value) {}
+    void ROM::write(uint16_t address, uint8_t value) {}
 
-    uint8_t ROMOnly::read_ram(uint16_t address) { return 0xFF; }
+    uint8_t ROM::read_ram(uint16_t address) { return 0xFF; }
 
-    void ROMOnly::write_ram(uint16_t address, uint8_t value) {}
+    void ROM::write_ram(uint16_t address, uint8_t value) {}
+
+    void ROM::save_sram_to_file() {}
+
+    void ROM::load_sram_from_file() {}
+
+    void ROM::tick(uint32_t cycles) {}
 
     MBC1::MBC1(CartHeader &&header) : Cartridge(std::move(header)), eram() { eram.fill(0); }
 
-    bool MBC1::has_battery() const { return header.mbc_type == 3; }
+    bool MBC1::has_battery() const { return header_.mbc_type == 3; }
 
-    void MBC1::init_banks(std::ifstream &rom_stream)
-    {
+    void MBC1::reset() {
+        mode = 0;
+        rom_bank_num = 1;
+        bank_upper_bits = 0;
+        ram_enabled = false;
+        eram.fill(0);
+    }
+
+    void MBC1::init_banks(std::ifstream &rom_stream) {
         rom_stream.seekg(0, std::ios::end);
         auto rom_len = rom_stream.tellg();
         rom_stream.seekg(0);
@@ -156,12 +168,10 @@ namespace GB
         rom_stream.read(reinterpret_cast<char *>(rom.data()), rom_len);
     }
 
-    uint8_t MBC1::read(uint16_t address)
-    {
+    uint8_t MBC1::read(uint16_t address) {
         uint32_t bank_num = (bank_upper_bits << 5);
 
-        if (address < 0x4000)
-        {
+        if (address < 0x4000) {
             bank_num = bank_num % (rom.size() / 0x4000);
             return rom[(mode ? (bank_num * 0x4000) : 0) + address];
         }
@@ -172,94 +182,84 @@ namespace GB
         return rom[(bank_num * 0x4000) + (address & 0x3FFF)];
     }
 
-    void MBC1::write(uint16_t address, uint8_t value)
-    {
-        switch (address >> 12)
-        {
+    void MBC1::write(uint16_t address, uint8_t value) {
+        switch (address >> 12) {
         case 0x0:
-        case 0x1:
-        {
+        case 0x1: {
             ram_enabled = (value & 0xF) == 0xA;
             break;
         }
         case 0x2:
-        case 0x3:
-        {
+        case 0x3: {
             rom_bank_num = value & 0x1F;
-            if (rom_bank_num == 0)
+            if (rom_bank_num == 0) {
                 rom_bank_num = 1;
+            }
             break;
         }
 
         case 0x4:
-        case 0x5:
-        {
-            if (mode)
-            {
-                if (header.ram_size == Ram32KB)
-                {
+        case 0x5: {
+            if (mode) {
+                if (header_.ram_size == Ram32KB) {
                     bank_upper_bits = value & 0x3;
                 }
             }
 
-            if (header.rom_size >= Rom1MB)
-            {
+            if (header_.rom_size >= Rom1MB) {
                 bank_upper_bits = (value & 0x3);
             }
             break;
         }
 
         case 0x6:
-        case 0x7:
-        {
+        case 0x7: {
             mode = value & 0x1;
             break;
         }
         }
     }
 
-    uint8_t MBC1::read_ram(uint16_t address)
-    {
-        if (ram_enabled)
+    uint8_t MBC1::read_ram(uint16_t address) {
+        if (ram_enabled) {
             return eram[(mode ? (bank_upper_bits * 0x2000) : 0) + address];
+        }
 
         return 0xFF;
     }
 
-    void MBC1::write_ram(uint16_t address, uint8_t value)
-    {
-        if (ram_enabled)
+    void MBC1::write_ram(uint16_t address, uint8_t value) {
+        if (ram_enabled) {
             eram[(mode ? (bank_upper_bits * 0x2000) : 0) + address] = value;
+        }
     }
 
-    void MBC1::save_sram_to_file()
-    {
-        if (!has_battery())
+    void MBC1::save_sram_to_file() {
+        if (!has_battery()) {
             return;
+        }
 
-        std::filesystem::path path = header.file_path;
+        std::filesystem::path path = header_.file_path;
         path += ".sram";
 
         std::ofstream sram(path, std::ios::binary);
-        if (sram)
-        {
+        if (sram) {
             sram.write(reinterpret_cast<char *>(eram.data()),
                        static_cast<std::streamsize>(eram.size()));
             sram.close();
         }
     }
 
-    void MBC1::load_sram_from_file()
-    {
-        if (!has_battery())
+    void MBC1::load_sram_from_file() {
+        if (!has_battery()) {
             return;
+        }
 
-        std::filesystem::path path = header.file_path;
+        std::filesystem::path path = header_.file_path;
         path += ".sram";
 
         std::ifstream sram(path, std::ios::binary | std::ios::ate);
-        if (sram)
-        {
+        if (sram) {
             auto len = sram.tellg();
 
             sram.seekg(0);
@@ -269,12 +269,19 @@ namespace GB
         }
     }
 
+    void MBC1::tick(uint32_t cycles) {}
+
     MBC2::MBC2(CartHeader &&header) : Cartridge(std::move(header)) {}
 
-    bool MBC2::has_battery() const { return header.mbc_type == 6; }
+    bool MBC2::has_battery() const { return header_.mbc_type == 6; }
 
-    void MBC2::init_banks(std::ifstream &rom_stream)
-    {
+    void MBC2::reset() {
+        rom_bank_num = 1;
+        ram_enabled = false;
+        ram.fill(0);
+    }
+
+    void MBC2::init_banks(std::ifstream &rom_stream) {
         rom_stream.seekg(0, std::ios::end);
         auto rom_len = rom_stream.tellg();
         rom_stream.seekg(0);
@@ -284,10 +291,8 @@ namespace GB
         rom_stream.read(reinterpret_cast<char *>(rom.data()), rom_len);
     }
 
-    uint8_t MBC2::read(uint16_t address)
-    {
-        if (address < 0x4000)
-        {
+    uint8_t MBC2::read(uint16_t address) {
+        if (address < 0x4000) {
             return rom[address];
         }
 
@@ -296,66 +301,62 @@ namespace GB
         return rom[(bank * 0x4000) + (address & 0x3FFF)];
     }
 
-    void MBC2::write(uint16_t address, uint8_t value)
-    {
-        if (address < 0x4000)
-        {
-            if (address & 0x100)
-            {
+    void MBC2::write(uint16_t address, uint8_t value) {
+        if (address < 0x4000) {
+            if (address & 0x100) {
+
                 rom_bank_num = value & 0xF;
-                if (rom_bank_num == 0)
+
+                if (rom_bank_num == 0) {
                     rom_bank_num = 1;
-            }
-            else
-            {
+                }
+            } else {
                 // ram enable
                 ram_enabled = (value & 0xF) == 0xA;
             }
         }
     }
 
-    uint8_t MBC2::read_ram(uint16_t address)
-    {
-        if (ram_enabled)
+    uint8_t MBC2::read_ram(uint16_t address) {
+        if (ram_enabled) {
             return (ram[address & 0x01FF] & 0xF) | 0xF0;
+        }
 
         return 0xFF;
     }
 
-    void MBC2::write_ram(uint16_t address, uint8_t value)
-    {
-        if (ram_enabled)
+    void MBC2::write_ram(uint16_t address, uint8_t value) {
+        if (ram_enabled) {
             ram[address & 0x01FF] = value & 0xF;
+        }
     }
 
-    void MBC2::save_sram_to_file()
-    {
-        if (!has_battery())
+    void MBC2::save_sram_to_file() {
+        if (!has_battery()) {
             return;
+        }
 
-        std::filesystem::path path = header.file_path;
+        std::filesystem::path path = header_.file_path;
         path += ".sram";
 
         std::ofstream sram(path, std::ios::binary);
-        if (sram)
-        {
+        if (sram) {
             sram.write(reinterpret_cast<char *>(ram.data()),
                        static_cast<std::streamsize>(ram.size()));
             sram.close();
         }
     }
 
-    void MBC2::load_sram_from_file()
-    {
-        if (!has_battery())
+    void MBC2::load_sram_from_file() {
+        if (!has_battery()) {
             return;
+        }
 
-        std::filesystem::path path = header.file_path;
+        std::filesystem::path path = header_.file_path;
         path += ".sram";
 
         std::ifstream sram(path, std::ios::binary | std::ios::ate);
-        if (sram)
-        {
+        if (sram) {
             auto len = sram.tellg();
 
             sram.seekg(0);
@@ -365,31 +366,28 @@ namespace GB
         }
     }
 
+    void MBC2::tick(uint32_t cycles) {}
+
     RTCCounter::RTCCounter(uint8_t bit_mask) : mask(bit_mask) {}
 
     uint8_t RTCCounter::get() const { return counter; }
 
-    void RTCCounter::set(uint8_t value)
-    {
+    void RTCCounter::set(uint8_t value) {
         counter = value;
         counter &= mask;
     }
 
-    void RTCCounter::increment()
-    {
+    void RTCCounter::increment() {
         counter++;
         counter &= mask;
     }
 
     MBC3::MBC3(CartHeader &&header) : Cartridge(std::move(header)) {}
 
-    bool MBC3::has_rtc() const
-    {
-        switch (header.mbc_type)
-        {
-        case 0x0F: // MBC3+TIMER+BATTERY
-        case 0x10: // MBC3+TIMER+RAM+BATTERY
-        {
+    bool MBC3::has_rtc() const {
+        switch (header_.mbc_type) {
+        case 0x0F:   // MBC3+TIMER+BATTERY
+        case 0x10: { // MBC3+TIMER+RAM+BATTERY
             return true;
         }
         }
@@ -397,22 +395,30 @@ namespace GB
         return false;
     }
 
-    bool MBC3::has_battery() const
-    {
-        switch (header.mbc_type)
-        {
-        case 0x0F: // MBC3+TIMER+BATTERY
-        case 0x10: // MBC3+TIMER+RAM+BATTERY
-        case 0x13: // MBC3+RAM+BATTERY
-        {
+    bool MBC3::has_battery() const {
+        switch (header_.mbc_type) {
+        case 0x0F:   // MBC3+TIMER+BATTERY
+        case 0x10:   // MBC3+TIMER+RAM+BATTERY
+        case 0x13: { // MBC3+RAM+BATTERY
             return true;
         }
         }
         return false;
     }
 
-    void MBC3::init_banks(std::ifstream &rom_stream)
-    {
+    void MBC3::reset() {
+        rom_bank_num = 1;
+        ram_rtc_select = 0;
+        ram_rtc_enabled = false;
+        eram.fill(0);
+        latch_byte = 0;
+        rtc_cycles = 0;
+        rtc = RTCTimePoint{};
+        shadow_rtc = RTCTimePoint{};
+        rtc_ctrl = 0;
+    }
+
+    void MBC3::init_banks(std::ifstream &rom_stream) {
         rom_stream.seekg(0, std::ios::end);
         auto rom_len = rom_stream.tellg();
         rom_stream.seekg(0);
@@ -422,45 +428,41 @@ namespace GB
         rom_stream.read(reinterpret_cast<char *>(rom.data()), rom_len);
     }
 
-    uint8_t MBC3::read(uint16_t address)
-    {
-        if (address < 0x4000)
+    uint8_t MBC3::read(uint16_t address) {
+        if (address < 0x4000) {
             return rom[address];
+        }
 
         return rom[(rom_bank_num * 0x4000) + (address & 0x3FFF)];
     }
 
-    void MBC3::write(uint16_t address, uint8_t value)
-    {
-        switch (address >> 12)
-        {
+    void MBC3::write(uint16_t address, uint8_t value) {
+        switch (address >> 12) {
         case 0x0:
-        case 0x1:
-        {
+        case 0x1: {
             ram_rtc_enabled = (value & 0xF) == 0xA;
             break;
         }
         case 0x2:
-        case 0x3:
-        {
+        case 0x3: {
             rom_bank_num = value; // MBC3 carts will access banks 1-7F, MBC30 1-FF
-            if (rom_bank_num == 0)
+            if (rom_bank_num == 0) {
                 rom_bank_num = 1;
+            }
             break;
         }
 
         case 0x4:
-        case 0x5:
-        {
+        case 0x5: {
             ram_rtc_select = value;
             break;
         }
 
         case 0x6:
-        case 0x7:
-        {
-            if ((latch_byte == 0) && (value == 1))
+        case 0x7: {
+            if ((latch_byte == 0) && (value == 1)) {
                 shadow_rtc = rtc;
+            }
 
             latch_byte = value;
             break;
@@ -468,11 +470,9 @@ namespace GB
         }
     }
 
-    uint8_t MBC3::read_ram(uint16_t address)
-    {
+    uint8_t MBC3::read_ram(uint16_t address) {
 
-        switch (ram_rtc_select)
-        {
+        switch (ram_rtc_select) {
         case 0x0:
         case 0x1:
         case 0x2:
@@ -480,31 +480,26 @@ namespace GB
         case 0x4: // MBC30 carts will access banks 0-7
         case 0x5:
         case 0x6:
-        case 0x7:
-        {
-            if (ram_rtc_enabled)
+        case 0x7: {
+            if (ram_rtc_enabled) {
                 return eram[(ram_rtc_select * 0x2000) + address];
+            }
 
             break;
         }
-        case 0x8:
-        {
+        case 0x8: {
             return shadow_rtc.seconds.get();
         }
-        case 0x9:
-        {
+        case 0x9: {
             return shadow_rtc.minutes.get();
         }
-        case 0xA:
-        {
+        case 0xA: {
             return shadow_rtc.hours.get();
         }
-        case 0xB:
-        {
+        case 0xB: {
             return static_cast<uint8_t>(shadow_rtc.days & 0xFF);
         }
-        case 0xC:
-        {
+        case 0xC: {
             uint32_t a = rtc_ctrl | ((shadow_rtc.days & 0x100) ? 1 : 0);
 
             return a;
@@ -513,10 +508,8 @@ namespace GB
         return 0xFF;
     }
 
-    void MBC3::write_ram(uint16_t address, uint8_t value)
-    {
-        switch (ram_rtc_select)
-        {
+    void MBC3::write_ram(uint16_t address, uint8_t value) {
+        switch (ram_rtc_select) {
         case 0x0:
         case 0x1:
         case 0x2:
@@ -524,36 +517,31 @@ namespace GB
         case 0x4: // MBC30 carts will access banks 0-7
         case 0x5:
         case 0x6:
-        case 0x7:
-        {
-            if (ram_rtc_enabled)
+        case 0x7: {
+            if (ram_rtc_enabled) {
                 eram[(ram_rtc_select * 0x2000) + address] = value;
+            }
             break;
         }
-        case 0x8:
-        {
+        case 0x8: {
             rtc_cycles = 0;
             rtc.seconds.set(value);
             break;
         }
-        case 0x9:
-        {
+        case 0x9: {
             rtc.minutes.set(value);
             break;
         }
-        case 0xA:
-        {
+        case 0xA: {
             rtc.hours.set(value);
             break;
         }
-        case 0xB:
-        {
+        case 0xB: {
             rtc.days &= ~0xFF;
             rtc.days |= value;
             break;
         }
-        case 0xC:
-        {
+        case 0xC: {
             rtc_ctrl = value & 0xC0;
 
             rtc.days &= ~0x100;
@@ -563,34 +551,32 @@ namespace GB
         }
     }
 
-    void MBC3::save_sram_to_file()
-    {
-        if (!has_battery())
+    void MBC3::save_sram_to_file() {
+        if (!has_battery()) {
             return;
+        }
 
-        std::filesystem::path path = header.file_path;
+        std::filesystem::path path = header_.file_path;
         path += ".sram";
 
         std::ofstream sram(path, std::ios::binary);
-        if (sram)
-        {
+        if (sram) {
             sram.write(reinterpret_cast<char *>(eram.data()),
                        static_cast<std::streamsize>(eram.size()));
             sram.close();
         }
     }
 
-    void MBC3::load_sram_from_file()
-    {
-        if (!has_battery())
+    void MBC3::load_sram_from_file() {
+        if (!has_battery()) {
             return;
+        }
 
-        std::filesystem::path path = header.file_path;
+        std::filesystem::path path = header_.file_path;
         path += ".sram";
 
         std::ifstream sram(path, std::ios::binary | std::ios::ate);
-        if (sram)
-        {
+        if (sram) {
             auto len = sram.tellg();
 
             sram.seekg(0);
@@ -600,34 +586,27 @@ namespace GB
         }
     }
 
-    void MBC3::tick(uint32_t cycles)
-    {
-        if (has_rtc() && !(rtc_ctrl & 64))
-        {
+    void MBC3::tick(uint32_t cycles) {
+        if (has_rtc() && !(rtc_ctrl & 64)) {
             rtc_cycles += cycles;
 
-            if (rtc_cycles == CPU_CLOCK_RATE)
-            {
+            if (rtc_cycles == CPU_CLOCK_RATE) {
                 rtc_cycles = 0;
                 rtc.seconds.increment();
 
-                if (rtc.seconds.get() == 60)
-                {
+                if (rtc.seconds.get() == 60) {
                     rtc.seconds.set(0);
                     rtc.minutes.increment();
 
-                    if (rtc.minutes.get() == 60)
-                    {
+                    if (rtc.minutes.get() == 60) {
                         rtc.minutes.set(0);
                         rtc.hours.increment();
 
-                        if (rtc.hours.get() == 24)
-                        {
+                        if (rtc.hours.get() == 24) {
                             rtc.hours.set(0);
                             rtc.days++;
 
-                            if (rtc.days == 512)
-                            {
+                            if (rtc.days == 512) {
                                 rtc.days = 0;
                                 rtc_ctrl |= 128;
                             }
@@ -638,15 +617,12 @@ namespace GB
         }
     }
 
-    MBC5::MBC5(CartHeader &&header) : Cartridge(std::move(header)), eram() { eram.fill(0); }
+    MBC5::MBC5(CartHeader &&header) : Cartridge(std::move(header)) {}
 
-    bool MBC5::has_battery() const
-    {
-        switch (header.mbc_type)
-        {
-        case 0x1B: // MBC5+RAM+BATTERY
-        case 0x1E: // MBC5+RUMBLE+RAM+BATTERY
-        {
+    bool MBC5::has_battery() const {
+        switch (header_.mbc_type) {
+        case 0x1B:   // MBC5+RAM+BATTERY
+        case 0x1E: { // MBC5+RUMBLE+RAM+BATTERY
             return true;
         }
         }
@@ -654,8 +630,15 @@ namespace GB
         return false;
     }
 
-    void MBC5::init_banks(std::ifstream &rom_stream)
-    {
+    void MBC5::reset() {
+        rom_bank_num = 1;
+        bank_upper_bits = 0;
+        ram_bank_num = 0;
+        ram_enabled = false;
+        eram.fill(0);
+    }
+
+    void MBC5::init_banks(std::ifstream &rom_stream) {
         rom_stream.seekg(0, std::ios::end);
         auto rom_len = rom_stream.tellg();
         rom_stream.seekg(0);
@@ -665,90 +648,82 @@ namespace GB
         rom_stream.read(reinterpret_cast<char *>(rom.data()), rom_len);
     }
 
-    uint8_t MBC5::read(uint16_t address)
-    {
+    uint8_t MBC5::read(uint16_t address) {
         uint32_t bank_num = rom_bank_num | bank_upper_bits;
 
-        if (address < 0x4000)
+        if (address < 0x4000) {
             return rom[address];
+        }
 
         bank_num = bank_num % (rom.size() / 0x4000);
 
         return rom[(bank_num * 0x4000) + (address & 0x3FFF)];
     }
 
-    void MBC5::write(uint16_t address, uint8_t value)
-    {
-        switch (address >> 12)
-        {
+    void MBC5::write(uint16_t address, uint8_t value) {
+        switch (address >> 12) {
         case 0x0:
-        case 0x1:
-        {
+        case 0x1: {
             ram_enabled = (value & 0xF) == 0xA;
             break;
         }
-        case 0x2:
-        {
+        case 0x2: {
             rom_bank_num = value;
             break;
         }
-        case 0x3:
-        {
+        case 0x3: {
             bank_upper_bits = (value & 0x1) << 8;
             break;
         }
 
         case 0x4:
-        case 0x5:
-        {
+        case 0x5: {
             ram_bank_num = value & 0xF;
             break;
         }
         }
     }
 
-    uint8_t MBC5::read_ram(uint16_t address)
-    {
-        if (ram_enabled)
+    uint8_t MBC5::read_ram(uint16_t address) {
+        if (ram_enabled) {
             return eram[(ram_bank_num * 0x2000) + address];
+        }
 
         return 0xFF;
     }
 
-    void MBC5::write_ram(uint16_t address, uint8_t value)
-    {
-        if (ram_enabled)
+    void MBC5::write_ram(uint16_t address, uint8_t value) {
+        if (ram_enabled) {
             eram[(ram_bank_num * 0x2000) + address] = value;
+        }
     }
 
-    void MBC5::save_sram_to_file()
-    {
-        if (!has_battery())
+    void MBC5::save_sram_to_file() {
+        if (!has_battery()) {
             return;
+        }
 
-        std::filesystem::path path = header.file_path;
+        std::filesystem::path path = header_.file_path;
         path += ".sram";
 
         std::ofstream sram(path, std::ios::binary);
-        if (sram)
-        {
+        if (sram) {
             sram.write(reinterpret_cast<char *>(eram.data()),
                        static_cast<std::streamsize>(eram.size()));
             sram.close();
         }
     }
 
-    void MBC5::load_sram_from_file()
-    {
-        if (!has_battery())
+    void MBC5::load_sram_from_file() {
+        if (!has_battery()) {
             return;
+        }
 
-        std::filesystem::path path = header.file_path;
+        std::filesystem::path path = header_.file_path;
         path += ".sram";
 
         std::ifstream sram(path, std::ios::binary | std::ios::ate);
-        if (sram)
-        {
+        if (sram) {
             auto len = sram.tellg();
 
             sram.seekg(0);
@@ -757,4 +732,6 @@ namespace GB
             sram.close();
         }
     }
+
+    void MBC5::tick(uint32_t cycles) {}
 }

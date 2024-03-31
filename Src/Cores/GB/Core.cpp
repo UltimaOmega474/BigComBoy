@@ -25,11 +25,12 @@ namespace GB {
     Core::Core() : bus(this), ppu(this), timer(this), cpu(this), dma(this) {}
 
     void Core::initialize(Cartridge *cart) {
+        ready_to_run = cart ? true : false;
         if (!cart) {
             return;
         }
 
-        ready_to_run = cart ? true : false;
+        cart->reset();
         bootstrap.clear();
         apu.reset();
         ppu.reset();
@@ -40,8 +41,8 @@ namespace GB {
 
         if (ready_to_run) {
 
-            if (cart->header.cgb_support == 0x80 || cart->header.cgb_support == 0xC0) {
-                bus.KEY0 = cart->header.cgb_support;
+            if (cart->header().cgb_support == 0x80 || cart->header().cgb_support == 0xC0) {
+                bus.KEY0 = cart->header().cgb_support;
                 ppu.write_register(0x6C, 0);
             } else {
                 bus.KEY0 = DISABLE_CGB_FUNCTIONS;
@@ -62,6 +63,12 @@ namespace GB {
     void Core::initialize_with_bootstrap(Cartridge *cart, ConsoleType console,
                                          std::filesystem::path bootstrap_path) {
         ready_to_run = cart ? true : false;
+
+        if (!cart) {
+            return;
+        }
+
+        cart->reset();
         bootstrap.clear();
         apu.reset();
         ppu.reset();
