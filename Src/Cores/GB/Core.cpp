@@ -22,7 +22,7 @@
 #include <fstream>
 
 namespace GB {
-    Core::Core() : bus(*this), ppu(bus), timer(this), cpu(this, &bus), dma(*this) {}
+    Core::Core() : bus(this), ppu(this), timer(this), cpu(this), dma(this) {}
 
     void Core::initialize(Cartridge *cart) {
         if (!cart) {
@@ -52,7 +52,7 @@ namespace GB {
                 ppu.set_compatibility_palette(PaletteID::OBJ2, LCD_GRAY);
             }
 
-            bus.bootstrap_mapped = false;
+            bus.bootstrap_mapped_ = false;
 
             cpu.reset(0x0100);
             ppu.set_post_boot_state();
@@ -137,5 +137,5 @@ namespace GB {
         }
     }
 
-    uint8_t Core::read_bootrom(uint16_t address) { return bootstrap[address]; }
+    uint8_t Core::read_bootstrap(uint16_t address) { return bootstrap[address]; }
 }

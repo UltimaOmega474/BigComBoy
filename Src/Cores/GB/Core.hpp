@@ -31,7 +31,6 @@
 
 namespace GB {
     class Core {
-
     public:
         Gamepad pad;
         MainBus bus;
@@ -50,7 +49,7 @@ namespace GB {
         void tick_subcomponents(uint8_t cycles);
         void load_bootstrap(std::filesystem::path path);
 
-        uint8_t read_bootrom(uint16_t address);
+        uint8_t read_bootstrap(uint16_t address);
 
     private:
         bool ready_to_run = false;

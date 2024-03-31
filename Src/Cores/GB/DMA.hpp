@@ -26,14 +26,7 @@ namespace GB {
 
     class DMAController {
     public:
-        DMAController(Core &core) : core(core) {}
-        void reset();
-
-        void set_dma_control(uint8_t ctrl);
-        void set_hdma1(uint8_t high);
-        void set_hdma2(uint8_t low);
-        void set_hdma3(uint8_t high);
-        void set_hdma4(uint8_t low);
+        DMAController(Core *core);
 
         uint8_t get_dma_status() const;
         uint8_t get_hdma1() const;
@@ -41,15 +34,23 @@ namespace GB {
         uint8_t get_hdma3() const;
         uint8_t get_hdma4() const;
 
+        void reset();
+        void set_dma_control(uint8_t ctrl);
+        void set_hdma1(uint8_t high);
+        void set_hdma2(uint8_t low);
+        void set_hdma3(uint8_t high);
+        void set_hdma4(uint8_t low);
+
         void tick();
 
     private:
         void transfer_block();
 
-        Core &core;
         bool active = false, is_mode0 = false;
         uint8_t current_length = 0x7F;
         uint16_t src_address = 0, dst_address = 0;
         DMAType type = DMAType::GDMA;
+
+        Core *core;
     };
 }

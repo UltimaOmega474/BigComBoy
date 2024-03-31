@@ -18,22 +18,26 @@
 
 #include "Bus.hpp"
 #include "Core.hpp"
+#include <stdexcept>
 
 namespace GB {
-    MainBus::MainBus(Core &core) : core(core) {}
+    MainBus::MainBus(Core *core) : core(core) {
+        if (!core) {
+            throw std::invalid_argument("Core cannot be null.");
+        }
+    }
+
+    bool MainBus::bootstrap_mapped() const { return bootstrap_mapped_; }
 
     bool MainBus::is_compatibility_mode() const { return (KEY0 & DISABLE_CGB_FUNCTIONS); }
 
     void MainBus::reset(Cartridge *new_cart) {
         KEY0 = 0;
-        KEY1 = 0;
-        bootstrap_mapped = true;
+        bootstrap_mapped_ = true;
         wram.fill(0);
         hram.fill(0);
         cart = new_cart;
     }
-
-    void MainBus::request_interrupt(uint8_t interrupt) { core.cpu.interrupt_flag |= interrupt; }
 
     uint8_t MainBus::read(uint16_t address) {
         auto page = address >> 12;
@@ -47,9 +51,9 @@ namespace GB {
         case 0x5:
         case 0x6:
         case 0x7: {
-            if (bootstrap_mapped) {
+            if (bootstrap_mapped_) {
                 if ((address < 0x100) || (address > 0x1FF)) {
-                    return core.read_bootrom(address);
+                    return core->read_bootstrap(address);
                 } else if (cart) {
                     return cart->read(address);
                 }
@@ -63,7 +67,7 @@ namespace GB {
 
         case 0x8:
         case 0x9: {
-            return core.ppu.read_vram(address & 0x1FFF);
+            return core->ppu.read_vram(address & 0x1FFF);
         }
         case 0xA:
         case 0xB: {
@@ -89,7 +93,7 @@ namespace GB {
                 return wram[address & 0x1FFF];
             }
             case 0xFE: {
-                return core.ppu.read_oam(address & 0xFF);
+                return core->ppu.read_oam(address & 0xFF);
             }
             case 0xFF: {
                 auto io_address = address & 0xFF;
@@ -97,7 +101,7 @@ namespace GB {
                 switch (io_address) {
                 // Input
                 case 0x00: {
-                    return core.pad.get_pad_state();
+                    return core->pad.get_pad_state();
                 }
 
                 // Serial Port
@@ -111,11 +115,11 @@ namespace GB {
                 case 0x05:
                 case 0x06:
                 case 0x07: {
-                    return core.timer.read_register(io_address);
+                    return core->timer.read_register(io_address);
                 }
 
                 case 0x0F: {
-                    return core.cpu.interrupt_flag;
+                    return core->cpu.interrupt_flag;
                 }
 
                 // APU
@@ -143,7 +147,7 @@ namespace GB {
                 case 0x25:
                 case 0x26:
                 case 0x27: {
-                    return core.apu.read_register(io_address);
+                    return core->apu.read_register(io_address);
                 }
 
                 // APU Wave RAM
@@ -163,7 +167,7 @@ namespace GB {
                 case 0x3D:
                 case 0x3E:
                 case 0x3F: {
-                    return core.apu.read_wave_ram(io_address - 0x30);
+                    return core->apu.read_wave_ram(io_address - 0x30);
                 }
 
                 // PPU Registers
@@ -185,20 +189,20 @@ namespace GB {
                 case 0x6A:
                 case 0x6B:
                 case 0x6C: {
-                    return core.ppu.read_register(io_address);
+                    return core->ppu.read_register(io_address);
                 }
 
                 case 0x4C: {
                     return KEY0;
                 }
                 case 0x4D: {
-                    return is_compatibility_mode() ? 0xFF : KEY1;
+                    return is_compatibility_mode() ? 0xFF : core->cpu.KEY1;
                 }
                 case 0x50: {
-                    return bootstrap_mapped;
+                    return bootstrap_mapped_;
                 }
                 case 0x55: {
-                    return core.dma.get_dma_status();
+                    return core->dma.get_dma_status();
                 }
                 case 0x70: {
                     return wram_bank_num;
@@ -208,7 +212,7 @@ namespace GB {
                 if ((address >= 0xFF80) && (address <= 0xFFFE)) {
                     return hram[address - 0xFF80]; // High Ram
                 } else if (address == 0xFFFF) {
-                    return core.cpu.interrupt_enable;
+                    return core->cpu.interrupt_enable;
                 }
 
                 return 0xFF; // IO Registers
@@ -234,7 +238,7 @@ namespace GB {
         case 0x5:
         case 0x6:
         case 0x7: {
-            if (bootstrap_mapped) {
+            if (bootstrap_mapped_) {
                 if ((address < 0x100) || (address > 0x1FF)) {
                     return;
                 } else if (cart) {
@@ -251,7 +255,7 @@ namespace GB {
 
         case 0x8:
         case 0x9: {
-            core.ppu.write_vram(address & 0x1FFF, value);
+            core->ppu.write_vram(address & 0x1FFF, value);
             return;
         }
 
@@ -285,7 +289,7 @@ namespace GB {
                 return;
             }
             case 0xFE: {
-                core.ppu.write_oam(address & 0xFF, value);
+                core->ppu.write_oam(address & 0xFF, value);
                 return;
             }
             case 0xFF: {
@@ -294,7 +298,7 @@ namespace GB {
                 switch (io_address) {
                 // Input
                 case 0x00: {
-                    core.pad.select_button_mode(value);
+                    core->pad.select_button_mode(value);
                     return;
                 }
 
@@ -303,12 +307,12 @@ namespace GB {
                 case 0x05:
                 case 0x06:
                 case 0x07: {
-                    core.timer.write_register(io_address, value);
+                    core->timer.write_register(io_address, value);
                     return;
                 }
 
                 case 0x0F: {
-                    core.cpu.interrupt_flag = value;
+                    core->cpu.interrupt_flag = value;
                     return;
                 }
 
@@ -337,7 +341,7 @@ namespace GB {
                 case 0x25:
                 case 0x26:
                 case 0x27: {
-                    core.apu.write_register(io_address, value);
+                    core->apu.write_register(io_address, value);
                     return;
                 }
 
@@ -358,7 +362,7 @@ namespace GB {
                 case 0x3D:
                 case 0x3E:
                 case 0x3F: {
-                    core.apu.write_wave_ram(io_address - 0x30, value);
+                    core->apu.write_wave_ram(io_address - 0x30, value);
                     return;
                 }
 
@@ -380,45 +384,45 @@ namespace GB {
                 case 0x6A:
                 case 0x6B:
                 case 0x6C: {
-                    core.ppu.write_register(io_address, value);
+                    core->ppu.write_register(io_address, value);
                     return;
                 }
 
                 case 0x4C: {
-                    if (bootstrap_mapped) {
+                    if (bootstrap_mapped_) {
                         KEY0 = value;
                     }
                     return;
                 }
 
                 case 0x4D: {
-                    KEY1 &= ~0x1;
-                    KEY1 |= value & 0x1;
+                    core->cpu.KEY1 &= ~0x1;
+                    core->cpu.KEY1 |= value & 0x1;
                     return;
                 }
 
                 case 0x50: {
-                    bootstrap_mapped = false;
+                    bootstrap_mapped_ = false;
                     return;
                 }
                 case 0x51: {
-                    core.dma.set_hdma1(value);
+                    core->dma.set_hdma1(value);
                     return;
                 }
                 case 0x52: {
-                    core.dma.set_hdma2(value);
+                    core->dma.set_hdma2(value);
                     return;
                 }
                 case 0x53: {
-                    core.dma.set_hdma3(value);
+                    core->dma.set_hdma3(value);
                     return;
                 }
                 case 0x54: {
-                    core.dma.set_hdma4(value);
+                    core->dma.set_hdma4(value);
                     return;
                 }
                 case 0x55: {
-                    core.dma.set_dma_control(value);
+                    core->dma.set_dma_control(value);
                     return;
                 }
 
@@ -433,7 +437,7 @@ namespace GB {
                     hram[address - 0xFF80] = value; // High Ram
                     return;
                 } else if (address == 0xFFFF) {
-                    core.cpu.interrupt_enable = value;
+                    core->cpu.interrupt_enable = value;
                     return;
                 }
 

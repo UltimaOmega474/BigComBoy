@@ -19,13 +19,20 @@
 #include "Timer.hpp"
 #include "Core.hpp"
 #include <array>
+#include <stdexcept>
 
 namespace GB {
     constexpr bool EdgeFell(uint16_t previous, uint16_t next, uint16_t mask) {
         return (previous & mask) && (!(next & mask));
     }
 
-    Timer::Timer(Core *core) : core(core) { reset(); }
+    Timer::Timer(Core *core) : core(core) {
+        if (!core) {
+            throw std::invalid_argument("Core cannot be null.");
+        }
+
+        reset();
+    }
 
     void Timer::write_register(uint8_t reg, uint8_t value) {
         switch (reg) {
@@ -100,7 +107,7 @@ namespace GB {
             ++tima;
             if (tima == 0) {
                 tima = tma;
-                core->bus.request_interrupt(0x04);
+                core->cpu.request_interrupt(INT_TIMER_BIT);
             }
         }
 

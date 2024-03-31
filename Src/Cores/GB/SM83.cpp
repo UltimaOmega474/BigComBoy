@@ -20,13 +20,16 @@
 #include "Bus.hpp"
 #include "Constants.hpp"
 #include "Core.hpp"
+#include <stdexcept>
 
 #define GET_REG(R) registers[static_cast<size_t>(R)]
 
 namespace GB {
-
-    SM83::SM83(Core *core, MainBus *bus)
-        : core(core), bus(bus), opcodes(gen_optable()), cb_opcodes(gen_cb_optable()) {}
+    SM83::SM83(Core *core) : opcodes(gen_optable()), cb_opcodes(gen_cb_optable()), core(core) {
+        if (!core) {
+            throw std::invalid_argument("Core cannot be null.");
+        }
+    }
 
     bool SM83::stopped() const { return stopped_; }
 
@@ -41,7 +44,7 @@ namespace GB {
         interrupt_enable = 0;
         interrupt_flag = 0;
 
-        if (bus->is_compatibility_mode()) {
+        if (core->bus.is_compatibility_mode()) {
             set_flags(FLAG_N, false);
             set_flags(FLAG_Z, true);
             set_flags(FLAG_HC | FLAG_CY, true);
@@ -72,6 +75,8 @@ namespace GB {
             sp = 0xFFFE;
         }
     }
+
+    void SM83::request_interrupt(uint8_t interrupt) { interrupt_flag |= interrupt; }
 
     void SM83::step() {
         service_interrupts();
@@ -150,7 +155,7 @@ namespace GB {
 
     uint8_t SM83::read(uint16_t address) {
         core->tick_subcomponents(4);
-        return bus->read(address);
+        return core->bus.read(address);
     }
 
     uint16_t SM83::read_uint16(uint16_t address) {
@@ -162,7 +167,7 @@ namespace GB {
 
     void SM83::write(uint16_t address, uint8_t value) {
         core->tick_subcomponents(4);
-        bus->write(address, value);
+        core->bus.write(address, value);
     }
 
     void SM83::write_uint16(uint16_t address, uint16_t value) {
@@ -266,9 +271,9 @@ namespace GB {
             return;
         }
 
-        if (bus->KEY1 & 0x1) {
+        if (KEY1 & 0x1) {
             double_speed_ = !double_speed_;
-            bus->KEY1 = double_speed_ << 7;
+            KEY1 = double_speed_ << 7;
         }
 
         pc += 2;

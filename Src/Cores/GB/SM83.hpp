@@ -22,7 +22,6 @@
 
 namespace GB {
     class Core;
-    class MainBus;
 
     enum class Register {
         B = 0,
@@ -52,13 +51,13 @@ namespace GB {
 
     class SM83 {
     public:
-        uint8_t interrupt_flag = 0, interrupt_enable = 0;
-
-        SM83(Core *core, MainBus *bus);
+        SM83(Core *core);
 
         bool stopped() const;
         bool double_speed() const;
+
         void reset(uint16_t new_pc);
+        void request_interrupt(uint8_t interrupt);
         void step();
 
     private:
@@ -149,12 +148,8 @@ namespace GB {
         template <uint8_t bit, Register r> void op_set();
 
         using opcode_function = void (SM83::*)();
-
         static std::array<SM83::opcode_function, 256> gen_optable();
         static std::array<SM83::opcode_function, 256> gen_cb_optable();
-
-        Core *core;
-        MainBus *bus;
 
         bool master_interrupt_enable_ = true;
         bool halted_ = false;
@@ -162,11 +157,18 @@ namespace GB {
         bool stopped_ = false;
         bool double_speed_ = false;
 
+        uint8_t interrupt_flag = 0, interrupt_enable = 0;
+        uint8_t KEY1 = 0;
+
         uint16_t sp = 0xFFFF, pc = 0;
         std::array<uint8_t, 8> registers{};
 
         std::array<opcode_function, 256> opcodes;
         std::array<opcode_function, 256> cb_opcodes;
+
+        Core *core;
+
+        friend class MainBus;
     };
 
 }

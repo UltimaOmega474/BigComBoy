@@ -19,8 +19,23 @@
 #include "DMA.hpp"
 #include "Core.hpp"
 #include "PPU.hpp"
+#include <stdexcept>
 
 namespace GB {
+    DMAController::DMAController(Core *core) : core(core) {
+        if (!core) {
+            throw std::invalid_argument("Core cannot be null.");
+        }
+    }
+
+    uint8_t DMAController::get_hdma1() const { return src_address >> 8; }
+
+    uint8_t DMAController::get_hdma2() const { return src_address & 0xFF; }
+
+    uint8_t DMAController::get_hdma3() const { return dst_address >> 8; }
+
+    uint8_t DMAController::get_hdma4() const { return dst_address & 0xFF; }
+
     void DMAController::reset() {
         active = false;
         is_mode0 = false;
@@ -66,16 +81,8 @@ namespace GB {
         return stat | (current_length & 0x7F);
     }
 
-    uint8_t DMAController::get_hdma1() const { return src_address >> 8; }
-
-    uint8_t DMAController::get_hdma2() const { return src_address & 0xFF; }
-
-    uint8_t DMAController::get_hdma3() const { return dst_address >> 8; }
-
-    uint8_t DMAController::get_hdma4() const { return dst_address & 0xFF; }
-
     void DMAController::tick() {
-        bool mode0_now = (core.ppu.read_register(0x41) & 0x3) == HBLANK;
+        bool mode0_now = (core->ppu.read_register(0x41) & 0x3) == HBLANK;
 
         if (active) {
             switch (type) {
@@ -112,16 +119,16 @@ namespace GB {
             bool can_tick = (i % 4) == 0;
 
             if (can_tick) {
-                core.tick_subcomponents(4);
+                core->tick_subcomponents(4);
             }
 
-            uint8_t data = core.bus.read(src_address);
+            uint8_t data = core->bus.read(src_address);
 
             if (can_tick) {
-                core.tick_subcomponents(4);
+                core->tick_subcomponents(4);
             }
 
-            core.ppu.write_vram(dst_address & 0x1FFF, data);
+            core->ppu.write_vram(dst_address & 0x1FFF, data);
 
             src_address++;
             dst_address++;

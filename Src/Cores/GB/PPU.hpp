@@ -23,7 +23,7 @@
 #include <span>
 
 namespace GB {
-    class MainBus;
+    class Core;
     class PPU;
 
     constexpr uint8_t HBLANK = 0x0;
@@ -121,7 +121,7 @@ namespace GB {
 
     class PPU {
     public:
-        PPU(MainBus &bus);
+        PPU(Core *core);
 
         std::span<uint8_t, LCD_WIDTH * LCD_HEIGHT * 4> framebuffer();
 
@@ -159,10 +159,6 @@ namespace GB {
         void set_mode(uint8_t mode);
         void check_ly_lyc(bool allow_interrupts);
 
-        friend class BackgroundFIFO;
-        friend class BackgroundFetcher;
-
-        MainBus &bus;
         BackgroundFetcher fetcher;
         BackgroundFIFO bg_fifo;
 
@@ -207,6 +203,11 @@ namespace GB {
         std::array<uint16_t, LCD_WIDTH * LCD_HEIGHT> bg_color_table{};
         std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT * 4> internal_framebuffer{};
         std::array<uint8_t, LCD_WIDTH * LCD_HEIGHT * 4> framebuffer_complete{};
+
+        Core *core;
+
+        friend class BackgroundFIFO;
+        friend class BackgroundFetcher;
     };
 
 }

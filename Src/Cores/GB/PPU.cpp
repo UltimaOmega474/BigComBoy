@@ -17,11 +17,11 @@
 */
 
 #include "PPU.hpp"
-#include "Bus.hpp"
 #include "Constants.hpp"
+#include "Core.hpp"
 #include <algorithm>
-#include <cstdint>
 #include <span>
+#include <stdexcept>
 
 namespace GB {
     uint8_t BackgroundFIFO::pixel_attribute() const { return attribute; }
@@ -174,8 +174,9 @@ namespace GB {
                 uint16_t bit12 = !((ppu.lcd_control & TILE_DATA_LOC_BIT) || (tile_id & 0x80));
                 uint16_t yoffset = (ppu.line_y + ppu.screen_scroll_y) & 7;
 
-                if (attribute_id & TILE_FLIP_Y_BIT)
+                if (attribute_id & TILE_FLIP_Y_BIT) {
                     yoffset = (7 - (ppu.line_y + ppu.screen_scroll_y)) & 7;
+                }
 
                 computed_address |= bit12 ? (1 << 12) : 0;
                 computed_address |= tile_id << 4;
@@ -187,8 +188,9 @@ namespace GB {
                 uint16_t bit12 = !((ppu.lcd_control & TILE_DATA_LOC_BIT) || (tile_id & 0x80));
                 uint16_t yoffset = ppu.window_line_y & 7;
 
-                if (attribute_id & TILE_FLIP_Y_BIT)
+                if (attribute_id & TILE_FLIP_Y_BIT) {
                     yoffset = (7 - ppu.window_line_y) & 7;
+                }
 
                 computed_address |= bit12 ? (1 << 12) : 0;
                 computed_address |= tile_id << 4;
@@ -248,7 +250,11 @@ namespace GB {
         state = FetchState::GetTileID;
     }
 
-    PPU::PPU(MainBus &bus) : bus(bus) {}
+    PPU::PPU(Core *core) : core(core) {
+        if (!core) {
+            throw std::invalid_argument("Core cannot be null.");
+        }
+    }
 
     std::span<uint8_t, LCD_WIDTH * LCD_HEIGHT * 4> PPU::framebuffer() {
         return framebuffer_complete;
@@ -352,10 +358,11 @@ namespace GB {
         }
 
         while (accumulated_cycles) {
-            bool allow_interrupt = stat_any() ? false : true;
+            bool allow_interrupt = !stat_any();
 
-            if (window_y == line_y)
+            if (window_y == line_y) {
                 window_draw_flag = true;
+            }
 
             switch (status & 0x3) {
 
@@ -370,15 +377,17 @@ namespace GB {
                     if (line_y == 144) {
                         set_mode(VBLANK);
 
-                        bus.request_interrupt(INT_VBLANK_BIT);
-                        if ((status & VBLANK_STAT_INT_BIT) && allow_interrupt)
-                            bus.request_interrupt(INT_LCD_STAT_BIT);
+                        core->cpu.request_interrupt(INT_VBLANK_BIT);
+                        if ((status & VBLANK_STAT_INT_BIT) && allow_interrupt) {
+                            core->cpu.request_interrupt(INT_LCD_STAT_BIT);
+                        }
                     } else {
 
                         set_mode(OAM_SEARCH);
 
-                        if ((status & OAM_STAT_INT_BIT) && allow_interrupt)
-                            bus.request_interrupt(INT_LCD_STAT_BIT);
+                        if ((status & OAM_STAT_INT_BIT) && allow_interrupt) {
+                            core->cpu.request_interrupt(INT_LCD_STAT_BIT);
+                        }
                     }
 
                     continue;
@@ -395,8 +404,9 @@ namespace GB {
                         framebuffer_complete = internal_framebuffer;
                         set_mode(OAM_SEARCH);
 
-                        if ((status & OAM_STAT_INT_BIT) && allow_interrupt)
-                            bus.request_interrupt(INT_LCD_STAT_BIT);
+                        if ((status & OAM_STAT_INT_BIT) && allow_interrupt) {
+                            core->cpu.request_interrupt(INT_LCD_STAT_BIT);
+                        }
 
                         line_y = 0;
                         window_line_y = 0;
@@ -429,11 +439,13 @@ namespace GB {
                     cycles = 0;
 
                     set_mode(HBLANK);
-                    if (fetcher.get_mode() == FetchMode::Window)
+                    if (fetcher.get_mode() == FetchMode::Window) {
                         window_line_y++;
+                    }
 
-                    if ((status & HBLANK_STAT_INT_BIT) && allow_interrupt)
-                        bus.request_interrupt(INT_LCD_STAT_BIT);
+                    if ((status & HBLANK_STAT_INT_BIT) && allow_interrupt) {
+                        core->cpu.request_interrupt(INT_LCD_STAT_BIT);
+                    }
 
                     continue;
                 } else {
@@ -519,7 +531,7 @@ namespace GB {
             break;
         }
         case 0x6C: {
-            if (bus.bootstrap_mapped) {
+            if (core->bus.bootstrap_mapped()) {
                 object_priority_mode = value & 0x1;
             }
             break;
@@ -621,38 +633,44 @@ namespace GB {
 
     void PPU::instant_dma(uint8_t address) {
         uint16_t addr = address << 8;
-        for (auto i = 0; i < 160; ++i)
-            oam[i] = bus.read((addr) + i);
+        for (int i = 0; i < 160; ++i) {
+            oam[i] = core->bus.read(addr + i);
+        }
     }
 
     void PPU::set_stat(uint8_t flags, bool value) {
-        if (value)
+        if (value) {
             status |= flags;
-        else
+        } else {
             status &= ~flags;
+        }
     }
 
     bool PPU::stat_any() const {
-        if (status & LYC_LY_STAT_INT_BIT) {
-            if (status & LYC_LY_COMPARE_MODE_BIT)
-                return true;
-        }
-
         uint8_t mode = status & 0x3;
 
-        if (status & OAM_STAT_INT_BIT) {
-            if (mode == OAM_SEARCH)
+        if (status & LYC_LY_STAT_INT_BIT) {
+            if (status & LYC_LY_COMPARE_MODE_BIT) {
                 return true;
+            }
+        }
+
+        if (status & OAM_STAT_INT_BIT) {
+            if (mode == OAM_SEARCH) {
+                return true;
+            }
         }
 
         if (status & VBLANK_STAT_INT_BIT) {
-            if (mode == VBLANK)
+            if (mode == VBLANK) {
                 return true;
+            }
         }
 
         if (status & HBLANK_STAT_INT_BIT) {
-            if (mode == HBLANK)
+            if (mode == HBLANK) {
                 return true;
+            }
         }
 
         return false;
@@ -666,7 +684,8 @@ namespace GB {
             uint8_t final_dmg_palette = background_palette;
             uint8_t bg_pixel = bg_fifo.clock();
 
-            bool bg_enabled = bus.is_compatibility_mode() ? (lcd_control & BG_ENABLED_BIT) : true;
+            bool bg_enabled =
+                core->bus.is_compatibility_mode() ? (lcd_control & BG_ENABLED_BIT) : true;
 
             if (!bg_enabled) {
                 final_pixel = 0;
@@ -679,7 +698,7 @@ namespace GB {
             bg_color_table[(line_y * LCD_WIDTH) + line_x] =
                 final_pixel | (static_cast<uint16_t>(bg_fifo.pixel_attribute()) << 8);
 
-            if (bus.is_compatibility_mode()) {
+            if (core->bus.is_compatibility_mode()) {
                 uint8_t cgb_pixel = (final_dmg_palette >> (int)(2 * final_pixel)) & 3;
 
                 plot_cgb_pixel(line_x, cgb_pixel, 0, false);
@@ -692,6 +711,7 @@ namespace GB {
 
         if ((lcd_control & WND_ENABLED_BIT) && window_draw_flag && (line_x >= (window_x - 7)) &&
             fetcher.get_mode() == FetchMode::Background) {
+
             fetcher.clear_with_mode(FetchMode::Window);
             bg_fifo.clear();
             extra_cycles += 6;
@@ -699,12 +719,13 @@ namespace GB {
     }
 
     void PPU::render_objects() {
-        if (!(lcd_control & OBJECTS_ENABLED_BIT))
+        if (!(lcd_control & OBJECTS_ENABLED_BIT)) {
             return;
+        }
 
         uint8_t height = (lcd_control & OBJECT_SIZE_BIT) ? 16 : 8;
 
-        for (auto i = 0; i < num_obj_on_scanline; ++i) {
+        for (int i = 0; i < num_obj_on_scanline; ++i) {
             auto &object = objects_on_scanline[(num_obj_on_scanline - 1) - i];
 
             uint8_t cgb_palette_idx = 0;
@@ -720,22 +741,24 @@ namespace GB {
 
             uint16_t tile_index = 0;
 
-            if (height == 16)
+            if (height == 16) {
                 object.tile &= ~1;
+            }
 
             int32_t obj_y = static_cast<int32_t>(object.y) - 16;
 
-            if (object.attributes & TILE_FLIP_Y_BIT)
+            if (object.attributes & TILE_FLIP_Y_BIT) {
                 tile_index =
                     (0x8000 & 0x1FFF) + (object.tile * 16) + ((height - (line_y - obj_y) - 1) * 2);
-            else
+            } else {
                 tile_index =
                     (0x8000 & 0x1FFF) + (object.tile * 16) + ((line_y - obj_y) % height * 2);
+            }
 
             int32_t adjusted_x = static_cast<int32_t>(object.x) - 8;
             size_t framebuffer_line_y = line_y * LCD_WIDTH;
 
-            for (auto x = 0; x < 8; ++x) {
+            for (int x = 0; x < 8; ++x) {
                 size_t framebuffer_line_x = adjusted_x + x;
 
                 if (framebuffer_line_x >= 0 && framebuffer_line_x < 160) {
@@ -743,15 +766,17 @@ namespace GB {
                     uint8_t high_byte = vram[bank + (tile_index + 1)];
                     uint8_t bit = 7 - (x & 7);
 
-                    if (object.attributes & TILE_FLIP_X_BIT)
+                    if (object.attributes & TILE_FLIP_X_BIT) {
                         bit = x & 7;
+                    }
 
                     uint8_t low_bit = (low_byte >> bit) & 0x01;
                     uint8_t high_bit = (high_byte >> bit) & 0x01;
                     uint8_t pixel = (high_bit << 1) | low_bit;
 
-                    if (pixel == 0)
+                    if (pixel == 0) {
                         continue;
+                    }
 
                     uint16_t bg_pixel =
                         bg_color_table[framebuffer_line_y + framebuffer_line_x] & 0xFF;
@@ -764,7 +789,7 @@ namespace GB {
 
                     bool bg_has_priority = false;
 
-                    if (bus.is_compatibility_mode()) {
+                    if (core->bus.is_compatibility_mode()) {
                         bg_has_priority = bg_pixel && (object.attributes & PRIORITY_BIT);
 
                         if (!bg_has_priority) {
@@ -772,11 +797,13 @@ namespace GB {
                             plot_cgb_pixel(framebuffer_line_x, cgb_pixel, cgb_palette_idx, true);
                         }
                     } else {
-                        if (master_priority && bg_pixel)
+                        if (master_priority && bg_pixel) {
                             bg_has_priority = oam_priority || bg_priority;
+                        }
 
-                        if (!bg_has_priority)
+                        if (!bg_has_priority) {
                             plot_cgb_pixel(framebuffer_line_x, pixel, cgb_palette, true);
+                        }
                     }
                 }
             }
@@ -815,9 +842,10 @@ namespace GB {
 
         num_obj_on_scanline = 0;
         objects_on_scanline.fill({});
-        for (auto i = 0, total = 0; i < 40; ++i) {
-            if (total == 10)
+        for (int i = 0, total = 0; i < 40; ++i) {
+            if (total == 10) {
                 break;
+            }
 
             const Object *sprite = reinterpret_cast<const Object *>((&oam[i * 4]));
             int32_t corrected_y_position = static_cast<int32_t>(sprite->y) - 16;
@@ -844,10 +872,13 @@ namespace GB {
 
     void PPU::check_ly_lyc(bool allow_interrupts) {
         set_stat(LYC_LY_COMPARE_MODE_BIT, false);
+
         if (line_y == line_y_compare) {
             set_stat(LYC_LY_COMPARE_MODE_BIT, true);
-            if ((status & LYC_LY_STAT_INT_BIT) && allow_interrupts)
-                bus.request_interrupt(INT_LCD_STAT_BIT);
+
+            if ((status & LYC_LY_STAT_INT_BIT) && allow_interrupts) {
+                core->cpu.request_interrupt(INT_LCD_STAT_BIT);
+            }
         }
     }
 }

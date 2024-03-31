@@ -20,8 +20,7 @@
 #include <array>
 #include <cinttypes>
 
-namespace GB
-{
+namespace GB {
     constexpr int32_t DISABLE_CGB_FUNCTIONS = 0x4;
     constexpr int32_t LCD_WIDTH = 160;
     constexpr int32_t LCD_HEIGHT = 144;
@@ -34,15 +33,13 @@ namespace GB
     constexpr uint32_t CPU_CLOCK_RATE = 4194304;
     constexpr uint32_t CYCLES_PER_FRAME = 70224;
 
-    enum class ConsoleType
-    {
+    enum class ConsoleType {
         DMG,
         CGB,
         AutoSelect,
     };
 
-    consteval uint16_t RGB555ToUInt(uint16_t r, uint16_t g, uint16_t b)
-    {
+    consteval uint16_t RGB555ToUInt(uint16_t r, uint16_t g, uint16_t b) {
         r &= 0x1F;
         g &= 0x1F;
         b &= 0x1F;
