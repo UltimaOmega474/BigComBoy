@@ -32,9 +32,9 @@ namespace QtFrontend {
         AudioSystem();
         ~AudioSystem();
         AudioSystem(const AudioSystem &) = delete;
-        AudioSystem(AudioSystem &&other) noexcept;
+        AudioSystem(AudioSystem &&other) = delete;
         AudioSystem &operator=(const AudioSystem &) = delete;
-        AudioSystem &operator=(AudioSystem &&other) noexcept;
+        AudioSystem &operator=(AudioSystem &&other) = delete;
 
         void open_device();
         void close_device();

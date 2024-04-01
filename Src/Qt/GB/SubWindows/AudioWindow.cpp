@@ -18,13 +18,12 @@
 
 #include "AudioWindow.hpp"
 #include "ui_AudioWindow.h"
+#include <QSlider>
+#include <QSpinBox>
 
-namespace QtFrontend
-{
-
+namespace QtFrontend {
     AudioWindow::AudioWindow(QWidget *parent)
-        : QWidget(parent), ui(new Ui::AudioWindow), audio(Common::Config::Current().gameboy.audio)
-    {
+        : QWidget(parent), ui(new Ui::AudioWindow), audio(Common::Config::Current().gameboy.audio) {
         ui->setupUi(this);
 
         connect_vol_controls(ui->master_slider, ui->master_spin);
@@ -40,13 +39,12 @@ namespace QtFrontend
         ui->noise_slider->setValue(audio.noise);
     }
 
-    AudioWindow::~AudioWindow()
-    {
+    AudioWindow::~AudioWindow() {
         delete ui;
         ui = nullptr;
     }
-    void AudioWindow::connect_vol_controls(QSlider *slider, QSpinBox *spin)
-    {
+
+    void AudioWindow::connect_vol_controls(QSlider *slider, QSpinBox *spin) {
         connect(slider, &QSlider::valueChanged, spin, &QSpinBox::setValue);
         connect(spin, &QSpinBox::valueChanged, slider, &QSlider::setValue);
         connect(slider, &QSlider::valueChanged, this, &AudioWindow::change_volume);
@@ -55,28 +53,18 @@ namespace QtFrontend
 
     void AudioWindow::apply_changes() { Common::Config::Current().gameboy.audio = audio; }
 
-    void AudioWindow::change_volume(int32_t volume)
-    {
+    void AudioWindow::change_volume(int32_t volume) {
         QObject *obj = sender();
 
-        if (obj == ui->master_slider || obj == ui->master_spin)
-        {
+        if (obj == ui->master_slider || obj == ui->master_spin) {
             audio.volume = volume;
-        }
-        else if (obj == ui->square1_slider || obj == ui->square1_spin)
-        {
+        } else if (obj == ui->square1_slider || obj == ui->square1_spin) {
             audio.square1 = volume;
-        }
-        else if (obj == ui->square2_slider || obj == ui->square2_spin)
-        {
+        } else if (obj == ui->square2_slider || obj == ui->square2_spin) {
             audio.square2 = volume;
-        }
-        else if (obj == ui->wave_slider || obj == ui->wave_spin)
-        {
+        } else if (obj == ui->wave_slider || obj == ui->wave_spin) {
             audio.wave = volume;
-        }
-        else if (obj == ui->noise_slider || obj == ui->noise_spin)
-        {
+        } else if (obj == ui->noise_slider || obj == ui->noise_spin) {
             audio.noise = volume;
         }
     }

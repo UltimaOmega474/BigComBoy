@@ -22,6 +22,6 @@
 
 namespace QtFrontend::Paths
 {
-    QString QtGetAppDataPath();
+    QString qt_get_appdata_path();
     std::filesystem::path ConfigLocation();
 }

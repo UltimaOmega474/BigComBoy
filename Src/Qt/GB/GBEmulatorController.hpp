@@ -21,45 +21,28 @@
 #include "Common/Math.hpp"
 #include "Cores/GB/Core.hpp"
 #include <QObject>
-#include <QThread>
 #include <QTimer>
 #include <array>
 #include <filesystem>
 #include <memory>
 
-namespace GL
-{
+namespace GL {
     class Renderer;
 }
 
-namespace QtFrontend
-{
+namespace QtFrontend {
     constexpr size_t FRAMES = 2;
 
-    enum class EmulationState
-    {
-        Stopped,
-        BreakMode,
-        Paused,
-        Running
-    };
+    enum class EmulationState { Stopped, BreakMode, Paused, Running };
 
-    class GBEmulatorController : public QObject
-    {
+    class GBEmulatorController : public QObject {
         Q_OBJECT
-
-        EmulationState state = EmulationState::Stopped;
-        GB::Core core{};
-        std::unique_ptr<GB::Cartridge> cart;
-        AudioSystem audio_system{};
-
-        QTimer *sram_timer = nullptr;
 
     public:
         GBEmulatorController();
+        ~GBEmulatorController();
         GBEmulatorController(const GBEmulatorController &) = delete;
         GBEmulatorController(GBEmulatorController &&) = delete;
-        ~GBEmulatorController() override;
         GBEmulatorController &operator=(const GBEmulatorController &) = delete;
         GBEmulatorController &operator=(GBEmulatorController &&) = delete;
 
@@ -83,5 +66,12 @@ namespace QtFrontend
 
     private:
         void init_by_console_type();
+
+        EmulationState state = EmulationState::Stopped;
+        GB::Core core{};
+        std::unique_ptr<GB::Cartridge> cart;
+        AudioSystem audio_system{};
+
+        QTimer *sram_timer = nullptr;
     };
 }

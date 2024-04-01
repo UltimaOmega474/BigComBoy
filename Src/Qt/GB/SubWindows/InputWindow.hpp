@@ -24,18 +24,42 @@
 class QTimer;
 class QPushButton;
 class QRadioButton;
-class QAbstractButton;
 
-namespace Ui
-{
+namespace Ui {
     class InputWindow;
 }
 
-namespace QtFrontend
-{
-    class InputWindow : public QWidget
-    {
+namespace QtFrontend {
+    class InputWindow : public QWidget {
         Q_OBJECT
+
+    public:
+        explicit InputWindow(QWidget *parent = nullptr);
+        ~InputWindow();
+        InputWindow(const InputWindow &) = delete;
+        InputWindow(InputWindow &&) = delete;
+        InputWindow &operator=(const InputWindow &) = delete;
+        InputWindow &operator=(InputWindow &&) = delete;
+
+        void keyPressEvent(QKeyEvent *event) override;
+        void keyReleaseEvent(QKeyEvent *event) override;
+
+        int32_t get_device_index_by_name(std::string_view name) const;
+
+        Q_SLOT void change_device_index(int index);
+        Q_SLOT void button_click();
+        Q_SLOT void page_changed();
+        Q_SLOT void apply_changes();
+        Q_SLOT void reload_device_list();
+
+        Q_SIGNAL void set_tab_focus(bool allowed);
+
+    private:
+        void check_device_for_input();
+        void load_mappings_for_page(int32_t page);
+        void begin_input_recording();
+        void end_input_recording();
+        void refresh_buttons_text();
 
         Ui::InputWindow *ui;
         QTimer *timer;
@@ -45,26 +69,5 @@ namespace QtFrontend
         int32_t selected_page = 0, selected_button = -1;
 
         std::array<Common::GBGamepadConfig, 2> pending_input_mappings;
-
-    public:
-        explicit InputWindow(QWidget *parent = nullptr);
-        ~InputWindow() override;
-        void keyPressEvent(QKeyEvent *event) override;
-        void keyReleaseEvent(QKeyEvent *event) override;
-
-        Q_SLOT void apply_changes();
-        void on_device_index_changed(int index);
-        void on_button_clicked();
-        void on_page_changed();
-
-        int32_t get_device_index_by_name(std::string_view name) const;
-        Q_SLOT void reload_device_list();
-        void check_device_for_input();
-        void load_mappings_for_page(int32_t page);
-        void begin_input_recording();
-        void end_input_recording();
-        void refresh_buttons_text();
-
-        Q_SIGNAL void on_set_tab_focus(bool allowed);
     };
 }

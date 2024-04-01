@@ -21,10 +21,8 @@
 #include <QPalette>
 #include <QStyleFactory>
 
-namespace QtFrontend
-{
-    StyleColor StyleColor::DefaultDark()
-    {
+namespace QtFrontend {
+    StyleColor StyleColor::default_dark() {
         auto main = QColor::fromString("#282828");
         auto text = QColor::fromString("#ffffff");
 
@@ -37,8 +35,7 @@ namespace QtFrontend
         };
     }
 
-    void ApplyColorPalette(const StyleColor &style_color)
-    {
+    void apply_color_palette(const StyleColor &style_color) {
         qApp->setStyle(QStyleFactory::create("fusion"));
         QPalette palette;
         palette.setColor(QPalette::Window, style_color.main);

@@ -21,27 +21,41 @@
 #include <array>
 #include <cinttypes>
 
-namespace QtFrontend
-{
+namespace QtFrontend {
     class GLFunctions;
     constexpr size_t MAX_IMAGES_PER_FRAME = 32;
     constexpr size_t VERTICES_PER_IMAGE = 4;
     constexpr size_t INDICES_PER_IMAGE = 6;
 
-    struct Color
-    {
-        float r = 0, g = 0, b = 0, a = 0;
+    struct Color {
+        float r = 0;
+        float g = 0;
+        float b = 0;
+        float a = 0;
     };
 
-    struct Vertex
-    {
-        float x = 0, y = 0;
-        float u = 0, v = 0;
+    struct Vertex {
+        float x = 0;
+        float y = 0;
+        float u = 0;
+        float v = 0;
         Color color;
     };
 
-    class Renderer
-    {
+    class Renderer {
+    public:
+        Renderer(GLFunctions *functions);
+        Renderer(const Renderer &) = delete;
+        Renderer(Renderer &&) = delete;
+        Renderer &operator=(const Renderer &) = delete;
+        Renderer &operator=(Renderer &&) = delete;
+        ~Renderer();
+
+        void reset_state(float screen_width, float screen_height);
+        void draw_image(GLuint texture, float x, float y, float width, float height,
+                        const Color &color = Color{.r = 1.0f, .g = 1.0f, .b = 1.0f, .a = 1.0f});
+
+    private:
         GLuint pipeline = 0;
         GLuint vao = 0, vertex_buffer = 0, index_buffer = 0, uniform_buffer = 0;
 
@@ -50,17 +64,5 @@ namespace QtFrontend
         std::array<uint32_t, INDICES_PER_IMAGE * MAX_IMAGES_PER_FRAME> indices{};
         std::array<float, 16> matrix{};
         GLFunctions *glfn = nullptr;
-
-    public:
-        Renderer(GLFunctions *functions);
-        Renderer(const Renderer &) = delete;
-        Renderer(Renderer &&) = default;
-        Renderer &operator=(const Renderer &) = delete;
-        Renderer &operator=(Renderer &&) = default;
-        ~Renderer();
-
-        void reset_state(float screen_width, float screen_height);
-        void draw_image(GLuint texture, float x, float y, float width, float height,
-                        const Color &color = Color{1.0f, 1.0f, 1.0f, 1.0f});
     };
 }

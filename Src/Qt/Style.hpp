@@ -19,18 +19,16 @@
 #pragma once
 #include <QColor>
 
-namespace QtFrontend
-{
-    struct StyleColor
-    {
+namespace QtFrontend {
+    struct StyleColor {
         QColor main;
         QColor base;
         QColor highlight;
         QColor text;
         QColor disabled_text;
 
-        static StyleColor DefaultDark();
+        static StyleColor default_dark();
     };
 
-    void ApplyColorPalette(const StyleColor &style_color);
+    void apply_color_palette(const StyleColor &style_color);
 }

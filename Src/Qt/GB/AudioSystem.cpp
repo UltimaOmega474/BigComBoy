@@ -29,22 +29,6 @@ namespace QtFrontend {
 
     AudioSystem::~AudioSystem() { close_device(); }
 
-    AudioSystem::AudioSystem(AudioSystem &&other) noexcept
-        : opened(other.opened), obtained(std::move(other.obtained)),
-          audio_device(other.audio_device), samples(std::move(other.samples)) {
-        other.audio_device = 0;
-    }
-
-    AudioSystem &AudioSystem::operator=(AudioSystem &&other) noexcept {
-        opened = other.opened;
-        obtained = other.obtained;
-        audio_device = other.audio_device;
-        std::swap(samples, other.samples);
-        other.audio_device = 0;
-
-        return *this;
-    }
-
     void AudioSystem::open_device() {
         if (opened) {
             return;

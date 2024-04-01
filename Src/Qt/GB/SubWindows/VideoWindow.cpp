@@ -20,11 +20,9 @@
 #include "ui_VideoWindow.h"
 #include <QtWidgets/qcheckbox.h>
 
-namespace QtFrontend
-{
+namespace QtFrontend {
     VideoWindow::VideoWindow(QWidget *parent)
-        : QWidget(parent), ui(new Ui::VideoWindow), video(Common::Config::Current().gameboy.video)
-    {
+        : QWidget(parent), ui(new Ui::VideoWindow), video(Common::Config::Current().gameboy.video) {
         ui->setupUi(this);
 
         connect(ui->buttonGroup, &QButtonGroup::buttonClicked, this,
@@ -33,14 +31,14 @@ namespace QtFrontend
 
         ui->blending_box->setChecked(video.frame_blending);
 
-        if (video.smooth_scaling)
+        if (video.smooth_scaling) {
             ui->smooth_radio->setChecked(true);
-        else
+        } else {
             ui->pixelated_radio->setChecked(true);
+        }
     }
 
-    VideoWindow::~VideoWindow()
-    {
+    VideoWindow::~VideoWindow() {
         delete ui;
         ui = nullptr;
     }
@@ -49,8 +47,7 @@ namespace QtFrontend
 
     void VideoWindow::set_blending_enabled(bool checked) { video.frame_blending = checked; }
 
-    void VideoWindow::select_scaling_mode(QAbstractButton *btn)
-    {
+    void VideoWindow::select_scaling_mode(QAbstractButton *btn) {
         video.smooth_scaling = (btn == ui->smooth_radio);
     }
 

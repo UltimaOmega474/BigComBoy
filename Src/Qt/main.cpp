@@ -23,7 +23,6 @@
 #include <QApplication>
 #include <QSurfaceFormat>
 #include <cstdlib>
-#include <filesystem>
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
 
@@ -31,10 +30,9 @@
 #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 #endif
 
-void SaveConfig() { Common::Config::Current().write_to_file(QtFrontend::Paths::ConfigLocation()); }
+void save_config() { Common::Config::Current().write_to_file(QtFrontend::Paths::ConfigLocation()); }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     QSurfaceFormat format;
     format.setDepthBufferSize(24);
     format.setStencilBufferSize(8);
@@ -48,9 +46,9 @@ int main(int argc, char *argv[])
     Common::Config::Current().read_from_file(QtFrontend::Paths::ConfigLocation());
 
     atexit(SDL_Quit);
-    atexit(SaveConfig);
+    atexit(save_config);
 
-    QtFrontend::ApplyColorPalette(QtFrontend::StyleColor::DefaultDark());
+    QtFrontend::apply_color_palette(QtFrontend::StyleColor::default_dark());
 
     QtFrontend::MainWindow w;
     w.show();

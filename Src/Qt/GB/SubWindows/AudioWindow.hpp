@@ -23,25 +23,29 @@
 class QSlider;
 class QSpinBox;
 
-namespace Ui
-{
+namespace Ui {
     class AudioWindow;
 }
 
-namespace QtFrontend
-{
-    class AudioWindow : public QWidget
-    {
-        Ui::AudioWindow *ui = nullptr;
-        Common::GBConfig::AudioData audio{};
+namespace QtFrontend {
+    class AudioWindow : public QWidget {
+        Q_OBJECT
 
     public:
         explicit AudioWindow(QWidget *parent = nullptr);
-        ~AudioWindow() override;
+        ~AudioWindow();
+        AudioWindow(const AudioWindow &) = delete;
+        AudioWindow(AudioWindow &&) = delete;
+        AudioWindow &operator=(const AudioWindow &) = delete;
+        AudioWindow &operator=(AudioWindow &&) = delete;
 
         void connect_vol_controls(QSlider *slider, QSpinBox *spin);
 
         Q_SLOT void apply_changes();
         Q_SLOT void change_volume(int32_t volume);
+
+    private:
+        Ui::AudioWindow *ui = nullptr;
+        Common::GBConfig::AudioData audio;
     };
 }

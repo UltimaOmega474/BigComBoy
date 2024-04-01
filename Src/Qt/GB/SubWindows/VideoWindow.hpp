@@ -22,24 +22,28 @@
 
 class QAbstractButton;
 
-namespace Ui
-{
+namespace Ui {
     class VideoWindow;
 }
 
-namespace QtFrontend
-{
-    class VideoWindow : public QWidget
-    {
-        Ui::VideoWindow *ui = nullptr;
-        Common::GBConfig::VideoData video;
+namespace QtFrontend {
+    class VideoWindow : public QWidget {
+        Q_OBJECT
 
     public:
         explicit VideoWindow(QWidget *parent = nullptr);
-        ~VideoWindow() override;
+        ~VideoWindow();
+        VideoWindow(const VideoWindow &) = delete;
+        VideoWindow(VideoWindow &&) = delete;
+        VideoWindow &operator=(const VideoWindow &) = delete;
+        VideoWindow &operator=(VideoWindow &&) = delete;
 
         Q_SLOT void apply_changes();
         Q_SLOT void set_blending_enabled(bool checked);
         Q_SLOT void select_scaling_mode(QAbstractButton *btn);
+
+    private:
+        Ui::VideoWindow *ui = nullptr;
+        Common::GBConfig::VideoData video;
     };
 }

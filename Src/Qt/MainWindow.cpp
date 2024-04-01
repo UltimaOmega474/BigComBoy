@@ -19,7 +19,6 @@
 #include "MainWindow.hpp"
 #include "Common/Config.hpp"
 #include "EmulatorView.hpp"
-#include "GB/SubWindows/InputWindow.hpp"
 #include "GB/SubWindows/SettingsWindow.hpp"
 #include "Input/DeviceRegistry.hpp"
 #include "Input/SDLControllerDevice.hpp"
@@ -33,14 +32,13 @@
 #include <fmt/format.h>
 #include <string>
 
-namespace QtFrontend
-{
+namespace QtFrontend {
     MainWindow::MainWindow(QWidget *parent)
         : QMainWindow(parent), input_timer(), keyboard(std::make_unique<KeyboardDevice>()),
-          ui(new Ui::MainWindow), fps_counter(new QLabel(tr("--")))
-    {
+          ui(new Ui::MainWindow), fps_counter(new QLabel(tr("--"))) {
         ui->setupUi(this);
         ui->menuLoad_Recent->setEnabled(false);
+
         delete ui->actionDummy_Item;
         ui->actionDummy_Item = nullptr;
 
@@ -62,30 +60,26 @@ namespace QtFrontend
         connect_slots();
     }
 
-    MainWindow::~MainWindow()
-    {
+    MainWindow::~MainWindow() {
         delete ui;
         ui = nullptr;
     }
 
     void MainWindow::showEvent(QShowEvent *event) { input_timer.start(1); }
 
-    void MainWindow::closeEvent(QCloseEvent *event)
-    {
+    void MainWindow::closeEvent(QCloseEvent *event) {
         auto &config = Common::Config::Current();
         config.wsize_x = width();
         config.wsize_y = height();
         input_timer.stop();
     }
 
-    void MainWindow::keyPressEvent(QKeyEvent *event)
-    {
+    void MainWindow::keyPressEvent(QKeyEvent *event) {
         keyboard->key_down(event->key());
         event->accept();
     }
 
-    void MainWindow::keyReleaseEvent(QKeyEvent *event)
-    {
+    void MainWindow::keyReleaseEvent(QKeyEvent *event) {
         keyboard->key_up(event->key());
         event->accept();
     }
@@ -98,37 +92,34 @@ namespace QtFrontend
 
     QLabel *MainWindow::get_fps_counter() { return fps_counter; }
 
-    void MainWindow::open_rom_file_browser()
-    {
+    void MainWindow::open_rom_file_browser() {
         QFileDialog dialog;
         dialog.setFileMode(QFileDialog::FileMode::ExistingFile);
         dialog.setViewMode(QFileDialog::Detail);
 
-        if (dialog.exec())
-        {
+        if (dialog.exec()) {
             std::string filePath = dialog.selectedFiles().first().toStdString();
-            emit on_rom_loaded(filePath);
+            emit rom_loaded(filePath);
         }
     }
 
-    void MainWindow::open_rom_from_recents(QAction *action)
-    {
+    void MainWindow::open_rom_from_recents(QAction *action) {
         auto filePath = action->text().toStdString();
 
-        emit on_rom_loaded(filePath);
+        emit rom_loaded(filePath);
     }
 
-    void MainWindow::open_gb_settings()
-    {
-        if (!settings)
-        {
+    void MainWindow::open_gb_settings() {
+        if (!settings) {
             int32_t menu = 0;
-            if (sender() == ui->actionVideo)
+
+            if (sender() == ui->actionVideo) {
                 menu = 1;
-            else if (sender() == ui->actionAudio)
+            } else if (sender() == ui->actionAudio) {
                 menu = 2;
-            else if (sender() == ui->actionInput)
+            } else if (sender() == ui->actionInput) {
                 menu = 3;
+            }
 
             settings = new SettingsWindow(this, menu);
             settings->show();
@@ -140,8 +131,7 @@ namespace QtFrontend
 
     void MainWindow::clear_settings_ptr() { settings = nullptr; }
 
-    void MainWindow::rom_load_success(const QString &message, int timeout)
-    {
+    void MainWindow::rom_load_success(const QString &message, int timeout) {
         Common::Config::Current().add_rom_to_history(message.toStdString());
         statusBar()->showMessage(
             QString::fromStdString(fmt::format("'{}' Loaded successfully.", message.toStdString())),
@@ -149,15 +139,13 @@ namespace QtFrontend
         reload_recent_roms();
     }
 
-    void MainWindow::rom_load_fail(const QString &message, int timeout)
-    {
+    void MainWindow::rom_load_fail(const QString &message, int timeout) {
         statusBar()->showMessage(
             QString::fromStdString(fmt::format("Unable to load '{}'", message.toStdString())),
             5000);
     }
 
-    void MainWindow::connect_slots()
-    {
+    void MainWindow::connect_slots() {
         connect(ui->menuLoad_Recent, &QMenu::triggered, this, &MainWindow::open_rom_from_recents);
         connect(&input_timer, &QTimer::timeout, this, &MainWindow::update_controllers);
         connect(ui->actionLoad, &QAction::triggered, this, &MainWindow::open_rom_file_browser);
@@ -168,62 +156,51 @@ namespace QtFrontend
         connect(ui->actionInput, &QAction::triggered, this, &MainWindow::open_gb_settings);
     }
 
-    void MainWindow::reload_recent_roms()
-    {
-        for (QAction *act : ui->menuLoad_Recent->actions())
-        {
+    void MainWindow::reload_recent_roms() {
+        for (QAction *act : ui->menuLoad_Recent->actions()) {
             delete act;
         }
         ui->menuLoad_Recent->actions().clear();
 
-        for (const auto &path : Common::Config::Current().recent_roms)
-        {
+        for (const auto &path : Common::Config::Current().recent_roms) {
             QAction *act = new QAction(QString::fromStdString(path), ui->menuLoad_Recent);
             ui->menuLoad_Recent->addAction(act);
         }
         ui->menuLoad_Recent->setEnabled(ui->menuLoad_Recent->actions().size() > 0 ? true : false);
     }
 
-    void MainWindow::update_controllers()
-    {
+    void MainWindow::update_controllers() {
         SDL_Event event;
 
-        if (SDL_PollEvent(&event))
-        {
-            switch (event.type)
-            {
+        if (SDL_PollEvent(&event)) {
+            switch (event.type) {
             case SDL_EventType::SDL_CONTROLLERDEVICEADDED:
-            case SDL_EventType::SDL_CONTROLLERDEVICEREMOVED:
-            {
+            case SDL_EventType::SDL_CONTROLLERDEVICEREMOVED: {
                 reload_controllers();
-                emit on_reload_device_list();
+                emit reload_device_list();
                 break;
             }
             }
         }
-        for (const auto &controller : controllers)
-        {
+        for (const auto &controller : controllers) {
             controller->update_internal_state();
         }
     }
 
-    void MainWindow::reload_controllers()
-    {
-        for (const auto &controller : controllers)
-        {
+    void MainWindow::reload_controllers() {
+        for (const auto &controller : controllers) {
             Input::DeviceRegistry::RemoveDevice(controller.get());
         }
         controllers.clear();
 
-        for (int32_t i = 0; i < SDL_NumJoysticks(); ++i)
-        {
-            if (SDL_IsGameController(i))
-            {
+        for (int32_t i = 0; i < SDL_NumJoysticks(); ++i) {
+            if (SDL_IsGameController(i)) {
                 auto controller = std::make_unique<Input::SDLControllerDevice>(i);
                 Input::DeviceRegistry::RegisterDevice(controller.get());
 
-                if (controller->is_open())
+                if (controller->is_open()) {
                     controllers.push_back(std::move(controller));
+                }
             }
         }
     }

@@ -21,28 +21,30 @@
 
 class QAbstractButton;
 
-namespace Ui
-{
+namespace Ui {
     class SettingsWindow;
 }
 
-namespace QtFrontend
-{
-    class SettingsWindow : public QDialog
-    {
+namespace QtFrontend {
+    class SettingsWindow : public QDialog {
         Q_OBJECT
-
-        Ui::SettingsWindow *ui;
-        bool allow_tab_focus = true;
 
     public:
         explicit SettingsWindow(QWidget *parent = nullptr, int32_t selected_index = 0);
-        ~SettingsWindow() override;
+        ~SettingsWindow();
+        SettingsWindow(const SettingsWindow &) = delete;
+        SettingsWindow(SettingsWindow &&) = delete;
+        SettingsWindow &operator=(const SettingsWindow &) = delete;
+        SettingsWindow &operator=(SettingsWindow &&) = delete;
 
         bool focusNextPrevChild(bool next) override;
 
         Q_SLOT void dialog_clicked(QAbstractButton *button);
         Q_SLOT void set_tab_focus(bool allowed);
-        Q_SIGNAL void on_apply_changes_to_tabs();
+        Q_SIGNAL void apply_changes_to_tabs();
+
+    private:
+        Ui::SettingsWindow *ui;
+        bool allow_tab_focus = true;
     };
 }

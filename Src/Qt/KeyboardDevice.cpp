@@ -20,21 +20,17 @@
 #include <QKeySequence>
 #include <QString>
 
-namespace QtFrontend
-{
+namespace QtFrontend {
     void KeyboardDevice::key_down(int32_t key) { pressed_keys.insert(key); }
 
     void KeyboardDevice::key_up(int32_t key) { pressed_keys.erase(key); }
 
-    bool KeyboardDevice::is_key_down(const Input::InputSource &key)
-    {
+    bool KeyboardDevice::is_key_down(const Input::InputSource &key) {
         return pressed_keys.contains(key.keyboard);
     }
 
-    std::optional<Input::InputSource> KeyboardDevice::get_input_for_any_key()
-    {
-        if (pressed_keys.size() > 0)
-        {
+    std::optional<Input::InputSource> KeyboardDevice::get_input_for_any_key() {
+        if (pressed_keys.size() > 0) {
             int32_t key = *pressed_keys.begin();
             return Input::InputSource{
                 .type = Input::SourceType::Invalid,
@@ -48,8 +44,7 @@ namespace QtFrontend
         return {};
     }
 
-    std::string KeyboardDevice::key_to_str(const Input::InputSource &key) const
-    {
+    std::string KeyboardDevice::key_to_str(const Input::InputSource &key) const {
         return QKeySequence(key.keyboard).toString().toUpper().toStdString();
     }
 

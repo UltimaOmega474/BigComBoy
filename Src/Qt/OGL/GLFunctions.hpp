@@ -22,10 +22,8 @@
 #include <span>
 #include <string_view>
 
-namespace QtFrontend
-{
-    class GLFunctions : public QOpenGLFunctions_4_1_Core
-    {
+namespace QtFrontend {
+    class GLFunctions : public QOpenGLFunctions_4_1_Core {
     public:
         GLuint create_vao();
         void set_vao_element(GLuint vao, GLuint index, GLint num_components, GLenum component_type,
@@ -52,8 +50,7 @@ namespace QtFrontend
 
     template <class T>
     inline GLuint GLFunctions::create_buffer(GLenum type, GLsizeiptr buffer_size,
-                                             std::span<T> init_data)
-    {
+                                             std::span<T> init_data) {
         GLuint buffer = 0;
         glGenBuffers(1, &buffer);
         glBindBuffer(type, buffer);
@@ -64,8 +61,7 @@ namespace QtFrontend
 
     template <class T>
     inline void GLFunctions::update_buffer_data(GLuint buffer, GLenum buffer_type,
-                                                std::span<T> data)
-    {
+                                                std::span<T> data) {
         glBindBuffer(buffer_type, buffer);
         glBufferSubData(buffer_type, 0, data.size() * sizeof(T), data.data());
     }

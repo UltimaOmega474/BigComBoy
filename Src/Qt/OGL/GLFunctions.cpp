@@ -20,10 +20,8 @@
 #include <array>
 #include <fmt/format.h>
 
-namespace QtFrontend
-{
-    GLuint GLFunctions::create_vao()
-    {
+namespace QtFrontend {
+    GLuint GLFunctions::create_vao() {
         GLuint vao = 0;
         glGenVertexArrays(1, &vao);
         return vao;
@@ -31,16 +29,14 @@ namespace QtFrontend
 
     void GLFunctions::set_vao_element(GLuint vao, GLuint index, GLint num_components,
                                       GLenum component_type, GLboolean normalize, GLsizei stride,
-                                      GLvoid *offset)
-    {
+                                      GLvoid *offset) {
         glVertexAttribPointer(index, num_components, component_type, normalize, stride, offset);
         glEnableVertexAttribArray(index);
     }
 
     void GLFunctions::destroy_vao(GLuint vao) { glDeleteVertexArrays(1, &vao); }
 
-    GLuint GLFunctions::create_texture(GLsizei width, GLsizei height)
-    {
+    GLuint GLFunctions::create_texture(GLsizei width, GLsizei height) {
         GLuint texture = 0;
         glGenTextures(1, &texture);
         glBindTexture(GL_TEXTURE_2D, texture);
@@ -55,15 +51,13 @@ namespace QtFrontend
     }
 
     void GLFunctions::update_texture_data(GLuint texture, GLsizei width, GLsizei height,
-                                          std::span<uint8_t> pixels)
-    {
+                                          std::span<uint8_t> pixels) {
         glBindTexture(GL_TEXTURE_2D, texture);
         glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE,
                         pixels.data());
     }
 
-    void GLFunctions::set_texture_filter(GLuint texture, GLint min_mag_filter)
-    {
+    void GLFunctions::set_texture_filter(GLuint texture, GLint min_mag_filter) {
         glBindTexture(GL_TEXTURE_2D, texture);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min_mag_filter);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, min_mag_filter);
@@ -74,8 +68,7 @@ namespace QtFrontend
     void GLFunctions::destroy_buffer(GLuint buffer) { glDeleteBuffers(1, &buffer); }
 
     std::optional<GLuint> GLFunctions::create_shader_program(GLenum shader_stage,
-                                                             std::string_view source)
-    {
+                                                             std::string_view source) {
         const char *data = source.data();
 
         GLsizei err_msg_length = 0;
@@ -86,10 +79,8 @@ namespace QtFrontend
         glGetProgramInfoLog(program, static_cast<GLsizei>(err_msg_buffer.size()), &err_msg_length,
                             err_msg_buffer.data());
 
-        if (err_msg_length)
-        {
+        if (err_msg_length) {
             fmt::print("#Shader Compiler Error:\n {} \n", err_msg_buffer);
-            fflush(stdout);
             glDeleteProgram(program);
             return {};
         }
@@ -97,10 +88,11 @@ namespace QtFrontend
         return program;
     }
 
-    std::optional<GLuint> GLFunctions::create_pipeline(GLuint vertex_shader, GLuint fragment_shader)
-    {
-        if (!vertex_shader || !fragment_shader)
+    std::optional<GLuint> GLFunctions::create_pipeline(GLuint vertex_shader,
+                                                       GLuint fragment_shader) {
+        if (!vertex_shader || !fragment_shader) {
             return {};
+        }
 
         GLuint pipeline = 0;
         glGenProgramPipelines(1, &pipeline);
@@ -110,21 +102,18 @@ namespace QtFrontend
         return pipeline;
     }
 
-    void GLFunctions::bind_sampler(GLuint shader, std::string_view name, GLint slot)
-    {
+    void GLFunctions::bind_sampler(GLuint shader, std::string_view name, GLint slot) {
         auto location = glGetUniformLocation(shader, name.data());
         glUniform1i(location, slot);
     }
 
-    void GLFunctions::destroy_pipeline(GLuint pipeline)
-    {
+    void GLFunctions::destroy_pipeline(GLuint pipeline) {
         std::array<GLuint, 2> programs{};
         GLsizei count = 0;
         glGetAttachedShaders(pipeline, programs.size(), &count, programs.data());
 
         glDeleteProgramPipelines(1, &pipeline);
-        for (int i = 0; i < count; i++)
-        {
+        for (int i = 0; i < count; i++) {
             glDeleteProgram(programs[i]);
         }
     }

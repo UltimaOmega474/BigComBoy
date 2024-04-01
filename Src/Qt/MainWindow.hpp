@@ -22,41 +22,27 @@
 #include <filesystem>
 #include <memory>
 
-namespace Ui
-{
+namespace Ui {
     class MainWindow;
 }
 
 class QAction;
 class QLabel;
 
-namespace Input
-{
+namespace Input {
     class InputDevice;
 }
 
-namespace QtFrontend
-{
+namespace QtFrontend {
     class EmulatorView;
     class SettingsWindow;
 
-    class MainWindow : public QMainWindow
-    {
+    class MainWindow : public QMainWindow {
         Q_OBJECT
-
-        QTimer input_timer;
-        std::vector<std::unique_ptr<Input::InputDevice>> controllers;
-        std::unique_ptr<Input::InputDevice> keyboard;
-
-        Ui::MainWindow *ui;
-        SettingsWindow *settings = nullptr;
-
-        QLabel *fps_counter = nullptr;
-        EmulatorView *emulator_widget;
 
     public:
         explicit MainWindow(QWidget *parent = nullptr);
-        ~MainWindow() override;
+        ~MainWindow();
         MainWindow(const MainWindow &) = delete;
         MainWindow(MainWindow &&) = delete;
         MainWindow &operator=(const MainWindow &) = delete;
@@ -79,13 +65,23 @@ namespace QtFrontend
         Q_SLOT void rom_load_success(const QString &message, int timeout = 0);
         Q_SLOT void rom_load_fail(const QString &message, int timeout = 0);
 
-        Q_SIGNAL void on_rom_loaded(std::filesystem::path);
-        Q_SIGNAL void on_reload_device_list();
+        Q_SIGNAL void rom_loaded(std::filesystem::path);
+        Q_SIGNAL void reload_device_list();
 
     private:
         void connect_slots();
         void reload_recent_roms();
         void update_controllers();
         void reload_controllers();
+
+        QTimer input_timer;
+        std::vector<std::unique_ptr<Input::InputDevice>> controllers;
+        std::unique_ptr<Input::InputDevice> keyboard;
+
+        Ui::MainWindow *ui;
+        SettingsWindow *settings = nullptr;
+
+        QLabel *fps_counter = nullptr;
+        EmulatorView *emulator_widget;
     };
 }

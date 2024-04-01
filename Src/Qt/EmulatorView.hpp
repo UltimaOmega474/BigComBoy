@@ -28,32 +28,27 @@
 #include <chrono>
 #include <mutex>
 
-namespace GL
-{
+namespace GL {
     class Renderer;
     class Context;
 }
 
-namespace QtFrontend
-{
+namespace QtFrontend {
     class MainWindow;
     class GBEmulatorController;
     class GLFunctions;
     class Renderer;
 
-    class EmulatorThread : public QThread
-    {
+    class EmulatorThread : public QThread {
         Q_OBJECT
 
-        std::atomic_bool running = true;
-
     public:
-        QTimer input_timer;
-        GBEmulatorController *gb_controller = nullptr;
-        SwapChain<GB::LCD_WIDTH * GB::LCD_HEIGHT * 4> image_buffer;
-
         EmulatorThread(QObject *parent);
-        ~EmulatorThread() override;
+        ~EmulatorThread();
+        EmulatorThread(const EmulatorThread &) = delete;
+        EmulatorThread(EmulatorThread &&) = delete;
+        EmulatorThread &operator=(const EmulatorThread &) = delete;
+        EmulatorThread &operator=(EmulatorThread &&) = delete;
 
         void stop();
         void run() override;
@@ -62,23 +57,29 @@ namespace QtFrontend
         Q_SIGNAL void on_update_fps_display(const QString &text);
         Q_SIGNAL void on_post_input(std::array<bool, 8> input);
         Q_SIGNAL void update_textures();
+
+    private:
+        std::atomic_bool running = true;
+
+        QTimer input_timer;
+
+        GBEmulatorController *gb_controller = nullptr;
+        SwapChain<GB::LCD_WIDTH * GB::LCD_HEIGHT * 4> image_buffer;
+
+        friend class EmulatorView;
     };
 
-    class EmulatorView : public QOpenGLWidget
-    {
+    class EmulatorView : public QOpenGLWidget {
         Q_OBJECT
-        EmulatorThread *thread = nullptr;
-        MainWindow *window = nullptr;
-
-        GLFunctions *functions = nullptr;
-        Renderer *renderer = nullptr;
-        float scaled_width = 0.0, scaled_height = 0.0;
-        std::array<GLuint, 2> textures{};
-        std::array<std::array<uint8_t, GB::LCD_WIDTH * GB::LCD_HEIGHT * 4>, 2> framebuffers{};
 
     public:
-        EmulatorView(MainWindow *parent);
-        ~EmulatorView() override;
+        explicit EmulatorView(MainWindow *parent);
+        ~EmulatorView();
+        EmulatorView(const EmulatorView &) = delete;
+        EmulatorView(EmulatorView &&) = delete;
+        EmulatorView &operator=(const EmulatorView &) = delete;
+        EmulatorView &operator=(EmulatorView &&) = delete;
+
         void showEvent(QShowEvent *ev) override;
         void hideEvent(QHideEvent *ev) override;
         void initializeGL() override;
@@ -87,5 +88,16 @@ namespace QtFrontend
 
         void connect_slots();
         Q_SLOT void update_textures();
+
+    private:
+        float scaled_width = 0.0, scaled_height = 0.0;
+
+        EmulatorThread *thread = nullptr;
+        MainWindow *window = nullptr;
+        GLFunctions *functions = nullptr;
+        Renderer *renderer = nullptr;
+
+        std::array<GLuint, 2> textures{};
+        std::array<std::array<uint8_t, GB::LCD_WIDTH * GB::LCD_HEIGHT * 4>, 2> framebuffers{};
     };
 }

@@ -21,25 +21,23 @@
 #include <QWidget>
 #include <string_view>
 
-namespace Ui
-{
+namespace Ui {
     class EmulationWindow;
 }
 
 class QAbstractButton;
 
-namespace QtFrontend
-{
-    class EmulationWindow : public QWidget
-    {
+namespace QtFrontend {
+    class EmulationWindow : public QWidget {
         Q_OBJECT
-
-        Ui::EmulationWindow *ui = nullptr;
-        Common::GBConfig::EmulationData emulation;
 
     public:
         explicit EmulationWindow(QWidget *parent = nullptr);
-        ~EmulationWindow() override;
+        ~EmulationWindow();
+        EmulationWindow(const EmulationWindow &) = delete;
+        EmulationWindow(EmulationWindow &&) = delete;
+        EmulationWindow &operator=(const EmulationWindow &) = delete;
+        EmulationWindow &operator=(EmulationWindow &&) = delete;
 
         Q_SLOT void apply_changes();
         Q_SLOT void select_bootrom();
@@ -49,5 +47,9 @@ namespace QtFrontend
         Q_SLOT void boot_path_changed(const QString &path);
 
         Q_SIGNAL void set_boot_path_text(const QString &text);
+
+    private:
+        Ui::EmulationWindow *ui = nullptr;
+        Common::GBConfig::EmulationData emulation;
     };
 }

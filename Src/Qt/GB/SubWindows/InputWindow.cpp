@@ -24,12 +24,10 @@
 #include <QMessageBox>
 #include <QTimer>
 
-namespace QtFrontend
-{
+namespace QtFrontend {
     InputWindow::InputWindow(QWidget *parent)
         : QWidget(parent), ui(new Ui::InputWindow), timer(new QTimer(this)),
-          pending_input_mappings(Common::Config::Current().gameboy.input_mappings)
-    {
+          pending_input_mappings(Common::Config::Current().gameboy.input_mappings) {
         ui->setupUi(this);
         reload_device_list();
         buttons[static_cast<size_t>(GB::PadButton::Left)] = ui->button_left;
@@ -47,60 +45,50 @@ namespace QtFrontend
         load_mappings_for_page(selected_page);
 
         connect(ui->device_select, &QComboBox::currentIndexChanged, this,
-                &InputWindow::on_device_index_changed);
+                &InputWindow::change_device_index);
 
-        for (auto page : pages)
-        {
-            connect(page, &QRadioButton::clicked, this, &InputWindow::on_page_changed);
+        for (auto page : pages) {
+            connect(page, &QRadioButton::clicked, this, &InputWindow::page_changed);
         }
 
-        for (auto button : buttons)
-        {
-            connect(button, &QPushButton::clicked, this, &InputWindow::on_button_clicked);
+        for (auto button : buttons) {
+            connect(button, &QPushButton::clicked, this, &InputWindow::button_click);
         }
 
         connect(timer, &QTimer::timeout, this, &InputWindow::check_device_for_input);
     }
 
-    InputWindow::~InputWindow()
-    {
+    InputWindow::~InputWindow() {
         delete ui;
         ui = nullptr;
     }
 
-    void InputWindow::keyPressEvent(QKeyEvent *event)
-    {
-        for (auto device : Input::DeviceRegistry::GetDevices())
-        {
+    void InputWindow::keyPressEvent(QKeyEvent *event) {
+        for (auto device : Input::DeviceRegistry::GetDevices()) {
             device->key_down(event->key());
         }
 
         event->accept();
     }
 
-    void InputWindow::keyReleaseEvent(QKeyEvent *event)
-    {
-        for (auto device : Input::DeviceRegistry::GetDevices())
-        {
+    void InputWindow::keyReleaseEvent(QKeyEvent *event) {
+        for (auto device : Input::DeviceRegistry::GetDevices()) {
             device->key_up(event->key());
         }
 
         event->accept();
     }
 
-    void InputWindow::apply_changes()
-    {
-        Common::Config::Current().gameboy.input_mappings = pending_input_mappings;
+    int32_t InputWindow::get_device_index_by_name(std::string_view name) const {
+        return static_cast<int32_t>(
+            ui->device_select->findText(QString::fromStdString(std::string(name))));
     }
 
-    void InputWindow::on_device_index_changed(int index)
-    {
+    void InputWindow::change_device_index(int index) {
         end_input_recording();
 
-        if (index == -1)
-        {
-            for (auto button : buttons)
-            {
+        if (index == -1) {
+            for (auto button : buttons) {
                 button->setEnabled(false);
             }
             return;
@@ -109,8 +97,7 @@ namespace QtFrontend
         refresh_buttons_text();
     }
 
-    void InputWindow::on_button_clicked()
-    {
+    void InputWindow::button_click() {
         auto clicked_button = dynamic_cast<QPushButton *>(sender());
         clicked_button->setText("...");
 
@@ -121,44 +108,36 @@ namespace QtFrontend
         begin_input_recording();
     }
 
-    void InputWindow::on_page_changed()
-    {
+    void InputWindow::page_changed() {
         auto clicked_page = dynamic_cast<QRadioButton *>(sender());
         auto resulting_iterator = std::find(pages.begin(), pages.end(), clicked_page);
         selected_page = static_cast<int32_t>(std::distance(pages.begin(), resulting_iterator));
         load_mappings_for_page(selected_page);
     }
 
-    int32_t InputWindow::get_device_index_by_name(std::string_view name) const
-    {
-        return static_cast<int32_t>(
-            ui->device_select->findText(QString::fromStdString(std::string(name))));
+    void InputWindow::apply_changes() {
+        Common::Config::Current().gameboy.input_mappings = pending_input_mappings;
     }
 
-    void InputWindow::reload_device_list()
-    {
+    void InputWindow::reload_device_list() {
         ui->device_select->clear();
 
-        for (const auto &device : Input::DeviceRegistry::GetDevices())
-        {
+        for (const auto &device : Input::DeviceRegistry::GetDevices()) {
             std::string str{device->name()};
             ui->device_select->addItem(QString::fromStdString(str));
         }
     }
 
-    void InputWindow::check_device_for_input()
-    {
+    void InputWindow::check_device_for_input() {
         int32_t selected_device = ui->device_select->currentIndex();
 
         auto device = Input::DeviceRegistry::TryFindDeviceByName(
             ui->device_select->itemText(selected_device).toStdString());
 
-        if (device)
-        {
+        if (device) {
             std::optional<Input::InputSource> result = device.value()->get_input_for_any_key();
 
-            if (result)
-            {
+            if (result) {
 
                 auto &mapping = pending_input_mappings[selected_page];
 
@@ -173,8 +152,7 @@ namespace QtFrontend
         }
     }
 
-    void InputWindow::load_mappings_for_page(int32_t page)
-    {
+    void InputWindow::load_mappings_for_page(int32_t page) {
         reload_device_list();
         end_input_recording();
 
@@ -182,8 +160,7 @@ namespace QtFrontend
 
         int32_t index = get_device_index_by_name(mapping.device_name);
 
-        if (index == -1)
-        {
+        if (index == -1) {
             QMessageBox msgBox{};
             auto msg =
                 QString("The device: '%1' is not connected.\n If you change any of the mappings "
@@ -191,21 +168,17 @@ namespace QtFrontend
                     .arg(QString::fromStdString(mapping.device_name));
             msgBox.setText(msg);
             msgBox.exec();
-        }
-        else
-        {
+        } else {
             ui->device_select->setCurrentIndex(index);
         }
 
         refresh_buttons_text();
     }
 
-    void InputWindow::begin_input_recording()
-    {
-        emit on_set_tab_focus(false);
+    void InputWindow::begin_input_recording() {
+        emit set_tab_focus(false);
 
-        for (auto button : buttons)
-        {
+        for (auto button : buttons) {
             button->setFocusPolicy(Qt::NoFocus);
             button->setAttribute(Qt::WA_TransparentForMouseEvents, true);
         }
@@ -214,12 +187,10 @@ namespace QtFrontend
         timer->start(1);
     }
 
-    void InputWindow::end_input_recording()
-    {
-        emit on_set_tab_focus(true);
+    void InputWindow::end_input_recording() {
+        emit set_tab_focus(true);
 
-        for (auto button : buttons)
-        {
+        for (auto button : buttons) {
             button->setFocusPolicy(Qt::StrongFocus);
             button->setAttribute(Qt::WA_TransparentForMouseEvents, false);
         }
@@ -230,15 +201,12 @@ namespace QtFrontend
         refresh_buttons_text();
     }
 
-    void InputWindow::refresh_buttons_text()
-    {
+    void InputWindow::refresh_buttons_text() {
         const auto &devices = Input::DeviceRegistry::GetDevices();
         int32_t selected_device = ui->device_select->currentIndex();
 
-        if (devices.empty() || selected_device == -1)
-        {
-            for (auto button : buttons)
-            {
+        if (devices.empty() || selected_device == -1) {
+            for (auto button : buttons) {
                 button->setEnabled(false);
             }
             return;
@@ -247,17 +215,14 @@ namespace QtFrontend
         const auto &mapping = pending_input_mappings[selected_page];
         const auto device = Input::DeviceRegistry::TryFindDeviceByName(mapping.device_name);
 
-        for (int i = 0; i < buttons.size(); ++i)
-        {
-            if (device && mapping.device_name == device.value()->name())
-            {
+        for (int i = 0; i < buttons.size(); ++i) {
+            if (device && mapping.device_name == device.value()->name()) {
                 auto name = device.value()->key_to_str(mapping.buttons[i]);
 
-                if (!name.empty())
+                if (!name.empty()) {
                     buttons[i]->setText(QString::fromStdString(name));
-            }
-            else
-            {
+                }
+            } else {
                 buttons[i]->setText("???");
             }
 

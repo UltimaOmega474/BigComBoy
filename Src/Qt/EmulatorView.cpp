@@ -31,6 +31,7 @@
 namespace QtFrontend {
     EmulatorThread::EmulatorThread(QObject *parent)
         : QThread(parent), input_timer(), gb_controller(new GBEmulatorController) {
+
         connect(gb_controller, &GBEmulatorController::on_show,
                 dynamic_cast<QOpenGLWidget *>(parent), &QWidget::show);
         connect(gb_controller, &GBEmulatorController::on_hide,
@@ -48,8 +49,9 @@ namespace QtFrontend {
         input_timer.stop();
         stop();
 
-        if (!wait(500))
+        if (!wait(500)) {
             terminate();
+        }
 
         if (gb_controller) {
             delete gb_controller;
@@ -78,8 +80,9 @@ namespace QtFrontend {
                 auto time_now = std::chrono::steady_clock::now();
                 auto delta = time_now - last_timer_time;
 
-                if (delta >= interval)
+                if (delta >= interval) {
                     delta = interval;
+                }
 
                 last_timer_time = time_now;
                 accumulator += delta;
@@ -169,8 +172,9 @@ namespace QtFrontend {
 
         renderer = new Renderer(functions);
 
-        for (auto &texture : textures)
+        for (auto &texture : textures) {
             texture = functions->create_texture(GB::LCD_WIDTH, GB::LCD_HEIGHT);
+        }
     }
 
     void EmulatorView::resizeGL(int w, int h) {
@@ -195,7 +199,7 @@ namespace QtFrontend {
             float alpha = 0.5f;
             for (size_t i = 1; i < textures.size(); ++i) {
                 auto fbtexture = textures[i];
-                auto color = Color{1.0f, 1.0f, 1.0f, alpha};
+                auto color = Color{.r = 1.0f, .g = 1.0f, .b = 1.0f, .a = alpha};
                 renderer->draw_image(fbtexture, final_x, 0, final_width, final_height, color);
             }
         }
@@ -222,7 +226,7 @@ namespace QtFrontend {
         connect(window->get_stop_action(), &QAction::triggered, thread->gb_controller,
                 &GBEmulatorController::stop_emulation);
 
-        connect(window, &MainWindow::on_rom_loaded, thread->gb_controller,
+        connect(window, &MainWindow::rom_loaded, thread->gb_controller,
                 &GBEmulatorController::start_rom);
     }
 
@@ -230,7 +234,7 @@ namespace QtFrontend {
         const auto &config = Common::Config::Current().gameboy.video;
 
         if (config.frame_blending) {
-            for (size_t i = (framebuffers.size() - 1); i > 0; --i) {
+            for (int i = (framebuffers.size() - 1); i > 0; --i) {
                 framebuffers[i] = framebuffers[i - 1];
 
                 functions->update_texture_data(textures[i], GB::LCD_WIDTH, GB::LCD_HEIGHT,

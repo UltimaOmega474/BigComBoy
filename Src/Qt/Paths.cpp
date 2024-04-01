@@ -20,24 +20,22 @@
 #include <QDir>
 #include <QStandardPaths>
 
-namespace QtFrontend::Paths
-{
+namespace QtFrontend::Paths {
 
-    QString QtGetAppDataPath()
-    {
+    QString qt_get_appdata_path() {
         static QString path =
             QStandardPaths::standardLocations(QStandardPaths::AppDataLocation).first();
 
-        if (!QDir(path).exists())
+        if (!QDir(path).exists()) {
             QDir().mkdir(path);
+        }
 
         return path;
     }
 
-    std::filesystem::path ConfigLocation()
-    {
+    std::filesystem::path ConfigLocation() {
         static std::filesystem::path config_location =
-            (QtGetAppDataPath() + "/config.toml").toStdString();
+            (qt_get_appdata_path() + "/config.toml").toStdString();
 
         return config_location;
     }

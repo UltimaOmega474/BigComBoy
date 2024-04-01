@@ -24,12 +24,10 @@
 #include <QRadioButton>
 #include <array>
 
-namespace QtFrontend
-{
+namespace QtFrontend {
     EmulationWindow::EmulationWindow(QWidget *parent)
         : QWidget(parent), ui(new Ui::EmulationWindow),
-          emulation(Common::Config::Current().gameboy.emulation)
-    {
+          emulation(Common::Config::Current().gameboy.emulation) {
         ui->setupUi(this);
 
         connect(ui->console_btn_group, &QButtonGroup::buttonClicked, this,
@@ -65,35 +63,27 @@ namespace QtFrontend
         ui->gbc_boot_path->setText(QString::fromStdString(emulation.cgb_bootstrap.string()));
     }
 
-    EmulationWindow::~EmulationWindow()
-    {
+    EmulationWindow::~EmulationWindow() {
         delete ui;
         ui = nullptr;
     }
 
-    void EmulationWindow::apply_changes()
-    {
+    void EmulationWindow::apply_changes() {
         Common::Config::Current().gameboy.emulation = emulation;
     }
 
-    void EmulationWindow::select_bootrom()
-    {
+    void EmulationWindow::select_bootrom() {
         QFileDialog dialog;
         dialog.setFileMode(QFileDialog::FileMode::ExistingFile);
         dialog.setViewMode(QFileDialog::Detail);
 
-        if (dialog.exec())
-        {
+        if (dialog.exec()) {
             QString path = dialog.selectedFiles().first();
 
-            if (sender() == ui->gb_browse_btn)
-            {
+            if (sender() == ui->gb_browse_btn) {
                 emulation.dmg_bootstrap = path.toStdString();
                 ui->gb_boot_path->setText(path);
-            }
-            else
-            {
-
+            } else {
                 emulation.cgb_bootstrap = path.toStdString();
                 ui->gbc_boot_path->setText(path);
             }
@@ -104,28 +94,22 @@ namespace QtFrontend
 
     void EmulationWindow::change_interval(int32_t value) { emulation.sram_save_interval = value; }
 
-    void EmulationWindow::set_console(QAbstractButton *btn)
-    {
-        if (btn == ui->auto_btn)
-        {
+    void EmulationWindow::set_console(QAbstractButton *btn) {
+        if (btn == ui->auto_btn) {
             emulation.console = GB::ConsoleType::AutoSelect;
-        }
-        else if (btn == ui->gb_btn)
-        {
+        } else if (btn == ui->gb_btn) {
             emulation.console = GB::ConsoleType::DMG;
-        }
-        else if (btn == ui->gbc_btn)
-        {
+        } else if (btn == ui->gbc_btn) {
             emulation.console = GB::ConsoleType::CGB;
         }
     }
 
-    void EmulationWindow::boot_path_changed(const QString &path)
-    {
-        if (sender() == ui->gb_boot_path)
+    void EmulationWindow::boot_path_changed(const QString &path) {
+        if (sender() == ui->gb_boot_path) {
             emulation.dmg_bootstrap = path.toStdString();
-        else
+        } else {
             emulation.cgb_bootstrap = path.toStdString();
+        }
     }
 
 }

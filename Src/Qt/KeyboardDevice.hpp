@@ -20,15 +20,11 @@
 #include "Input/InputDevice.hpp"
 #include <set>
 
-namespace QtFrontend
-{
-    class KeyboardDevice : public Input::InputDevice
-    {
-        std::set<int32_t> pressed_keys;
-
+namespace QtFrontend {
+    class KeyboardDevice : public Input::InputDevice {
     public:
-        ~KeyboardDevice() override {}
         std::string_view name() const override { return "Keyboard"; }
+
         void update_internal_state() override{};
         void key_down(int32_t key) override;
         void key_up(int32_t key) override;
@@ -38,5 +34,8 @@ namespace QtFrontend
 
         std::string key_to_str(const Input::InputSource &key) const override;
         int32_t str_to_key(std::string_view str) const override;
+
+    private:
+        std::set<int32_t> pressed_keys;
     };
 }

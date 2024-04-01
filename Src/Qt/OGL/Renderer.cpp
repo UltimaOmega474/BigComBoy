@@ -21,8 +21,7 @@
 #include "GLFunctions.hpp"
 #include <string_view>
 
-namespace QtFrontend
-{
+namespace QtFrontend {
     using namespace std::string_view_literals;
 
     constexpr std::string_view DEFAULT_VERTEX_SHADER =
@@ -65,10 +64,8 @@ namespace QtFrontend
         "\tFragColor = texture(DiffuseTexture, TextureUV) * VColor;\n"
         "}"sv;
 
-    Renderer::Renderer(GLFunctions *functions) : glfn(functions)
-    {
-        for (int i = 0; i < MAX_IMAGES_PER_FRAME; ++i)
-        {
+    Renderer::Renderer(GLFunctions *functions) : glfn(functions) {
+        for (int i = 0; i < MAX_IMAGES_PER_FRAME; ++i) {
             indices[(i * 6)] = (i * 4);
             indices[(i * 6) + 1] = ((i * 4) + 1);
             indices[(i * 6) + 2] = ((i * 4) + 2);
@@ -109,8 +106,7 @@ namespace QtFrontend
         glfn->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
 
-    Renderer::~Renderer()
-    {
+    Renderer::~Renderer() {
         glfn->destroy_buffer(uniform_buffer);
         glfn->destroy_vao(vao);
         glfn->destroy_buffer(vertex_buffer);
@@ -118,8 +114,7 @@ namespace QtFrontend
         glfn->destroy_pipeline(pipeline);
     }
 
-    void Renderer::reset_state(float screen_width, float screen_height)
-    {
+    void Renderer::reset_state(float screen_width, float screen_height) {
         vertex_offset = 0;
         index_offset = 0;
 
@@ -130,15 +125,15 @@ namespace QtFrontend
     }
 
     void Renderer::draw_image(GLuint texture, float x, float y, float width, float height,
-                              const Color &color)
-    {
-        if (vertex_offset >= vertices.size())
+                              const Color &color) {
+        if (vertex_offset >= vertices.size()) {
             return;
+        }
 
-        constexpr std::array<float, 4> u_list{0.0f, 1.0f, 0.0f, 1.0f};
-        constexpr std::array<float, 4> v_list{0.0f, 1.0f, 1.0f, 0.0f};
-        for (int i = 0; i < 4; ++i)
-        {
+        constexpr static std::array<float, 4> u_list{0.0f, 1.0f, 0.0f, 1.0f};
+        constexpr static std::array<float, 4> v_list{0.0f, 1.0f, 1.0f, 0.0f};
+
+        for (int i = 0; i < 4; ++i) {
             vertices[vertex_offset + i] = {
                 .x = x + (width * u_list[i]),
                 .y = y + (height * v_list[i]),

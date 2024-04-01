@@ -20,32 +20,28 @@
 #include <array>
 #include <atomic>
 
-namespace QtFrontend
-{
-    template <size_t Size> class SwapChain
-    {
+namespace QtFrontend {
+    template <size_t Size> class SwapChain {
+    public:
+        std::array<uint8_t, Size> &next_rendering_image();
+        std::array<uint8_t, Size> &next_drawing_image();
+
+    private:
         int32_t rendering_index = 0;
         std::atomic_int32_t ready_index = 1;
         int32_t drawing_index = 2;
 
         std::array<std::array<uint8_t, Size>, 3> buffers{};
-
-    public:
-        std::array<uint8_t, Size> &next_rendering_image();
-
-        void swap_image();
-        std::array<uint8_t, Size> &next_drawing_image();
     };
 
-    template <size_t Size> inline std::array<uint8_t, Size> &SwapChain<Size>::next_rendering_image()
-    {
+    template <size_t Size>
+    inline std::array<uint8_t, Size> &SwapChain<Size>::next_rendering_image() {
         auto &image = buffers[rendering_index];
         rendering_index = ready_index.exchange(rendering_index);
         return image;
     }
 
-    template <size_t Size> inline std::array<uint8_t, Size> &SwapChain<Size>::next_drawing_image()
-    {
+    template <size_t Size> inline std::array<uint8_t, Size> &SwapChain<Size>::next_drawing_image() {
         drawing_index = ready_index.exchange(drawing_index);
         return buffers[drawing_index];
     }

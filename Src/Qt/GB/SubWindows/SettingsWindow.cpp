@@ -27,28 +27,25 @@
 #include <QCoreApplication>
 #include <QDialogButtonBox>
 
-namespace QtFrontend
-{
+namespace QtFrontend {
     SettingsWindow::SettingsWindow(QWidget *parent, int32_t selected_index)
-        : QDialog(parent), ui(new Ui::SettingsWindow)
-    {
+        : QDialog(parent), ui(new Ui::SettingsWindow) {
         ui->setupUi(this);
 
         connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
         connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
-        connect(ui->input_tab, &InputWindow::on_set_tab_focus, this,
-                &SettingsWindow::set_tab_focus);
+        connect(ui->input_tab, &InputWindow::set_tab_focus, this, &SettingsWindow::set_tab_focus);
 
         connect(ui->buttonBox, &QDialogButtonBox::clicked, this, &SettingsWindow::dialog_clicked);
 
-        connect(this, &SettingsWindow::on_apply_changes_to_tabs, ui->emulation_tab,
+        connect(this, &SettingsWindow::apply_changes_to_tabs, ui->emulation_tab,
                 &EmulationWindow::apply_changes);
-        connect(this, &SettingsWindow::on_apply_changes_to_tabs, ui->video_tab,
+        connect(this, &SettingsWindow::apply_changes_to_tabs, ui->video_tab,
                 &VideoWindow::apply_changes);
-        connect(this, &SettingsWindow::on_apply_changes_to_tabs, ui->audio_tab,
+        connect(this, &SettingsWindow::apply_changes_to_tabs, ui->audio_tab,
                 &AudioWindow::apply_changes);
-        connect(this, &SettingsWindow::on_apply_changes_to_tabs, ui->input_tab,
+        connect(this, &SettingsWindow::apply_changes_to_tabs, ui->input_tab,
                 &InputWindow::apply_changes);
 
         setAttribute(Qt::WA_DeleteOnClose);
@@ -56,31 +53,24 @@ namespace QtFrontend
         ui->tabWidget->setCurrentIndex(selected_index);
     }
 
-    SettingsWindow::~SettingsWindow()
-    {
+    SettingsWindow::~SettingsWindow() {
         delete ui;
         ui = nullptr;
     }
 
-    bool SettingsWindow::focusNextPrevChild(bool next)
-    {
-        if (allow_tab_focus)
-        {
+    bool SettingsWindow::focusNextPrevChild(bool next) {
+        if (allow_tab_focus) {
             return QWidget::focusNextPrevChild(next);
-        }
-        else
-        {
+        } else {
             return false;
         }
     }
 
-    void SettingsWindow::dialog_clicked(QAbstractButton *button)
-    {
+    void SettingsWindow::dialog_clicked(QAbstractButton *button) {
         QString name = button->text();
 
-        if (name == "Apply" || name == "OK")
-        {
-            emit on_apply_changes_to_tabs();
+        if (name == "Apply" || name == "OK") {
+            emit apply_changes_to_tabs();
 
             Common::Config::Current().write_to_file(QtFrontend::Paths::ConfigLocation());
         }
