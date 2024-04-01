@@ -21,22 +21,14 @@
 #include <SDL.h>
 #include <vector>
 
-namespace QtFrontend
-{
-    class AudioSystem
-    {
-        struct AudioSample
-        {
+namespace QtFrontend {
+    class AudioSystem {
+        struct AudioSample {
             float left = 0.0f;
             float right = 0.0f;
         };
 
-        bool opened = false;
-
     public:
-        SDL_AudioSpec obtained{};
-        SDL_AudioDeviceID audio_device = 0;
-        std::vector<AudioSample> samples{};
         AudioSystem();
         ~AudioSystem();
         AudioSystem(const AudioSystem &) = delete;
@@ -49,5 +41,11 @@ namespace QtFrontend
         bool should_continue();
         void operator()(GB::SampleResult result);
         void prep_for_playback(GB::APU &apu);
+
+    private:
+        bool opened = false;
+        SDL_AudioSpec obtained{};
+        SDL_AudioDeviceID audio_device = 0;
+        std::vector<AudioSample> samples{};
     };
 }

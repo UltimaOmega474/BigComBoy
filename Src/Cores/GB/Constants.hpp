@@ -30,8 +30,8 @@ namespace GB {
     constexpr uint8_t INT_TIMER_BIT = 0x04;
     constexpr uint8_t INT_SERIAL_PORT_BIT = 0x08;
     constexpr uint8_t INT_JOYPAD_BIT = 0x10;
-    constexpr uint32_t CPU_CLOCK_RATE = 4194304;
-    constexpr uint32_t CYCLES_PER_FRAME = 70224;
+    constexpr int32_t CPU_CLOCK_RATE = 4194304;
+    constexpr int32_t CYCLES_PER_FRAME = 70224;
 
     enum class ConsoleType {
         DMG,

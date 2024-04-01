@@ -20,10 +20,10 @@
 #include "Common/Config.hpp"
 #include "Cores/GB/Constants.hpp"
 
-namespace QtFrontend
-{
-    constexpr float MAX_LAG = 0.04f;
+namespace QtFrontend {
     constexpr bool SYNC_TO_AUDIO = true;
+    constexpr float MAX_LAG = 0.04f;
+    constexpr float VOLUME_SCALE = 255.0f;
 
     AudioSystem::AudioSystem() { open_device(); }
 
@@ -31,14 +31,11 @@ namespace QtFrontend
 
     AudioSystem::AudioSystem(AudioSystem &&other) noexcept
         : opened(other.opened), obtained(std::move(other.obtained)),
-          audio_device(other.audio_device), samples(std::move(other.samples))
-
-    {
+          audio_device(other.audio_device), samples(std::move(other.samples)) {
         other.audio_device = 0;
     }
 
-    AudioSystem &AudioSystem::operator=(AudioSystem &&other) noexcept
-    {
+    AudioSystem &AudioSystem::operator=(AudioSystem &&other) noexcept {
         opened = other.opened;
         obtained = other.obtained;
         audio_device = other.audio_device;
@@ -48,10 +45,10 @@ namespace QtFrontend
         return *this;
     }
 
-    void AudioSystem::open_device()
-    {
-        if (opened)
+    void AudioSystem::open_device() {
+        if (opened) {
             return;
+        }
 
         SDL_AudioSpec audio_spec{};
         audio_spec.freq = 48000;
@@ -64,28 +61,22 @@ namespace QtFrontend
         opened = true;
     }
 
-    void AudioSystem::close_device()
-    {
+    void AudioSystem::close_device() {
         SDL_CloseAudioDevice(audio_device);
         samples.clear();
         opened = false;
         audio_device = 0;
     }
 
-    bool AudioSystem::should_continue()
-    {
+    bool AudioSystem::should_continue() {
         float samples_remain =
             static_cast<float>(SDL_GetQueuedAudioSize(audio_device) / (sizeof(AudioSample)));
         float lag_threshold = static_cast<float>(obtained.freq) * MAX_LAG;
 
-        if (samples_remain > lag_threshold)
-        {
-            if (SYNC_TO_AUDIO)
-            {
+        if (samples_remain > lag_threshold) {
+            if (SYNC_TO_AUDIO) {
                 return false;
-            }
-            else
-            {
+            } else {
                 return true;
             }
         }
@@ -93,13 +84,11 @@ namespace QtFrontend
         return true;
     }
 
-    void AudioSystem::operator()(GB::SampleResult result)
-    {
+    void AudioSystem::operator()(GB::SampleResult result) {
         const auto &config = Common::Config::Current().gameboy;
 
-        constexpr float VOLUME_SCALE = 255.0f;
-        float left_vol = (128 * result.left_channel.master_volume) / 7;
-        float right_vol = (128 * result.right_channel.master_volume) / 7;
+        float left_vol = static_cast<float>(128 * result.left_channel.master_volume) / 7;
+        float right_vol = static_cast<float>(128 * result.right_channel.master_volume) / 7;
 
         float volume = static_cast<float>(config.audio.volume) / 100.0f;
         float square1 = static_cast<float>(config.audio.square1) / 100.0f;
@@ -111,59 +100,56 @@ namespace QtFrontend
         float input = static_cast<float>(result.left_channel.pulse_1) / VOLUME_SCALE;
         SDL_MixAudioFormat(reinterpret_cast<Uint8 *>(&sample_left),
                            reinterpret_cast<Uint8 *>(&input), AUDIO_F32SYS, sizeof(float),
-                           left_vol * square1);
+                           static_cast<int>(left_vol * square1));
         input = static_cast<float>(result.left_channel.pulse_2) / VOLUME_SCALE;
         SDL_MixAudioFormat(reinterpret_cast<Uint8 *>(&sample_left),
                            reinterpret_cast<Uint8 *>(&input), AUDIO_F32SYS, sizeof(float),
-                           left_vol * square2);
+                           static_cast<int>(left_vol * square2));
         input = static_cast<float>(result.left_channel.wave) / VOLUME_SCALE;
         SDL_MixAudioFormat(reinterpret_cast<Uint8 *>(&sample_left),
                            reinterpret_cast<Uint8 *>(&input), AUDIO_F32SYS, sizeof(float),
-                           left_vol * wave);
+                           static_cast<int>(left_vol * wave));
         input = static_cast<float>(result.left_channel.noise) / VOLUME_SCALE;
         SDL_MixAudioFormat(reinterpret_cast<Uint8 *>(&sample_left),
                            reinterpret_cast<Uint8 *>(&input), AUDIO_F32SYS, sizeof(float),
-                           left_vol * noise);
+                           static_cast<int>(left_vol * noise));
 
         float sample_right = 0;
         input = static_cast<float>(result.right_channel.pulse_1) / VOLUME_SCALE;
         SDL_MixAudioFormat(reinterpret_cast<Uint8 *>(&sample_right),
                            reinterpret_cast<Uint8 *>(&input), AUDIO_F32SYS, sizeof(float),
-                           right_vol * square1);
+                           static_cast<int>(right_vol * square1));
         input = static_cast<float>(result.right_channel.pulse_2) / VOLUME_SCALE;
         SDL_MixAudioFormat(reinterpret_cast<Uint8 *>(&sample_right),
                            reinterpret_cast<Uint8 *>(&input), AUDIO_F32SYS, sizeof(float),
-                           right_vol * square2);
+                           static_cast<int>(right_vol * square2));
         input = static_cast<float>(result.right_channel.wave) / VOLUME_SCALE;
         SDL_MixAudioFormat(reinterpret_cast<Uint8 *>(&sample_right),
                            reinterpret_cast<Uint8 *>(&input), AUDIO_F32SYS, sizeof(float),
-                           right_vol * wave);
+                           static_cast<int>(right_vol * wave));
         input = static_cast<float>(result.right_channel.noise) / VOLUME_SCALE;
         SDL_MixAudioFormat(reinterpret_cast<Uint8 *>(&sample_right),
                            reinterpret_cast<Uint8 *>(&input), AUDIO_F32SYS, sizeof(float),
-                           right_vol * noise);
+                           static_cast<int>(right_vol * noise));
 
-        samples.push_back({sample_left * volume, sample_right * volume});
+        samples.push_back({.left = sample_left * volume, .right = sample_right * volume});
 
-        if (samples.size() == obtained.samples)
-        {
+        if (samples.size() == obtained.samples) {
             SDL_QueueAudio(audio_device, samples.data(), samples.size() * sizeof(AudioSample));
             samples.clear();
         }
     }
 
-    void AudioSystem::prep_for_playback(GB::APU &apu)
-    {
-        if (!opened)
+    void AudioSystem::prep_for_playback(GB::APU &apu) {
+        if (!opened) {
             return;
+        }
+
         SDL_PauseAudioDevice(audio_device, 0);
-        apu.sample_rate = GB::CPU_CLOCK_RATE / obtained.freq;
         samples.clear();
         samples.reserve(obtained.samples);
 
-        apu.samples_ready_func = [this](GB::SampleResult samples)
-        {
-            this->operator()(samples);
-        };
+        apu.set_samples_callback(GB::CPU_CLOCK_RATE / obtained.freq,
+                                 [this](GB::SampleResult samples) { this->operator()(samples); });
     }
 }
