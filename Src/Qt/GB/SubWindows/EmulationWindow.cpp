@@ -27,7 +27,7 @@
 namespace QtFrontend {
     EmulationWindow::EmulationWindow(QWidget *parent)
         : QWidget(parent), ui(new Ui::EmulationWindow),
-          emulation(Common::Config::Current().gameboy.emulation) {
+          emulation(Common::Config::current().gameboy.emulation) {
         ui->setupUi(this);
 
         connect(ui->console_btn_group, &QButtonGroup::buttonClicked, this,
@@ -69,7 +69,7 @@ namespace QtFrontend {
     }
 
     void EmulationWindow::apply_changes() {
-        Common::Config::Current().gameboy.emulation = emulation;
+        Common::Config::current().gameboy.emulation = emulation;
     }
 
     void EmulationWindow::select_bootrom() {

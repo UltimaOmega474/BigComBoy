@@ -25,25 +25,20 @@
 #include <filesystem>
 #include <string>
 
-namespace Common
-{
-    struct GBGamepadConfig
-    {
+namespace Common {
+    struct GBGamepadConfig {
         std::string device_name;
         std::array<Input::InputSource, 8> buttons{};
     };
 
-    class GBConfig
-    {
-    public:
-        struct VideoData
-        {
+    struct GBConfig {
+        struct VideoData {
             std::string screen_filter = "No Filter";
-            bool frame_blending = true, smooth_scaling = false;
+            bool frame_blending = true;
+            bool smooth_scaling = false;
         } video;
 
-        struct EmulationData
-        {
+        struct EmulationData {
             GB::ConsoleType console = GB::ConsoleType::AutoSelect;
             std::filesystem::path dmg_bootstrap;
             std::filesystem::path cgb_bootstrap;
@@ -52,25 +47,27 @@ namespace Common
             int32_t sram_save_interval = 30;
         } emulation;
 
-        struct AudioData
-        {
+        struct AudioData {
             int32_t volume = 70;
-            int32_t square1 = 100, square2 = 100;
-            int32_t wave = 100, noise = 100;
+            int32_t square1 = 100;
+            int32_t square2 = 100;
+            int32_t wave = 100;
+            int32_t noise = 100;
         } audio;
 
-        std::array<GBGamepadConfig, 2> input_mappings;
+        std::array<GBGamepadConfig, 2> input_mappings{
+            GBGamepadConfig{.device_name = "Keyboard"},
+            GBGamepadConfig{.device_name = "Keyboard"},
+        };
     };
 
-    class Config
-    {
-    public:
+    struct Config {
         int32_t wsize_x = 640, wsize_y = 480;
 
         std::deque<std::string> recent_roms{};
         GBConfig gameboy;
 
-        static Config &Current();
+        static Config &current();
         void add_rom_to_history(const std::string &file);
         void write_to_file(std::filesystem::path path);
         void read_from_file(std::filesystem::path path);

@@ -118,7 +118,7 @@ namespace QtFrontend {
         vertex_offset = 0;
         index_offset = 0;
 
-        Common::Math::OrthroProject(matrix, 0, screen_width, 0, screen_height, 0, 1);
+        Common::Math::ortho_projection(matrix, 0, screen_width, 0, screen_height, 0, 1);
         glfn->update_buffer_data<float>(uniform_buffer, GL_UNIFORM_BUFFER, matrix);
 
         glfn->glClear(GL_COLOR_BUFFER_BIT);

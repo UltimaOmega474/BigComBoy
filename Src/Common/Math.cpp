@@ -18,26 +18,26 @@
 
 #include "Math.hpp"
 
-namespace Common::Math
-{
-    std::tuple<float, float> FitToAspectRatio(float window_width, float window_height,
-                                              float target_width, float target_height)
-    {
-        float final_width = window_width, final_height = window_height;
-        auto scaled_w = static_cast<float>(window_width) * (target_height / target_width);
-        auto scaled_h = static_cast<float>(window_height) * (target_width / target_height);
+namespace Common::Math {
+    std::tuple<float, float> fit_aspect_ratio(float window_width, float window_height,
+                                              float target_width, float target_height) {
+        float final_width = window_width;
+        float final_height = window_height;
 
-        if (scaled_h <= window_width)
+        float scaled_w = window_width * (target_height / target_width);
+        float scaled_h = window_height * (target_width / target_height);
+
+        if (scaled_h <= window_width) {
             final_width = scaled_h;
-        else if (scaled_w <= window_height)
+        } else if (scaled_w <= window_height) {
             final_height = scaled_w;
+        }
 
         return std::make_tuple(final_width, final_height);
     }
 
-    void OrthroProject(std::array<float, 16> &matrix, float left, float right, float top,
-                       float bottom, float near, float far)
-    {
+    void ortho_projection(std::array<float, 16> &matrix, float left, float right, float top,
+                          float bottom, float near, float far) {
         matrix[0] = 2.0f / (right - left);
         matrix[1] = 0.0f;
         matrix[2] = 0.0f;

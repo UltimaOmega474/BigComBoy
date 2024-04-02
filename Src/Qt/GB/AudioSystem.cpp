@@ -69,7 +69,7 @@ namespace QtFrontend {
     }
 
     void AudioSystem::operator()(GB::SampleResult result) {
-        const auto &config = Common::Config::Current().gameboy;
+        const auto &config = Common::Config::current().gameboy;
 
         float left_vol = static_cast<float>(128 * result.left_channel.master_volume) / 7;
         float right_vol = static_cast<float>(128 * result.right_channel.master_volume) / 7;

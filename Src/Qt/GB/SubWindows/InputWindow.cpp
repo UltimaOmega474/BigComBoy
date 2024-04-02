@@ -27,7 +27,7 @@
 namespace QtFrontend {
     InputWindow::InputWindow(QWidget *parent)
         : QWidget(parent), ui(new Ui::InputWindow), timer(new QTimer(this)),
-          pending_input_mappings(Common::Config::Current().gameboy.input_mappings) {
+          pending_input_mappings(Common::Config::current().gameboy.input_mappings) {
         ui->setupUi(this);
         reload_device_list();
         buttons[static_cast<size_t>(GB::PadButton::Left)] = ui->button_left;
@@ -116,7 +116,7 @@ namespace QtFrontend {
     }
 
     void InputWindow::apply_changes() {
-        Common::Config::Current().gameboy.input_mappings = pending_input_mappings;
+        Common::Config::current().gameboy.input_mappings = pending_input_mappings;
     }
 
     void InputWindow::reload_device_list() {
@@ -162,10 +162,10 @@ namespace QtFrontend {
 
         if (index == -1) {
             QMessageBox msgBox{};
-            auto msg =
-                QString("The device: '%1' is not connected.\n If you change any of the mappings "
-                        "then the original device configuration will be overwritten.")
-                    .arg(QString::fromStdString(mapping.device_name));
+            auto msg = QString("The device: '%1' is not connected.\nIf you change any mappings "
+                               "for this entry, "
+                               "the original device configuration will be overwritten.")
+                           .arg(QString::fromStdString(mapping.device_name));
             msgBox.setText(msg);
             msgBox.exec();
         } else {
@@ -217,11 +217,10 @@ namespace QtFrontend {
 
         for (int i = 0; i < buttons.size(); ++i) {
             if (device && mapping.device_name == device.value()->name()) {
-                auto name = device.value()->key_to_str(mapping.buttons[i]);
+                std::string name = device.value()->key_to_str(mapping.buttons[i]);
 
-                if (!name.empty()) {
-                    buttons[i]->setText(QString::fromStdString(name));
-                }
+                buttons[i]->setText(QString::fromStdString(name));
+
             } else {
                 buttons[i]->setText("???");
             }

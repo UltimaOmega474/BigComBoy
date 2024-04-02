@@ -23,7 +23,7 @@
 
 namespace QtFrontend {
     AudioWindow::AudioWindow(QWidget *parent)
-        : QWidget(parent), ui(new Ui::AudioWindow), audio(Common::Config::Current().gameboy.audio) {
+        : QWidget(parent), ui(new Ui::AudioWindow), audio(Common::Config::current().gameboy.audio) {
         ui->setupUi(this);
 
         connect_vol_controls(ui->master_slider, ui->master_spin);
@@ -51,7 +51,7 @@ namespace QtFrontend {
         connect(spin, &QSpinBox::valueChanged, this, &AudioWindow::change_volume);
     }
 
-    void AudioWindow::apply_changes() { Common::Config::Current().gameboy.audio = audio; }
+    void AudioWindow::apply_changes() { Common::Config::current().gameboy.audio = audio; }
 
     void AudioWindow::change_volume(int32_t volume) {
         QObject *obj = sender();

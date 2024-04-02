@@ -1,5 +1,4 @@
 add_library(Common STATIC
-	IO.cpp
 	Math.cpp
 	Config.cpp
 )

@@ -19,23 +19,16 @@
 #pragma once
 #include <array>
 #include <chrono>
-#include <cinttypes>
-#include <span>
 #include <tuple>
 
-namespace Common::Math
-{
-    std::tuple<float, float> FitToAspectRatio(float window_width, float window_height,
+namespace Common::Math {
+    std::tuple<float, float> fit_aspect_ratio(float window_width, float window_height,
                                               float target_width, float target_height);
 
-    void OrthroProject(std::array<float, 16> &matrix, float left, float right, float top,
-                       float bottom, float near, float far);
+    void ortho_projection(std::array<float, 16> &matrix, float left, float right, float top,
+                          float bottom, float near, float far);
 
-    void AlphaComposite(std::span<uint8_t> a, std::span<uint8_t> b, std::span<uint8_t> out,
-                        size_t width, size_t height, size_t bit_depth);
-
-    static constexpr std::chrono::nanoseconds FrequencyToNano(size_t hz)
-    {
+    consteval std::chrono::nanoseconds freq_to_nanoseconds(int32_t hz) {
         using namespace std::chrono_literals;
         constexpr std::chrono::nanoseconds nanoseconds_per_hertz = 1000000000ns;
         // framerate was inconsistent without this adjustment

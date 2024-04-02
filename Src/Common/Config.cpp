@@ -22,27 +22,24 @@
 #include <toml.hpp>
 #include <vector>
 
-namespace Common
-{
-    static Config config{};
+namespace Common {
+    static Config config;
 
-    Config &Config::Current() { return config; }
+    Config &Config::current() { return config; }
 
-    void Config::add_rom_to_history(const std::string &path)
-    {
+    void Config::add_rom_to_history(const std::string &path) {
         auto it = std::find(recent_roms.begin(), recent_roms.end(), path);
-        if (it != recent_roms.end())
-        {
+        if (it != recent_roms.end()) {
             recent_roms.erase(it);
         }
 
         recent_roms.push_front(std::move(path));
-        if (recent_roms.size() > 10)
+        if (recent_roms.size() > 10) {
             recent_roms.pop_back();
+        }
     }
 
-    void Config::write_to_file(std::filesystem::path path)
-    {
+    void Config::write_to_file(std::filesystem::path path) {
         using namespace Input;
         toml::value gb{
             {"console", static_cast<int32_t>(gameboy.emulation.console)},
@@ -59,11 +56,10 @@ namespace Common
             {"wave", gameboy.audio.wave},
             {"noise", gameboy.audio.noise},
         };
+
         std::vector<toml::value> devices;
-        for (const auto &mapping : gameboy.input_mappings)
-        {
-            const auto &source_to_toml = [](const InputSource &src)
-            {
+        for (const auto &mapping : gameboy.input_mappings) {
+            const auto &source_to_toml = [](const InputSource &src) {
                 return toml::value{
                     {"type", (int32_t)src.type},
                     {"keyboard", src.keyboard},
@@ -74,15 +70,14 @@ namespace Common
             };
 
             std::vector<toml::value> buttons;
-
-            for (const auto &button : mapping.buttons)
-            {
+            for (const auto &button : mapping.buttons) {
                 buttons.push_back(source_to_toml(button));
             }
 
             toml::value device{
                 {"device_name", mapping.device_name},
             };
+
             device["buttons"] = buttons;
 
             devices.push_back(device);
@@ -99,19 +94,18 @@ namespace Common
 
         std::ofstream ofs{path};
 
-        if (ofs)
-        {
+        if (ofs) {
             ofs << data;
-
             ofs.close();
         }
     }
 
-    void Config::read_from_file(std::filesystem::path path)
-    {
+    void Config::read_from_file(std::filesystem::path path) {
         using namespace Input;
-        if (!std::filesystem::exists(path))
+
+        if (!std::filesystem::exists(path)) {
             return;
+        }
 
         auto data = toml::parse(path);
         wsize_x = toml::find_or(data, "wsize_x", wsize_x);
@@ -146,12 +140,10 @@ namespace Common
         gameboy.audio.wave = toml::find_or(gb, "wave", gameboy.audio.wave);
         gameboy.audio.noise = toml::find_or(gb, "noise", gameboy.audio.noise);
 
-        if (gb["devices"].is_array())
-        {
+        if (gb["devices"].is_array()) {
             auto gb_devices = gb["devices"].as_array();
 
-            const auto &toml_to_source = [](toml::value &src)
-            {
+            const auto &toml_to_source = [](toml::value &src) {
                 return InputSource{
                     .type = (SourceType)toml::find_or(src, "type", -1),
                     .keyboard = toml::find_or(src, "keyboard", -1),
@@ -161,18 +153,15 @@ namespace Common
                 };
             };
 
-            for (int i = 0; i < gameboy.input_mappings.size(); ++i)
-            {
+            for (int i = 0; i < gameboy.input_mappings.size(); ++i) {
                 auto &device = gb_devices[i];
                 auto &mapping = gameboy.input_mappings[i];
 
                 mapping.device_name = toml::find_or(device, "device_name", mapping.device_name);
 
-                if (device["buttons"].is_array())
-                {
+                if (device["buttons"].is_array()) {
                     auto &buttons = device["buttons"].as_array();
-                    for (int i = 0; i < buttons.size(); ++i)
-                    {
+                    for (int i = 0; i < buttons.size(); ++i) {
                         mapping.buttons[i] = toml_to_source(buttons[i]);
                     }
                 }

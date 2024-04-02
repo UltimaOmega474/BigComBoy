@@ -49,7 +49,7 @@ namespace QtFrontend {
         reload_controllers();
         reload_recent_roms();
 
-        const auto &config = Common::Config::Current();
+        const auto &config = Common::Config::current();
         resize(config.wsize_x, config.wsize_y);
         menuBar()->setNativeMenuBar(true);
 
@@ -68,7 +68,7 @@ namespace QtFrontend {
     void MainWindow::showEvent(QShowEvent *event) { input_timer.start(1); }
 
     void MainWindow::closeEvent(QCloseEvent *event) {
-        auto &config = Common::Config::Current();
+        auto &config = Common::Config::current();
         config.wsize_x = width();
         config.wsize_y = height();
         input_timer.stop();
@@ -132,7 +132,7 @@ namespace QtFrontend {
     void MainWindow::clear_settings_ptr() { settings = nullptr; }
 
     void MainWindow::rom_load_success(const QString &message, int timeout) {
-        Common::Config::Current().add_rom_to_history(message.toStdString());
+        Common::Config::current().add_rom_to_history(message.toStdString());
         statusBar()->showMessage(
             QString::fromStdString(fmt::format("'{}' Loaded successfully.", message.toStdString())),
             5000);
@@ -162,7 +162,7 @@ namespace QtFrontend {
         }
         ui->menuLoad_Recent->actions().clear();
 
-        for (const auto &path : Common::Config::Current().recent_roms) {
+        for (const auto &path : Common::Config::current().recent_roms) {
             QAction *act = new QAction(QString::fromStdString(path), ui->menuLoad_Recent);
             ui->menuLoad_Recent->addAction(act);
         }

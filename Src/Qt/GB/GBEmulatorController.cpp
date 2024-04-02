@@ -43,7 +43,7 @@ namespace QtFrontend {
     }
 
     void GBEmulatorController::process_input(std::array<bool, 8> &buttons) {
-        const auto &mappings = Common::Config::Current().gameboy.input_mappings;
+        const auto &mappings = Common::Config::current().gameboy.input_mappings;
 
         for (const auto &mapping : mappings) {
             auto device_option = Input::try_find_by_name(mapping.device_name);
@@ -69,7 +69,7 @@ namespace QtFrontend {
         }
 
         if (new_cart) {
-            const auto &emulation = Common::Config::Current().gameboy.emulation;
+            const auto &emulation = Common::Config::current().gameboy.emulation;
 
             cart = std::move(new_cart);
 
@@ -132,7 +132,7 @@ namespace QtFrontend {
 
     void GBEmulatorController::save_sram() {
         int32_t interval_seconds =
-            Common::Config::Current().gameboy.emulation.sram_save_interval * 1000;
+            Common::Config::current().gameboy.emulation.sram_save_interval * 1000;
         cart->save_sram_to_file();
 
         if (sram_timer->interval() != interval_seconds) {
@@ -141,7 +141,7 @@ namespace QtFrontend {
     }
 
     void GBEmulatorController::init_by_console_type() {
-        const auto &emulation = Common::Config::Current().gameboy.emulation;
+        const auto &emulation = Common::Config::current().gameboy.emulation;
 
         switch (emulation.console) {
         case GB::ConsoleType::AutoSelect: {

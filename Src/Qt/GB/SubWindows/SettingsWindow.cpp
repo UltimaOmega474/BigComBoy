@@ -72,7 +72,7 @@ namespace QtFrontend {
         if (name == "Apply" || name == "OK") {
             emit apply_changes_to_tabs();
 
-            Common::Config::Current().write_to_file(QtFrontend::Paths::ConfigLocation());
+            Common::Config::current().write_to_file(QtFrontend::Paths::ConfigLocation());
         }
     }
 

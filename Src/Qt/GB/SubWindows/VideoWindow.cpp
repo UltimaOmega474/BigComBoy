@@ -22,7 +22,7 @@
 
 namespace QtFrontend {
     VideoWindow::VideoWindow(QWidget *parent)
-        : QWidget(parent), ui(new Ui::VideoWindow), video(Common::Config::Current().gameboy.video) {
+        : QWidget(parent), ui(new Ui::VideoWindow), video(Common::Config::current().gameboy.video) {
         ui->setupUi(this);
 
         connect(ui->buttonGroup, &QButtonGroup::buttonClicked, this,
@@ -43,7 +43,7 @@ namespace QtFrontend {
         ui = nullptr;
     }
 
-    void VideoWindow::apply_changes() { Common::Config::Current().gameboy.video = video; }
+    void VideoWindow::apply_changes() { Common::Config::current().gameboy.video = video; }
 
     void VideoWindow::set_blending_enabled(bool checked) { video.frame_blending = checked; }
 

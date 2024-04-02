@@ -65,7 +65,7 @@ namespace QtFrontend {
         auto accumulator = std::chrono::nanoseconds::zero();
         auto last_timer_time = std::chrono::steady_clock::now();
         auto last_callback_time = std::chrono::steady_clock::now();
-        auto interval = Common::Math::FrequencyToNano(60);
+        auto interval = Common::Math::freq_to_nanoseconds(60);
 
         std::array<double, 100> samples{};
         size_t next = 0;
@@ -186,9 +186,9 @@ namespace QtFrontend {
     void EmulatorView::paintGL() {
         renderer->reset_state(scaled_width, scaled_height);
 
-        const auto use_frame_blending = Common::Config::Current().gameboy.video.frame_blending;
+        const auto use_frame_blending = Common::Config::current().gameboy.video.frame_blending;
 
-        auto [final_width, final_height] = Common::Math::FitToAspectRatio(
+        auto [final_width, final_height] = Common::Math::fit_aspect_ratio(
             scaled_width, scaled_height, GB::LCD_WIDTH, GB::LCD_HEIGHT);
 
         float final_x = scaled_width / 2.0f - (final_width / 2);
@@ -231,7 +231,7 @@ namespace QtFrontend {
     }
 
     void EmulatorView::update_textures() {
-        const auto &config = Common::Config::Current().gameboy.video;
+        const auto &config = Common::Config::current().gameboy.video;
 
         if (config.frame_blending) {
             for (int i = (framebuffers.size() - 1); i > 0; --i) {

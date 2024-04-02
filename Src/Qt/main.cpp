@@ -30,7 +30,7 @@
 #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 #endif
 
-void save_config() { Common::Config::Current().write_to_file(QtFrontend::Paths::ConfigLocation()); }
+void save_config() { Common::Config::current().write_to_file(QtFrontend::Paths::ConfigLocation()); }
 
 int main(int argc, char *argv[]) {
     QSurfaceFormat format;
@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
 
     QApplication a(argc, argv);
     SDL_Init(SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO);
-    Common::Config::Current().read_from_file(QtFrontend::Paths::ConfigLocation());
+    Common::Config::current().read_from_file(QtFrontend::Paths::ConfigLocation());
 
     atexit(SDL_Quit);
     atexit(save_config);
