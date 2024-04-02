@@ -30,7 +30,7 @@ namespace GB {
         void write_register(uint8_t reg, uint8_t value);
         uint8_t read_register(uint8_t reg);
         void reset();
-        void update(uint32_t cycles);
+        void update(int32_t cycles);
 
     private:
         void set_tac(uint8_t rate);

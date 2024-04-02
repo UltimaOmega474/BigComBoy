@@ -336,7 +336,7 @@ namespace GB {
         }
     }
 
-    void PPU::step(uint32_t accumulated_cycles) {
+    void PPU::step(int32_t accumulated_cycles) {
         if (!(lcd_control & LCD_ENABLED_BIT)) {
             set_mode(HBLANK);
             previously_disabled = true;

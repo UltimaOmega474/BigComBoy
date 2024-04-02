@@ -130,7 +130,7 @@ namespace GB {
         void set_compatibility_palette(PaletteID palette_type,
                                        const std::span<const uint16_t> colors);
 
-        void step(uint32_t accumulated_cycles);
+        void step(int32_t accumulated_cycles);
 
         void write_register(uint8_t reg, uint8_t value);
         uint8_t read_register(uint8_t reg) const;
@@ -189,8 +189,8 @@ namespace GB {
         uint8_t obj_palette_select = 0;
         uint8_t object_priority_mode = 0;
 
-        uint32_t cycles = 0;
-        uint32_t extra_cycles = 0;
+        int32_t cycles = 0;
+        int32_t extra_cycles = 0;
 
         std::array<uint8_t, 64> obj_cram{};
         std::array<uint8_t, 64> bg_cram{};

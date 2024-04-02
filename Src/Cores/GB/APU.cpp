@@ -839,7 +839,7 @@ namespace GB {
         return nr51;
     }
 
-    void APU::step(uint32_t cycles) {
+    void APU::step(int32_t cycles) {
         for (int i = 0; i < cycles; ++i) {
             pulse_1.step_frequency();
             pulse_2.step_frequency();

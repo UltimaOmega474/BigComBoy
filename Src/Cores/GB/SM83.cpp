@@ -589,9 +589,9 @@ namespace GB {
     }
 
     template <RegisterPair rp> inline void SM83::op_add_hl_rp() {
-        uint32_t left = get_rp(RegisterPair::HL);
-        uint32_t right = get_rp(rp);
-        uint32_t res32 = left + right;
+        int32_t left = get_rp(RegisterPair::HL);
+        int32_t right = get_rp(rp);
+        int32_t res32 = left + right;
 
         set_flags(FLAG_N, false);
         set_flags(FLAG_HC, ((left & 0xFFF) + (right & 0xFFF)) > 0xFFF);
@@ -729,7 +729,7 @@ namespace GB {
 
         int16_t cy = with_carry ? get_flag(FLAG_CY) : 0;
 
-        int16_t result = left - right - cy;
+        int16_t result = static_cast<int16_t>(left - right - cy);
         uint8_t masked_result = result & 0xFF;
 
         set_flags(FLAG_HC, ((left & 0xF) - (right & 0xF) - (cy & 0xF)) < 0);

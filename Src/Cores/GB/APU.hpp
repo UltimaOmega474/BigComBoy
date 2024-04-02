@@ -204,7 +204,7 @@ namespace GB {
         uint8_t read_nr50() const;
         uint8_t read_nr51() const;
 
-        void step(uint32_t cycles);
+        void step(int32_t cycles);
         void step_frame_sequencer();
 
     private:

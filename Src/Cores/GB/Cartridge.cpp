@@ -129,7 +129,8 @@ namespace GB {
         rom.resize(rom_stream.tellg());
 
         rom_stream.seekg(0);
-        rom_stream.read(reinterpret_cast<char *>(rom.data()), rom.size());
+        rom_stream.read(reinterpret_cast<char *>(rom.data()),
+                        static_cast<std::streamsize>(rom.size()));
     }
 
     uint8_t ROM::read(uint16_t address) { return rom[address]; }
@@ -144,7 +145,7 @@ namespace GB {
 
     void ROM::load_sram_from_file() {}
 
-    void ROM::tick(uint32_t cycles) {}
+    void ROM::tick(int32_t cycles) {}
 
     MBC1::MBC1(CartHeader &&header) : Cartridge(std::move(header)), eram() { eram.fill(0); }
 
@@ -169,15 +170,15 @@ namespace GB {
     }
 
     uint8_t MBC1::read(uint16_t address) {
-        uint32_t bank_num = (bank_upper_bits << 5);
+        int32_t bank_num = (bank_upper_bits << 5);
 
         if (address < 0x4000) {
-            bank_num = bank_num % (rom.size() / 0x4000);
+            bank_num = bank_num % static_cast<int32_t>(rom.size() / 0x4000);
             return rom[(mode ? (bank_num * 0x4000) : 0) + address];
         }
 
         bank_num |= rom_bank_num;
-        bank_num = bank_num % (rom.size() / 0x4000);
+        bank_num = bank_num % static_cast<int32_t>(rom.size() / 0x4000);
 
         return rom[(bank_num * 0x4000) + (address & 0x3FFF)];
     }
@@ -201,12 +202,12 @@ namespace GB {
         case 0x4:
         case 0x5: {
             if (mode) {
-                if (header_.ram_size == Ram32KB) {
+                if (header_.ram_size == RamSize::Ram32KB) {
                     bank_upper_bits = value & 0x3;
                 }
             }
 
-            if (header_.rom_size >= Rom1MB) {
+            if (header_.rom_size >= RomSize::Rom1MB) {
                 bank_upper_bits = (value & 0x3);
             }
             break;
@@ -269,7 +270,7 @@ namespace GB {
         }
     }
 
-    void MBC1::tick(uint32_t cycles) {}
+    void MBC1::tick(int32_t cycles) {}
 
     MBC2::MBC2(CartHeader &&header) : Cartridge(std::move(header)) {}
 
@@ -366,7 +367,7 @@ namespace GB {
         }
     }
 
-    void MBC2::tick(uint32_t cycles) {}
+    void MBC2::tick(int32_t cycles) {}
 
     RTCCounter::RTCCounter(uint8_t bit_mask) : mask(bit_mask) {}
 
@@ -500,7 +501,7 @@ namespace GB {
             return static_cast<uint8_t>(shadow_rtc.days & 0xFF);
         }
         case 0xC: {
-            uint32_t a = rtc_ctrl | ((shadow_rtc.days & 0x100) ? 1 : 0);
+            int32_t a = rtc_ctrl | ((shadow_rtc.days & 0x100) ? 1 : 0);
 
             return a;
         }
@@ -586,7 +587,7 @@ namespace GB {
         }
     }
 
-    void MBC3::tick(uint32_t cycles) {
+    void MBC3::tick(int32_t cycles) {
         if (has_rtc() && !(rtc_ctrl & 64)) {
             rtc_cycles += cycles;
 
@@ -649,13 +650,13 @@ namespace GB {
     }
 
     uint8_t MBC5::read(uint16_t address) {
-        uint32_t bank_num = rom_bank_num | bank_upper_bits;
+        int32_t bank_num = rom_bank_num | bank_upper_bits;
 
         if (address < 0x4000) {
             return rom[address];
         }
 
-        bank_num = bank_num % (rom.size() / 0x4000);
+        bank_num = bank_num % static_cast<int32_t>(rom.size() / 0x4000);
 
         return rom[(bank_num * 0x4000) + (address & 0x3FFF)];
     }
@@ -733,5 +734,5 @@ namespace GB {
         }
     }
 
-    void MBC5::tick(uint32_t cycles) {}
+    void MBC5::tick(int32_t cycles) {}
 }

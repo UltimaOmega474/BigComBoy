@@ -106,14 +106,8 @@ namespace GB {
         }
     }
 
-    void Core::run_for_cycles(int32_t cycles) {
-        cycle_count = 0;
-        while (cycle_count < cycles && !cpu.stopped())
-            cpu.step();
-    }
-
-    void Core::tick_subcomponents(uint8_t cycles) {
-        auto adjusted_cycles = cpu.double_speed() ? 2 : 4;
+    void Core::tick_subcomponents(int32_t cycles) {
+        int32_t adjusted_cycles = cpu.double_speed() ? 2 : 4;
 
         while (cycles > 0) {
             timer.update(4);
