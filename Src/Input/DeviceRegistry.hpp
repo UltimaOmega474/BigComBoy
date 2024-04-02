@@ -22,18 +22,13 @@
 #include <string_view>
 #include <unordered_set>
 
-namespace Input
-{
+namespace Input {
+    std::unordered_set<InputDevice *> &devices();
 
-    class DeviceRegistry
-    {
-    public:
-        static std::unordered_set<InputDevice *> &GetDevices();
-        static void RegisterDevice(InputDevice *device);
-        static void RemoveDevice(InputDevice *device);
+    std::optional<InputDevice *> try_find_by_name(std::string_view name);
+    std::optional<InputDevice *> try_find_by_index(int32_t index);
+    std::optional<int32_t> try_get_index_by_name(std::string_view name);
 
-        static std::optional<InputDevice *> TryFindDeviceByName(std::string_view name);
-        static std::optional<InputDevice *> TryFindDeviceByIndex(int32_t index);
-        static std::optional<int32_t> TryGetDeviceIndexFromName(std::string_view name);
-    };
+    void register_device(InputDevice *device);
+    void remove_device(InputDevice *device);
 }

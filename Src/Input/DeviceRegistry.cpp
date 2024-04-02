@@ -18,49 +18,45 @@
 
 #include "DeviceRegistry.hpp"
 
-namespace Input
-{
+namespace Input {
+    static std::unordered_set<InputDevice *> devices_;
 
-    std::unordered_set<InputDevice *> devices;
+    std::unordered_set<InputDevice *> &devices() { return devices_; }
 
-    std::unordered_set<InputDevice *> &DeviceRegistry::GetDevices() { return devices; }
-
-    void DeviceRegistry::RegisterDevice(InputDevice *device)
-    {
-        if (!devices.contains(device))
-            devices.insert(device);
+    void register_device(InputDevice *device) {
+        if (!devices_.contains(device)) {
+            devices_.insert(device);
+        }
     }
 
-    void DeviceRegistry::RemoveDevice(InputDevice *device) { devices.erase(device); }
+    void remove_device(InputDevice *device) { devices_.erase(device); }
 
-    std::optional<InputDevice *> DeviceRegistry::TryFindDeviceByName(std::string_view name)
-    {
-        for (auto device : devices)
-        {
-            if (device->name() == name)
+    std::optional<InputDevice *> try_find_by_name(std::string_view name) {
+        for (auto device : devices_) {
+            if (device->name() == name) {
                 return device;
+            }
         }
 
         return {};
     }
-    std::optional<InputDevice *> DeviceRegistry::TryFindDeviceByIndex(int32_t index)
-    {
+    std::optional<InputDevice *> try_find_by_index(int32_t index) {
         int32_t i = 0;
-        for (auto device : devices)
-        {
-            if (i == index)
+
+        for (auto device : devices_) {
+            if (i == index) {
                 return device;
+            }
 
             ++i;
         }
 
         return {};
     }
-    std::optional<int32_t> DeviceRegistry::TryGetDeviceIndexFromName(std::string_view name)
-    {
+    std::optional<int32_t> try_get_index_by_name(std::string_view name) {
         int32_t i = 0;
-        for (auto device : devices)
-        {
+
+        for (auto device : devices_) {
             if (device->name() == name)
                 return i;
 

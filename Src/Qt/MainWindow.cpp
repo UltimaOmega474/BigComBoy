@@ -45,7 +45,7 @@ namespace QtFrontend {
         setStatusBar(new QStatusBar(this));
         statusBar()->addPermanentWidget(fps_counter, 0);
 
-        Input::DeviceRegistry::RegisterDevice(keyboard.get());
+        Input::register_device(keyboard.get());
         reload_controllers();
         reload_recent_roms();
 
@@ -189,14 +189,14 @@ namespace QtFrontend {
 
     void MainWindow::reload_controllers() {
         for (const auto &controller : controllers) {
-            Input::DeviceRegistry::RemoveDevice(controller.get());
+            Input::remove_device(controller.get());
         }
         controllers.clear();
 
         for (int32_t i = 0; i < SDL_NumJoysticks(); ++i) {
             if (SDL_IsGameController(i)) {
                 auto controller = std::make_unique<Input::SDLControllerDevice>(i);
-                Input::DeviceRegistry::RegisterDevice(controller.get());
+                Input::register_device(controller.get());
 
                 if (controller->is_open()) {
                     controllers.push_back(std::move(controller));

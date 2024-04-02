@@ -49,4 +49,6 @@ namespace QtFrontend {
     }
 
     int32_t KeyboardDevice::str_to_key(std::string_view str) const { return 0; }
+
+    void KeyboardDevice::update_internal_state() {}
 }

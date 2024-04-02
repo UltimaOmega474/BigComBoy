@@ -46,7 +46,7 @@ namespace QtFrontend {
         const auto &mappings = Common::Config::Current().gameboy.input_mappings;
 
         for (const auto &mapping : mappings) {
-            auto device_option = Input::DeviceRegistry::TryFindDeviceByName(mapping.device_name);
+            auto device_option = Input::try_find_by_name(mapping.device_name);
 
             if (device_option) {
                 auto device = device_option.value();

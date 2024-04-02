@@ -64,7 +64,7 @@ namespace QtFrontend {
     }
 
     void InputWindow::keyPressEvent(QKeyEvent *event) {
-        for (auto device : Input::DeviceRegistry::GetDevices()) {
+        for (auto device : Input::devices()) {
             device->key_down(event->key());
         }
 
@@ -72,7 +72,7 @@ namespace QtFrontend {
     }
 
     void InputWindow::keyReleaseEvent(QKeyEvent *event) {
-        for (auto device : Input::DeviceRegistry::GetDevices()) {
+        for (auto device : Input::devices()) {
             device->key_up(event->key());
         }
 
@@ -122,7 +122,7 @@ namespace QtFrontend {
     void InputWindow::reload_device_list() {
         ui->device_select->clear();
 
-        for (const auto &device : Input::DeviceRegistry::GetDevices()) {
+        for (const auto &device : Input::devices()) {
             std::string str{device->name()};
             ui->device_select->addItem(QString::fromStdString(str));
         }
@@ -131,8 +131,8 @@ namespace QtFrontend {
     void InputWindow::check_device_for_input() {
         int32_t selected_device = ui->device_select->currentIndex();
 
-        auto device = Input::DeviceRegistry::TryFindDeviceByName(
-            ui->device_select->itemText(selected_device).toStdString());
+        auto device =
+            Input::try_find_by_name(ui->device_select->itemText(selected_device).toStdString());
 
         if (device) {
             std::optional<Input::InputSource> result = device.value()->get_input_for_any_key();
@@ -202,7 +202,7 @@ namespace QtFrontend {
     }
 
     void InputWindow::refresh_buttons_text() {
-        const auto &devices = Input::DeviceRegistry::GetDevices();
+        const auto &devices = Input::devices();
         int32_t selected_device = ui->device_select->currentIndex();
 
         if (devices.empty() || selected_device == -1) {
@@ -213,7 +213,7 @@ namespace QtFrontend {
         }
 
         const auto &mapping = pending_input_mappings[selected_page];
-        const auto device = Input::DeviceRegistry::TryFindDeviceByName(mapping.device_name);
+        const auto device = Input::try_find_by_name(mapping.device_name);
 
         for (int i = 0; i < buttons.size(); ++i) {
             if (device && mapping.device_name == device.value()->name()) {

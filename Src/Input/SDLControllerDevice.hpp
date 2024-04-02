@@ -24,28 +24,20 @@
 struct _SDL_GameController;
 typedef _SDL_GameController SDL_GameController;
 
-namespace Input
-{
-    struct ControllerAxis
-    {
+namespace Input {
+    struct ControllerAxis {
         int32_t axis = 0;
         AxisDirection direction = AxisDirection::Positive;
     };
 
-    class SDLControllerDevice : public InputDevice
-    {
-        SDL_GameController *controller = nullptr;
-        std::set<int32_t> pressed_buttons{};
-        std::vector<ControllerAxis> pressed_axis{};
-
+    class SDLControllerDevice : public InputDevice {
     public:
-        SDLControllerDevice() = delete;
-        SDLControllerDevice(int32_t index);
-        SDLControllerDevice(SDLControllerDevice &&) noexcept = default;
+        explicit SDLControllerDevice(int32_t index);
+        ~SDLControllerDevice();
+        SDLControllerDevice(SDLControllerDevice &&) = delete;
         SDLControllerDevice(const SDLControllerDevice &) = delete;
-        SDLControllerDevice &operator=(SDLControllerDevice &&) = default;
+        SDLControllerDevice &operator=(SDLControllerDevice &&) = delete;
         SDLControllerDevice &operator=(const SDLControllerDevice &) = delete;
-        ~SDLControllerDevice() override;
 
         bool is_open() const;
         std::string_view name() const override;
@@ -58,10 +50,15 @@ namespace Input
 
         std::string key_to_str(const InputSource &key) const override;
         int32_t str_to_key(std::string_view str) const override;
+
         void update_internal_state() override;
 
     private:
         void check_button_pressed(int32_t btn);
         void check_axis_pressed(int32_t axis);
+
+        SDL_GameController *controller = nullptr;
+        std::set<int32_t> pressed_buttons{};
+        std::vector<ControllerAxis> pressed_axis{};
     };
 }

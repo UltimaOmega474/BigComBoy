@@ -21,23 +21,19 @@
 #include <optional>
 #include <string_view>
 
-namespace Input
-{
-    enum class SourceType : int32_t
-    {
+namespace Input {
+    enum class SourceType : int32_t {
         Invalid = -1,
         ControllerButton = 0,
         ControllerAxis = 1,
     };
 
-    enum class AxisDirection : int32_t
-    {
+    enum class AxisDirection : int32_t {
         Positive,
         Negative,
     };
 
-    struct InputSource
-    {
+    struct InputSource {
         SourceType type = SourceType::Invalid;
         int32_t keyboard = -1;
         int32_t button = -1;
@@ -45,13 +41,17 @@ namespace Input
         AxisDirection axis_direction = AxisDirection::Positive;
     };
 
-    class InputDevice
-    {
+    class InputDevice {
     public:
+        InputDevice() = default;
         virtual ~InputDevice() = default;
+        InputDevice(InputDevice &&) = delete;
+        InputDevice(const InputDevice &) = delete;
+        InputDevice &operator=(InputDevice &&) = delete;
+        InputDevice &operator=(const InputDevice &) = delete;
 
         virtual std::string_view name() const = 0;
-        virtual void update_internal_state() = 0;
+
         virtual void key_down(int32_t key) = 0;
         virtual void key_up(int32_t key) = 0;
 
@@ -60,5 +60,7 @@ namespace Input
 
         virtual std::string key_to_str(const InputSource &key) const = 0;
         virtual int32_t str_to_key(std::string_view str) const = 0;
+
+        virtual void update_internal_state() = 0;
     };
 }

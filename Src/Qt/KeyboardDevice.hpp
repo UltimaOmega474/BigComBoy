@@ -25,7 +25,6 @@ namespace QtFrontend {
     public:
         std::string_view name() const override { return "Keyboard"; }
 
-        void update_internal_state() override{};
         void key_down(int32_t key) override;
         void key_up(int32_t key) override;
 
@@ -34,6 +33,8 @@ namespace QtFrontend {
 
         std::string key_to_str(const Input::InputSource &key) const override;
         int32_t str_to_key(std::string_view str) const override;
+
+        void update_internal_state() override;
 
     private:
         std::set<int32_t> pressed_keys;
