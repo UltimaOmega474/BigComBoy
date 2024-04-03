@@ -17,6 +17,7 @@
 */
 
 #include "MainWindow.hpp"
+#include "AboutWindow.hpp"
 #include "Common/Config.hpp"
 #include "EmulatorView.hpp"
 #include "GB/SubWindows/SettingsWindow.hpp"
@@ -58,6 +59,8 @@ namespace QtFrontend {
         centralWidget()->hide();
 
         connect_slots();
+
+        setWindowTitle(QString("Big ComBoy " BCB_VER));
     }
 
     MainWindow::~MainWindow() {
@@ -129,7 +132,19 @@ namespace QtFrontend {
         }
     }
 
+    void MainWindow::open_about() {
+        if (!about) {
+            about = new AboutWindow(this);
+            about->show();
+            about->raise();
+            about->activateWindow();
+            connect(about, &QDialog::finished, this, &MainWindow::clear_about_ptr);
+        }
+    }
+
     void MainWindow::clear_settings_ptr() { settings = nullptr; }
+
+    void MainWindow::clear_about_ptr() { about = nullptr; }
 
     void MainWindow::rom_load_success(const QString &message, int timeout) {
         Common::Config::current().add_rom_to_history(message.toStdString());
@@ -154,6 +169,7 @@ namespace QtFrontend {
         connect(ui->actionVideo, &QAction::triggered, this, &MainWindow::open_gb_settings);
         connect(ui->actionAudio, &QAction::triggered, this, &MainWindow::open_gb_settings);
         connect(ui->actionInput, &QAction::triggered, this, &MainWindow::open_gb_settings);
+        connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::open_about);
     }
 
     void MainWindow::reload_recent_roms() {

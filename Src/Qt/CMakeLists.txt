@@ -6,6 +6,9 @@ set(QT_SOURCES
 	KeyboardDevice.cpp
 	EmulatorView.cpp
 	Style.cpp
+	AboutWindow.cpp
+	AboutWindow.ui
+	../../Icons/icon.qrc
 
 	OGL/GLFunctions.cpp
 	OGL/Renderer.cpp
@@ -68,6 +71,8 @@ target_link_libraries(BigComBoy PRIVATE
 	SDL2::SDL2
 	Input
 )
+
+target_compile_definitions(BigComBoy PRIVATE BCB_VER="${CMAKE_PROJECT_VERSION}")
 
 set_target_properties(BigComBoy PROPERTIES
 	OUTPUT_NAME "BigComBoy"

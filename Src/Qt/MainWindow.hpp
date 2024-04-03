@@ -36,6 +36,7 @@ namespace Input {
 namespace QtFrontend {
     class EmulatorView;
     class SettingsWindow;
+    class AboutWindow;
 
     class MainWindow : public QMainWindow {
         Q_OBJECT
@@ -61,7 +62,9 @@ namespace QtFrontend {
         Q_SLOT void open_rom_file_browser();
         Q_SLOT void open_rom_from_recents(QAction *action);
         Q_SLOT void open_gb_settings();
+        Q_SLOT void open_about();
         Q_SLOT void clear_settings_ptr();
+        Q_SLOT void clear_about_ptr();
         Q_SLOT void rom_load_success(const QString &message, int timeout = 0);
         Q_SLOT void rom_load_fail(const QString &message, int timeout = 0);
 
@@ -80,6 +83,7 @@ namespace QtFrontend {
 
         Ui::MainWindow *ui;
         SettingsWindow *settings = nullptr;
+        AboutWindow *about = nullptr;
 
         QLabel *fps_counter = nullptr;
         EmulatorView *emulator_widget;

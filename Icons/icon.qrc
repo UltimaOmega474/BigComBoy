@@ -1,0 +1,5 @@
+<RCC>
+  <qresource prefix="bcb_icon">
+    <file>bcb.png</file>
+  </qresource>
+</RCC>
