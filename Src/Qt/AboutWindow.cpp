@@ -5,7 +5,7 @@ namespace QtFrontend {
 
     AboutWindow::AboutWindow(QWidget *parent) : QDialog(parent), ui(new Ui::AboutWindow) {
         ui->setupUi(this);
-        setFixedSize(size());
+        setFixedSize(sizeHint());
         setAttribute(Qt::WA_DeleteOnClose);
 
         QString img = "<img src=\":/bcb_icon/bcb.png\" width=\"64\"height=\"64\" "
