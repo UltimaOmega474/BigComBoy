@@ -1,5 +1,7 @@
 /build*
 /bin
+/.idea
+/cmake-build*
 /.vscode
 /.vs
 /x64
