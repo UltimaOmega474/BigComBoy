@@ -1,7 +1,16 @@
 {
-	"$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+	"name": "bigcomboy",
+	"version-string": "v0.9",
+	"description": "Game Boy & Game Boy Color emulator written in C++",
+	"builtin-baseline": "943c5ef1c8f6b5e6ced092b242c8299caae2ff01",
 	"dependencies": [
-		"fmt",
-		"sdl2"
+		{
+			"name": "fmt",
+			"version>=": "10.2.1#2"
+		},
+		{
+			"name": "sdl2",
+			"version>=": "2.30.1"
+		}
 	]
 }
