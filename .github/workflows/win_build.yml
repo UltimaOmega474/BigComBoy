@@ -18,8 +18,6 @@ jobs:
 
       - name: Install dependencies from vcpkg manifest
         uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgGitCommitId: "9de2e978bdfec6bb7852cc1d6ecf375c923c485c"
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v3.3.0
