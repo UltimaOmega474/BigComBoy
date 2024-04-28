@@ -25,6 +25,10 @@ jobs:
           version: 6.6
           cache: true
 
+      - name: Fetch vcpkg
+        run: git fetch
+        working-directory: C:/vcpkg
+
       - name: Configure
         run: cmake -B build -DVCPKG_TARGET_TRIPLET=x64-windows -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
 
