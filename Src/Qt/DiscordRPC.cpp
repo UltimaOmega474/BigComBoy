@@ -17,6 +17,7 @@
 */
 
 #include "DiscordRPC.hpp"
+#include "Common/Config.hpp"
 #include <QTimer>
 #include <chrono>
 #include <cstdint>
@@ -25,6 +26,8 @@
 
 namespace QtFrontend::DiscordRPC {
     QTimer *poll_timer = nullptr;
+    std::string last_title;
+    int64_t last_timestamp = 0;
 
     int64_t get_timestamp();
     void ready(const DiscordUser *user);
@@ -51,22 +54,33 @@ namespace QtFrontend::DiscordRPC {
         Discord_Shutdown();
     }
 
-    void new_activity(const std::string &title) {
-        DiscordRichPresence rpc{};
-        rpc.largeImageKey = "bcb_app_icon";
-        rpc.largeImageText = "Big ComBoy " BCB_VER;
-        rpc.details = title.c_str();
-        rpc.startTimestamp = get_timestamp();
-        Discord_UpdatePresence(&rpc);
+    void new_activity(std::string title) {
+        last_title = std::move(title);
+        last_timestamp = get_timestamp();
+
+        if (Common::Config::current().gameboy.emulation.use_rpc) {
+            DiscordRichPresence rpc{};
+            rpc.largeImageKey = "bcb_app_icon";
+            rpc.largeImageText = "Big ComBoy " BCB_VER;
+            rpc.details = last_title.c_str();
+            rpc.startTimestamp = last_timestamp;
+            Discord_UpdatePresence(&rpc);
+        }
     }
 
-    void set_idle() {
-        DiscordRichPresence rpc{};
-        rpc.largeImageKey = "bcb_app_icon";
-        rpc.largeImageText = "Big ComBoy" BCB_VER;
-        rpc.details = "Idle";
-        rpc.startTimestamp = get_timestamp();
-        Discord_UpdatePresence(&rpc);
+    void set_idle() { new_activity("Idle"); }
+
+    void remove_activity() { Discord_ClearPresence(); }
+
+    void restore_activity() {
+        if (Common::Config::current().gameboy.emulation.use_rpc) {
+            DiscordRichPresence rpc{};
+            rpc.largeImageKey = "bcb_app_icon";
+            rpc.largeImageText = "Big ComBoy " BCB_VER;
+            rpc.details = last_title.c_str();
+            rpc.startTimestamp = last_timestamp;
+            Discord_UpdatePresence(&rpc);
+        }
     }
 
     int64_t get_timestamp() {

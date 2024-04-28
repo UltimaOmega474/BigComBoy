@@ -22,6 +22,8 @@
 namespace QtFrontend::DiscordRPC {
     void initialize();
     void close();
-    void new_activity(const std::string &title);
+    void new_activity(std::string title);
     void set_idle();
+    void remove_activity();
+    void restore_activity();
 }

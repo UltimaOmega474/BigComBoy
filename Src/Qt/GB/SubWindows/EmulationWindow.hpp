@@ -42,6 +42,7 @@ namespace QtFrontend {
         Q_SLOT void apply_changes();
         Q_SLOT void select_bootrom();
         Q_SLOT void set_allow_sram(bool checked);
+        Q_SLOT void set_use_rpc(bool checked);
         Q_SLOT void change_interval(int32_t value);
         Q_SLOT void set_console(QAbstractButton *btn);
         Q_SLOT void boot_path_changed(const QString &path);

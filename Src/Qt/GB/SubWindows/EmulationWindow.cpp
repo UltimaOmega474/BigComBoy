@@ -18,7 +18,9 @@
 
 #include "EmulationWindow.hpp"
 #include "Cores/GB/Constants.hpp"
+#include "Qt/DiscordRPC.hpp"
 #include "ui_EmulationWindow.h"
+
 #include <QFileDialog>
 #include <QPushButton>
 #include <QRadioButton>
@@ -44,10 +46,12 @@ namespace QtFrontend {
         connect(this, &EmulationWindow::set_boot_path_text, ui->gbc_boot_path, &QLineEdit::setText);
 
         connect(ui->allow_sram, &QCheckBox::clicked, this, &EmulationWindow::set_allow_sram);
+        connect(ui->rich_presence, &QCheckBox::clicked, this, &EmulationWindow::set_use_rpc);
         connect(ui->sram_interval, &QSpinBox::valueChanged, this,
                 &EmulationWindow::change_interval);
 
         ui->allow_sram->setChecked(emulation.allow_sram_saving);
+        ui->rich_presence->setChecked(emulation.use_rpc);
         ui->sram_interval->setValue(emulation.sram_save_interval);
 
         std::array<QRadioButton *, 3> btns{
@@ -69,7 +73,14 @@ namespace QtFrontend {
     }
 
     void EmulationWindow::apply_changes() {
-        Common::Config::current().gameboy.emulation = emulation;
+        auto &config_emu = Common::Config::current().gameboy.emulation;
+        config_emu = emulation;
+
+        if (config_emu.use_rpc) {
+            DiscordRPC::restore_activity();
+        } else {
+            DiscordRPC::remove_activity();
+        }
     }
 
     void EmulationWindow::select_bootrom() {
@@ -91,6 +102,8 @@ namespace QtFrontend {
     }
 
     void EmulationWindow::set_allow_sram(bool checked) { emulation.allow_sram_saving = checked; }
+
+    void EmulationWindow::set_use_rpc(bool checked) { emulation.use_rpc = checked; }
 
     void EmulationWindow::change_interval(int32_t value) { emulation.sram_save_interval = value; }
 

@@ -46,6 +46,7 @@ namespace Common {
             {"dmg_bootstrap", gameboy.emulation.dmg_bootstrap.string()},
             {"cgb_bootstrap", gameboy.emulation.cgb_bootstrap.string()},
             {"allow_sram_saving", gameboy.emulation.allow_sram_saving},
+            {"use_rpc", gameboy.emulation.use_rpc},
             {"sram_save_interval", gameboy.emulation.sram_save_interval},
             {"frame_blending", gameboy.video.frame_blending},
             {"smooth_scaling", gameboy.video.smooth_scaling},
@@ -124,6 +125,7 @@ namespace Common {
 
         gameboy.emulation.allow_sram_saving =
             toml::find_or(gb, "allow_sram_saving", gameboy.emulation.allow_sram_saving);
+        gameboy.emulation.use_rpc = toml::find_or(gb, "use_rpc", gameboy.emulation.use_rpc);
         gameboy.emulation.sram_save_interval =
             toml::find_or(gb, "sram_save_interval", gameboy.emulation.sram_save_interval);
 

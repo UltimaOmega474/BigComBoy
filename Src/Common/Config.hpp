@@ -44,6 +44,7 @@ namespace Common {
             std::filesystem::path cgb_bootstrap;
 
             bool allow_sram_saving = true;
+            bool use_rpc = true;
             int32_t sram_save_interval = 30;
         } emulation;
 
