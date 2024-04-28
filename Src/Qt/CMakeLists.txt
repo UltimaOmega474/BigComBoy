@@ -4,6 +4,8 @@ set(QT_SOURCES
 	MainWindow.cpp
 	MainWindow.ui
 	KeyboardDevice.cpp
+	DiscordRPC.cpp
+	DiscordRPC.hpp
 	EmulatorView.cpp
 	Style.cpp
 	AboutWindow.cpp
@@ -59,7 +61,7 @@ else()
 	)
 endif()
 
-target_include_directories(BigComBoy PRIVATE ${MAIN_INCLUDE_DIR})
+target_include_directories(BigComBoy PRIVATE ${MAIN_INCLUDE_DIR} ${CMAKE_SOURCE_DIR}/External/discord-rpc/include)
 
 target_link_libraries(BigComBoy PRIVATE
 	Qt6::Widgets
@@ -70,6 +72,7 @@ target_link_libraries(BigComBoy PRIVATE
 	Common
 	SDL2::SDL2
 	Input
+	Discord-RPC
 )
 
 target_compile_definitions(BigComBoy PRIVATE BCB_VER="${CMAKE_PROJECT_VERSION}")

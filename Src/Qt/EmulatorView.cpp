@@ -18,6 +18,7 @@
 
 #include "EmulatorView.hpp"
 #include "Common/Config.hpp"
+#include "DiscordRPC.hpp"
 #include "GB/GBEmulatorController.hpp"
 #include "MainWindow.hpp"
 #include "OGL/GLFunctions.hpp"
@@ -160,6 +161,7 @@ namespace QtFrontend {
     }
 
     void EmulatorView::hideEvent(QHideEvent *ev) {
+        DiscordRPC::set_idle();
         window->get_pause_action()->setChecked(false);
 
         window->get_reset_action()->setDisabled(true);

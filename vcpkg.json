@@ -1,16 +1,16 @@
 {
-	"name": "bigcomboy",
-	"version-string": "v0.9",
-	"description": "Game Boy & Game Boy Color emulator written in C++",
-	"builtin-baseline": "943c5ef1c8f6b5e6ced092b242c8299caae2ff01",
-	"dependencies": [
-		{
-			"name": "fmt",
-			"version>=": "10.2.1#2"
-		},
-		{
-			"name": "sdl2",
-			"version>=": "2.30.1"
-		}
-	]
+  "name" : "bigcomboy",
+  "version-string" : "v0.9",
+  "description" : "Game Boy & Game Boy Color emulator written in C++",
+  "builtin-baseline" : "943c5ef1c8f6b5e6ced092b242c8299caae2ff01",
+  "dependencies" : [ {
+    "name" : "fmt",
+    "version>=" : "10.2.1#2"
+  }, {
+    "name" : "sdl2",
+    "version>=" : "2.30.1"
+  }, {
+    "name" : "rapidjson",
+    "version>=" : "2023-07-17#1"
+  } ]
 }

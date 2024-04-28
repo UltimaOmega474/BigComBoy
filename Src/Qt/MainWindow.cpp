@@ -19,6 +19,7 @@
 #include "MainWindow.hpp"
 #include "AboutWindow.hpp"
 #include "Common/Config.hpp"
+#include "DiscordRPC.hpp"
 #include "EmulatorView.hpp"
 #include "GB/SubWindows/SettingsWindow.hpp"
 #include "Input/DeviceRegistry.hpp"
@@ -61,6 +62,7 @@ namespace QtFrontend {
         connect_slots();
 
         setWindowTitle(QString("Big ComBoy " BCB_VER));
+        DiscordRPC::initialize();
     }
 
     MainWindow::~MainWindow() {
@@ -75,6 +77,7 @@ namespace QtFrontend {
         config.wsize_x = width();
         config.wsize_y = height();
         input_timer.stop();
+        DiscordRPC::close();
     }
 
     void MainWindow::keyPressEvent(QKeyEvent *event) {
@@ -152,6 +155,9 @@ namespace QtFrontend {
             QString::fromStdString(fmt::format("'{}' Loaded successfully.", message.toStdString())),
             5000);
         reload_recent_roms();
+
+        const QFileInfo info(message);
+        DiscordRPC::new_activity(info.fileName().toStdString());
     }
 
     void MainWindow::rom_load_fail(const QString &message, int timeout) {
