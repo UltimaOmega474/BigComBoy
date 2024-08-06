@@ -11,12 +11,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(fmt CONFIG REQUIRED)
 find_package(SDL2 CONFIG REQUIRED)
-find_package(RapidJSON CONFIG REQUIRED)
 
 add_subdirectory(Src)
 add_subdirectory(External/toml11)
 add_subdirectory(External/discord-rpc)
-
+add_subdirectory(External/rapidjson)
 configure_file(LICENSE.txt ${CMAKE_SOURCE_DIR}/bin/Release/LICENSE.txt COPYONLY)
 configure_file(LICENSE.txt ${CMAKE_SOURCE_DIR}/bin/Debug/LICENSE.txt COPYONLY)
 configure_file(THIRD-PARTY.txt ${CMAKE_SOURCE_DIR}/bin/Release/THIRD-PARTY.txt COPYONLY)

@@ -1,8 +1,8 @@
 # Big ComBoy
 
-Game Boy & Game Boy Color emulator written in C++. 
+Cross-platform Game Boy & Game Boy Color emulator written in C++. 
 
-## Hardware Compatibility
+## Cartridge Compatibility
 
 - [x] MBC1
 - [ ] MBC1M
@@ -20,20 +20,10 @@ Game Boy & Game Boy Color emulator written in C++.
 
 ## Building
 
-Windows and MacOS are currently supported. Linux port is planned but not a priority.
-
-A C++ compiler that supports C++20 along with CMake is required.
-
-The following external dependencies are required. 
-
-- Qt6 
-- {fmt}
-- SDL2
-- toml11 (Included as a submodule)
-
-Install them using your favorite package manager on your platform of choice. Windows users should consider using vcpkg.
-
-Use the provided CMakeLists to configure. The frontend can be built via the BigComBoy target. The GB target contains the emulator core and has no external dependencies required for use.
+1. Make sure your C++ compiler supports C++20.
+2. Use git to clone the project with submodules.
+3. Install the following dependencies: CMake, Qt Framework 6, {fmt}, SDL2.
+4. Use CMake to build the BigComBoy target. 
 
 ## License
 

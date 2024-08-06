@@ -5,7 +5,7 @@ add_library(Discord-RPC STATIC
 )
 
 target_include_directories(Discord-RPC PRIVATE include)
-target_link_libraries(Discord-RPC PRIVATE rapidjson)
+target_link_libraries(Discord-RPC PRIVATE RapidJSON)
 
 if(WIN32)
     target_sources(Discord-RPC PRIVATE
