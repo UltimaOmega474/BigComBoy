@@ -32,6 +32,21 @@
 namespace GB {
     class Core {
     public:
+        std::function<uint8_t(uint16_t)> bus_read_fn = [this](uint16_t address) -> uint8_t {
+            tick_subcomponents(4);
+            return bus.read(address);
+        };
+
+        std::function<void(uint16_t, uint8_t)> bus_write_fn = [this](uint16_t address,
+                                                                     uint8_t value) -> void {
+            tick_subcomponents(4);
+            bus.write(address, value);
+        };
+
+        std::function<void(int32_t)> run_external_state_fn = [this](int32_t cycles) -> void {
+            tick_subcomponents(cycles);
+        };
+
         Gamepad pad;
         MainBus bus;
         PPU ppu;

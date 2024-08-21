@@ -19,22 +19,21 @@
 #pragma once
 #include <array>
 #include <cinttypes>
+#include <functional>
 
 namespace GB {
-    class Core;
-
-    enum class Register {
-        B = 0,
-        C = 1,
-        D = 2,
-        E = 3,
-        H = 4,
-        L = 5,
-        HL_ADDR = 6,
-        F = 6,
-        A = 7,
-        U8 = 8, // for ALU opcodes that take an immediate value
-    };
+    namespace Register {
+        constexpr int32_t B = 0;
+        constexpr int32_t C = 1;
+        constexpr int32_t D = 2;
+        constexpr int32_t E = 3;
+        constexpr int32_t H = 4;
+        constexpr int32_t L = 5;
+        constexpr int32_t A = 6;
+        constexpr int32_t F = 7;
+        constexpr int32_t HL_ADDRESS = 8;
+        constexpr int32_t C8BIT_IMMEDIATE = 9;
+    }
 
     enum class RegisterPair {
         BC,
@@ -51,22 +50,48 @@ namespace GB {
 
     class SM83 {
     public:
-        SM83(Core *core);
+        uint8_t interrupt_flag = 0, interrupt_enable = 0;
+        uint8_t KEY1 = 0;
+        uint16_t program_counter = 0;
+        uint16_t stack_pointer = 0xFFFF;
+
+        union {
+            std::array<uint8_t, 8> registers{};
+
+            struct {
+                uint8_t b;
+                uint8_t c;
+                uint8_t d;
+                uint8_t e;
+                uint8_t h;
+                uint8_t l;
+                uint8_t a;
+                uint8_t f;
+            };
+        };
+
+        std::function<void(int32_t)> run_external_state_fn;
+        std::function<void(uint16_t, uint8_t)> bus_write_fn;
+        std::function<uint8_t(uint16_t)> bus_read_fn;
+
+        SM83(std::function<void(int32_t)> run_external_state_fn,
+             std::function<void(uint16_t, uint8_t)> bus_write_fn,
+             std::function<uint8_t(uint16_t)> bus_read_fn);
 
         bool stopped() const;
         bool double_speed() const;
+        bool ime() const;
+        bool halted() const;
 
-        void reset(uint16_t new_pc);
+        void reset(uint16_t new_pc, bool with_DMG_values);
         void request_interrupt(uint8_t interrupt);
         void step();
 
     private:
         void service_interrupts();
 
-        uint8_t read(uint16_t address);
-        uint16_t read_uint16(uint16_t address);
-        void write(uint16_t address, uint8_t value);
-        void write_uint16(uint16_t address, uint16_t value);
+        uint16_t read_uint16(uint16_t address) const;
+        void write_uint16(uint16_t address, uint16_t value) const;
 
         void push_sp(uint16_t value);
         uint16_t pop_sp();
@@ -111,18 +136,20 @@ namespace GB {
         template <RegisterPair rp, int16_t displacement> void op_ld_rp_a();
         template <uint8_t cc, bool boolean_ver> void op_jr_cc_i8();
         template <RegisterPair rp> void op_add_hl_rp();
-        template <Register r> void op_inc_r();
-        template <Register r> void op_dec_r();
-        template <Register r> void op_ld_r_u8();
-        template <RegisterPair rp, int16_t displacement> void op_ld_a_rp();
-        template <Register r, Register r2> void op_ld_r_r();
 
-        template <Register r, bool with_carry> void op_add_a_r();
-        template <Register r, bool with_carry> void op_sub_a_r();
-        template <Register r> void op_and_a_r();
-        template <Register r> void op_xor_a_r();
-        template <Register r> void op_or_a_r();
-        template <Register r> void op_cp_a_r();
+        template <int32_t r> void op_inc_r();
+        template <int32_t r> void op_dec_r();
+
+        template <int32_t r> void op_ld_r_u8();
+        template <RegisterPair rp, int16_t displacement> void op_ld_a_rp();
+        template <int32_t r, int32_t r2> void op_ld_r_r();
+
+        template <int32_t r, bool with_carry> void op_add_a_r();
+        template <int32_t r, bool with_carry> void op_sub_a_r();
+        template <int32_t r> void op_and_a_r();
+        template <int32_t r> void op_xor_a_r();
+        template <int32_t r> void op_or_a_r();
+        template <int32_t r> void op_cp_a_r();
 
         template <bool enable_interrupts> void op_ret();
         template <uint8_t cc, bool boolean_ver> void op_ret_cc();
@@ -134,41 +161,31 @@ namespace GB {
 
         template <uint16_t page> void op_rst_n();
 
-        template <Register r> void op_rlc();
-        template <Register r> void op_rrc();
-        template <Register r> void op_rl();
-        template <Register r> void op_rr();
-        template <Register r> void op_sla();
-        template <Register r> void op_sra();
-        template <Register r> void op_swap();
-        template <Register r> void op_srl();
+        template <int32_t r> void op_rlc();
+        template <int32_t r> void op_rrc();
+        template <int32_t r> void op_rl();
+        template <int32_t r> void op_rr();
+        template <int32_t r> void op_sla();
+        template <int32_t r> void op_sra();
+        template <int32_t r> void op_swap();
+        template <int32_t r> void op_srl();
 
-        template <uint8_t bit, Register r> void op_bit();
-        template <uint8_t bit, Register r> void op_res();
-        template <uint8_t bit, Register r> void op_set();
+        template <uint8_t bit, int32_t r> void op_bit();
+        template <uint8_t bit, int32_t r> void op_res();
+        template <uint8_t bit, int32_t r> void op_set();
 
-        using opcode_function = void (SM83::*)();
-        static std::array<SM83::opcode_function, 256> gen_optable();
-        static std::array<SM83::opcode_function, 256> gen_cb_optable();
+        void gen_opcodes();
+        void gen_bitwise_opcodes();
 
         bool master_interrupt_enable_ = true;
         bool halted_ = false;
         bool ei_delay_ = false;
         bool stopped_ = false;
         bool double_speed_ = false;
+        bool dmg_mode = true;
 
-        uint8_t interrupt_flag = 0, interrupt_enable = 0;
-        uint8_t KEY1 = 0;
-
-        uint16_t sp = 0xFFFF, pc = 0;
-        std::array<uint8_t, 8> registers{};
-
-        std::array<opcode_function, 256> opcodes;
-        std::array<opcode_function, 256> cb_opcodes;
-
-        Core *core;
-
-        friend class MainBus;
+        using OpcodeFunction = void (SM83::*)();
+        std::array<OpcodeFunction, 256> opcodes{};
+        std::array<OpcodeFunction, 256> bitwise_opcodes{};
     };
-
 }

@@ -1,6 +1,7 @@
 BasedOnStyle: LLVM
 IndentWidth: 4
 AllowShortLambdasOnASingleLine: Inline
+AllowShortCaseLabelsOnASingleLine: True
 AccessModifierOffset: -4
 NamespaceIndentation: All
 FixNamespaceComments: false
