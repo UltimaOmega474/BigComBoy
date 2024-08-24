@@ -22,18 +22,19 @@
 #include <functional>
 
 namespace GB {
-    namespace Register {
-        constexpr int32_t B = 0;
-        constexpr int32_t C = 1;
-        constexpr int32_t D = 2;
-        constexpr int32_t E = 3;
-        constexpr int32_t H = 4;
-        constexpr int32_t L = 5;
-        constexpr int32_t A = 6;
-        constexpr int32_t F = 7;
-        constexpr int32_t HL_ADDRESS = 8;
-        constexpr int32_t C8BIT_IMMEDIATE = 9;
-    }
+    
+    enum class Register {
+        B,
+        C,
+        D,
+        E,
+        H,
+        L,
+        A,
+        F,
+        HLAddress,
+        C8BitImmediate,
+    };
 
     enum class RegisterPair {
         BC,
@@ -54,21 +55,14 @@ namespace GB {
         uint8_t KEY1 = 0;
         uint16_t program_counter = 0;
         uint16_t stack_pointer = 0xFFFF;
-
-        union {
-            std::array<uint8_t, 8> registers{};
-
-            struct {
-                uint8_t b;
-                uint8_t c;
-                uint8_t d;
-                uint8_t e;
-                uint8_t h;
-                uint8_t l;
-                uint8_t a;
-                uint8_t f;
-            };
-        };
+        uint8_t b = 0;
+        uint8_t c = 0;
+        uint8_t d = 0;
+        uint8_t e = 0;
+        uint8_t h = 0;
+        uint8_t l = 0;
+        uint8_t a = 0;
+        uint8_t f = 0;
 
         std::function<void(int32_t)> run_external_state_fn;
         std::function<void(uint16_t, uint8_t)> bus_write_fn;
@@ -95,10 +89,15 @@ namespace GB {
 
         void push_sp(uint16_t value);
         uint16_t pop_sp();
+
         void set_flags(uint8_t flags, bool set);
         bool get_flag(uint8_t flag) const;
+
         uint16_t get_rp(RegisterPair index) const;
         void set_rp(RegisterPair index, uint16_t value);
+
+        uint8_t get_register(Register reg) const;
+        void set_register(Register reg, uint8_t value);
 
         void op_ld_u16_sp();
         void op_stop();
@@ -137,19 +136,19 @@ namespace GB {
         template <uint8_t cc, bool boolean_ver> void op_jr_cc_i8();
         template <RegisterPair rp> void op_add_hl_rp();
 
-        template <int32_t r> void op_inc_r();
-        template <int32_t r> void op_dec_r();
+        template <Register r> void op_inc_r();
+        template <Register r> void op_dec_r();
 
-        template <int32_t r> void op_ld_r_u8();
+        template <Register r> void op_ld_r_u8();
         template <RegisterPair rp, int16_t displacement> void op_ld_a_rp();
-        template <int32_t r, int32_t r2> void op_ld_r_r();
+        template <Register r, Register r2> void op_ld_r_r();
 
-        template <int32_t r, bool with_carry> void op_add_a_r();
-        template <int32_t r, bool with_carry> void op_sub_a_r();
-        template <int32_t r> void op_and_a_r();
-        template <int32_t r> void op_xor_a_r();
-        template <int32_t r> void op_or_a_r();
-        template <int32_t r> void op_cp_a_r();
+        template <Register r, bool with_carry> void op_add_a_r();
+        template <Register r, bool with_carry> void op_sub_a_r();
+        template <Register r> void op_and_a_r();
+        template <Register r> void op_xor_a_r();
+        template <Register r> void op_or_a_r();
+        template <Register r> void op_cp_a_r();
 
         template <bool enable_interrupts> void op_ret();
         template <uint8_t cc, bool boolean_ver> void op_ret_cc();
@@ -161,18 +160,18 @@ namespace GB {
 
         template <uint16_t page> void op_rst_n();
 
-        template <int32_t r> void op_rlc();
-        template <int32_t r> void op_rrc();
-        template <int32_t r> void op_rl();
-        template <int32_t r> void op_rr();
-        template <int32_t r> void op_sla();
-        template <int32_t r> void op_sra();
-        template <int32_t r> void op_swap();
-        template <int32_t r> void op_srl();
+        template <Register r> void op_rlc();
+        template <Register r> void op_rrc();
+        template <Register r> void op_rl();
+        template <Register r> void op_rr();
+        template <Register r> void op_sla();
+        template <Register r> void op_sra();
+        template <Register r> void op_swap();
+        template <Register r> void op_srl();
 
-        template <uint8_t bit, int32_t r> void op_bit();
-        template <uint8_t bit, int32_t r> void op_res();
-        template <uint8_t bit, int32_t r> void op_set();
+        template <uint8_t bit, Register r> void op_bit();
+        template <uint8_t bit, Register r> void op_res();
+        template <uint8_t bit, Register r> void op_set();
 
         void gen_opcodes();
         void gen_bitwise_opcodes();
