@@ -22,7 +22,7 @@
 #include <functional>
 
 namespace GB {
-    
+
     enum class Register {
         B,
         C,
@@ -51,10 +51,6 @@ namespace GB {
 
     class SM83 {
     public:
-        uint8_t interrupt_flag = 0, interrupt_enable = 0;
-        uint8_t KEY1 = 0;
-        uint16_t program_counter = 0;
-        uint16_t stack_pointer = 0xFFFF;
         uint8_t b = 0;
         uint8_t c = 0;
         uint8_t d = 0;
@@ -63,6 +59,13 @@ namespace GB {
         uint8_t l = 0;
         uint8_t a = 0;
         uint8_t f = 0;
+
+        uint8_t interrupt_flag = 0;
+        uint8_t interrupt_enable = 0;
+        uint8_t KEY1 = 0;
+
+        uint16_t program_counter = 0;
+        uint16_t stack_pointer = 0xFFFF;
 
         std::function<void(int32_t)> run_external_state_fn;
         std::function<void(uint16_t, uint8_t)> bus_write_fn;
