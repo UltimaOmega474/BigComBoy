@@ -67,10 +67,6 @@ namespace GB {
         uint16_t program_counter = 0;
         uint16_t stack_pointer = 0xFFFF;
 
-        std::function<void(int32_t)> run_external_state_fn;
-        std::function<void(uint16_t, uint8_t)> bus_write_fn;
-        std::function<uint8_t(uint16_t)> bus_read_fn;
-
         SM83(std::function<void(int32_t)> run_external_state_fn,
              std::function<void(uint16_t, uint8_t)> bus_write_fn,
              std::function<uint8_t(uint16_t)> bus_read_fn);
@@ -189,5 +185,9 @@ namespace GB {
         using OpcodeFunction = void (SM83::*)();
         std::array<OpcodeFunction, 256> opcodes{};
         std::array<OpcodeFunction, 256> bitwise_opcodes{};
+
+        std::function<void(int32_t)> run_external_state_fn;
+        std::function<void(uint16_t, uint8_t)> bus_write_fn;
+        std::function<uint8_t(uint16_t)> bus_read_fn;
     };
 }

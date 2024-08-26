@@ -31,7 +31,6 @@
 
 namespace GB {
     class Core {
-    public:
         std::function<uint8_t(uint16_t)> bus_read_fn = [this](uint16_t address) -> uint8_t {
             tick_subcomponents(4);
             return bus.read(address);
@@ -47,6 +46,7 @@ namespace GB {
             tick_subcomponents(cycles);
         };
 
+    public:
         Gamepad pad;
         MainBus bus;
         PPU ppu;
