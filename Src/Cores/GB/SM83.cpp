@@ -255,30 +255,30 @@ namespace GB {
         }
     }
 
-    uint8_t SM83::get_register(Register reg) const {
+    uint8_t SM83::get_register(Operand reg) const {
         switch (reg) {
-        case Register::B: return b;
-        case Register::C: return c;
-        case Register::D: return d;
-        case Register::E: return e;
-        case Register::H: return h;
-        case Register::L: return l;
-        case Register::A: return a;
-        case Register::F: return f;
+        case Operand::B: return b;
+        case Operand::C: return c;
+        case Operand::D: return d;
+        case Operand::E: return e;
+        case Operand::H: return h;
+        case Operand::L: return l;
+        case Operand::A: return a;
+        case Operand::F: return f;
         default: return 0;
         }
     }
 
-    void SM83::set_register(Register reg, uint8_t value) {
+    void SM83::set_register(Operand reg, uint8_t value) {
         switch (reg) {
-        case Register::B: b = value; return;
-        case Register::C: c = value; return;
-        case Register::D: d = value; return;
-        case Register::E: e = value; return;
-        case Register::H: h = value; return;
-        case Register::L: l = value; return;
-        case Register::A: a = value; return;
-        case Register::F: f = value; return;
+        case Operand::B: b = value; return;
+        case Operand::C: c = value; return;
+        case Operand::D: d = value; return;
+        case Operand::E: e = value; return;
+        case Operand::H: h = value; return;
+        case Operand::L: l = value; return;
+        case Operand::A: a = value; return;
+        case Operand::F: f = value; return;
         default: return;
         }
     }
@@ -627,11 +627,11 @@ namespace GB {
         ++program_counter;
     }
 
-    template <Register r> void SM83::op_inc_r() {
+    template <Operand r> void SM83::op_inc_r() {
         uint16_t left;
         uint16_t right = 1;
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             left = bus_read_fn(get_rp(RegisterPair::HL));
         } else {
             left = get_register(r);
@@ -644,7 +644,7 @@ namespace GB {
         set_flags(FLAG_Z, masked_result == 0);
         set_flags(FLAG_HC, ((left & 0xF) + (right & 0xF)) > 0xF);
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             bus_write_fn(get_rp(RegisterPair::HL), masked_result);
         } else {
             set_register(r, masked_result);
@@ -652,11 +652,11 @@ namespace GB {
         ++program_counter;
     }
 
-    template <Register r> void SM83::op_dec_r() {
+    template <Operand r> void SM83::op_dec_r() {
         int16_t left;
         int16_t right = 1;
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             left = bus_read_fn(get_rp(RegisterPair::HL));
         } else {
             left = get_register(r);
@@ -669,7 +669,7 @@ namespace GB {
         set_flags(FLAG_Z, masked_result == 0);
         set_flags(FLAG_N, true); // only set if subtraction
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             bus_write_fn(get_rp(RegisterPair::HL), masked_result);
         } else {
             set_register(r, masked_result);
@@ -677,8 +677,8 @@ namespace GB {
         ++program_counter;
     }
 
-    template <Register r> void SM83::op_ld_r_u8() {
-        if constexpr (r == Register::HLAddress) {
+    template <Operand r> void SM83::op_ld_r_u8() {
+        if constexpr (r == Operand::HLAddress) {
             bus_write_fn(get_rp(RegisterPair::HL), bus_read_fn(program_counter + 1));
         } else {
             set_register(r, bus_read_fn(program_counter + 1));
@@ -697,28 +697,28 @@ namespace GB {
         ++program_counter;
     }
 
-    template <Register r, Register r2> void SM83::op_ld_r_r() {
+    template <Operand r, Operand r2> void SM83::op_ld_r_r() {
         // r = destination
         // r2 = source
-        if constexpr (r == Register::HLAddress && r2 != Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress && r2 != Operand::HLAddress) {
             bus_write_fn(get_rp(RegisterPair::HL), get_register(r2));
-        } else if constexpr (r != Register::HLAddress && r2 == Register::HLAddress) {
+        } else if constexpr (r != Operand::HLAddress && r2 == Operand::HLAddress) {
             set_register(r, bus_read_fn(get_rp(RegisterPair::HL)));
-        } else if constexpr (r == Register::HLAddress && r2 == Register::HLAddress) {
+        } else if constexpr (r == Operand::HLAddress && r2 == Operand::HLAddress) {
             halted_ = true;
-        } else if constexpr (r != Register::HLAddress && r2 != Register::HLAddress) {
+        } else if constexpr (r != Operand::HLAddress && r2 != Operand::HLAddress) {
             set_register(r, get_register(r2));
         }
         ++program_counter;
     }
 
-    template <Register r, bool with_carry> void SM83::op_add_a_r() {
+    template <Operand r, bool with_carry> void SM83::op_add_a_r() {
         auto left = static_cast<uint16_t>(a);
         uint16_t right;
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             right = static_cast<uint16_t>(bus_read_fn(get_rp(RegisterPair::HL)));
-        } else if constexpr (r == Register::C8BitImmediate) {
+        } else if constexpr (r == Operand::Immediate) {
             right = static_cast<uint16_t>(bus_read_fn(program_counter + 1));
             ++program_counter;
         } else {
@@ -739,13 +739,13 @@ namespace GB {
         ++program_counter;
     }
 
-    template <Register r, bool with_carry> void SM83::op_sub_a_r() {
+    template <Operand r, bool with_carry> void SM83::op_sub_a_r() {
         auto left = static_cast<int16_t>(a);
         int16_t right;
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             right = static_cast<int16_t>(bus_read_fn(get_rp(RegisterPair::HL)));
-        } else if constexpr (r == Register::C8BitImmediate) {
+        } else if constexpr (r == Operand::Immediate) {
             right = static_cast<int16_t>(bus_read_fn(program_counter + 1));
             ++program_counter;
         } else {
@@ -766,12 +766,12 @@ namespace GB {
         ++program_counter;
     }
 
-    template <Register r> void SM83::op_and_a_r() {
+    template <Operand r> void SM83::op_and_a_r() {
         uint8_t right;
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             right = bus_read_fn(get_rp(RegisterPair::HL));
-        } else if constexpr (r == Register::C8BitImmediate) {
+        } else if constexpr (r == Operand::Immediate) {
             right = bus_read_fn(program_counter + 1);
             ++program_counter;
         } else {
@@ -788,12 +788,12 @@ namespace GB {
         ++program_counter;
     }
 
-    template <Register r> void SM83::op_xor_a_r() {
+    template <Operand r> void SM83::op_xor_a_r() {
         uint8_t right;
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             right = bus_read_fn(get_rp(RegisterPair::HL));
-        } else if constexpr (r == Register::C8BitImmediate) {
+        } else if constexpr (r == Operand::Immediate) {
             right = bus_read_fn(program_counter + 1);
             ++program_counter;
         } else {
@@ -810,12 +810,12 @@ namespace GB {
         ++program_counter;
     }
 
-    template <Register r> void SM83::op_or_a_r() {
+    template <Operand r> void SM83::op_or_a_r() {
         uint8_t right;
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             right = bus_read_fn(get_rp(RegisterPair::HL));
-        } else if constexpr (r == Register::C8BitImmediate) {
+        } else if constexpr (r == Operand::Immediate) {
             right = bus_read_fn(program_counter + 1);
             ++program_counter;
         } else {
@@ -832,12 +832,12 @@ namespace GB {
         ++program_counter;
     }
 
-    template <Register r> void SM83::op_cp_a_r() {
+    template <Operand r> void SM83::op_cp_a_r() {
         uint8_t right;
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             right = bus_read_fn(get_rp(RegisterPair::HL));
-        } else if constexpr (r == Register::C8BitImmediate) {
+        } else if constexpr (r == Operand::Immediate) {
             right = bus_read_fn(program_counter + 1);
             ++program_counter;
         } else {
@@ -852,7 +852,7 @@ namespace GB {
         set_flags(FLAG_Z, masked_result == 0);
         set_flags(FLAG_N, true);
 
-        // Register::A is not modified, same as subtract without carry
+        // Operand::A is not modified, same as subtract without carry
         ++program_counter;
     }
 
@@ -919,10 +919,10 @@ namespace GB {
         program_counter = page;
     }
 
-    template <Register r> void SM83::op_rlc() {
+    template <Operand r> void SM83::op_rlc() {
         uint8_t temp = get_register(r);
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             temp = bus_read_fn(get_rp(RegisterPair::HL));
         }
 
@@ -934,17 +934,17 @@ namespace GB {
         temp = temp << 1;
         temp |= bit7;
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             bus_write_fn(get_rp(RegisterPair::HL), temp);
         } else {
             set_register(r, temp);
         }
     }
 
-    template <Register r> void SM83::op_rrc() {
+    template <Operand r> void SM83::op_rrc() {
         uint8_t temp = get_register(r);
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             temp = bus_read_fn(get_rp(RegisterPair::HL));
         }
 
@@ -955,17 +955,17 @@ namespace GB {
         temp = temp >> 1;
         temp |= bit0;
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             bus_write_fn(get_rp(RegisterPair::HL), temp);
         } else {
             set_register(r, temp);
         }
     }
 
-    template <Register r> void SM83::op_rl() {
+    template <Operand r> void SM83::op_rl() {
         uint16_t temp = get_register(r);
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             temp = bus_read_fn(get_rp(RegisterPair::HL));
         }
 
@@ -979,17 +979,17 @@ namespace GB {
         set_flags(FLAG_Z, result == 0);
         set_flags(FLAG_N | FLAG_HC, false);
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             bus_write_fn(get_rp(RegisterPair::HL), result);
         } else {
             set_register(r, result);
         }
     }
 
-    template <Register r> void SM83::op_rr() {
+    template <Operand r> void SM83::op_rr() {
         uint16_t temp = get_register(r);
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             temp = bus_read_fn(get_rp(RegisterPair::HL));
         }
 
@@ -1003,17 +1003,17 @@ namespace GB {
         set_flags(FLAG_Z, result == 0);
         set_flags(FLAG_N | FLAG_HC, false);
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             bus_write_fn(get_rp(RegisterPair::HL), result);
         } else {
             set_register(r, result);
         }
     }
 
-    template <Register r> void SM83::op_sla() {
+    template <Operand r> void SM83::op_sla() {
         uint8_t temp = get_register(r);
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             temp = bus_read_fn(get_rp(RegisterPair::HL));
         }
 
@@ -1022,17 +1022,17 @@ namespace GB {
         set_flags(FLAG_Z, temp == 0);
         set_flags(FLAG_N | FLAG_HC, false);
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             bus_write_fn(get_rp(RegisterPair::HL), temp);
         } else {
             set_register(r, temp);
         }
     }
 
-    template <Register r> void SM83::op_sra() {
+    template <Operand r> void SM83::op_sra() {
         uint8_t temp = get_register(r);
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             temp = bus_read_fn(get_rp(RegisterPair::HL));
         }
 
@@ -1043,17 +1043,17 @@ namespace GB {
         set_flags(FLAG_Z, temp == 0);
         set_flags(FLAG_N | FLAG_HC, false);
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             bus_write_fn(get_rp(RegisterPair::HL), temp);
         } else {
             set_register(r, temp);
         }
     }
 
-    template <Register r> void SM83::op_swap() {
+    template <Operand r> void SM83::op_swap() {
         uint8_t temp = get_register(r);
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             temp = bus_read_fn(get_rp(RegisterPair::HL));
         }
 
@@ -1064,17 +1064,17 @@ namespace GB {
         set_flags(FLAG_Z, temp == 0);
         set_flags(FLAG_N | FLAG_HC | FLAG_CY, false);
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             bus_write_fn(get_rp(RegisterPair::HL), temp);
         } else {
             set_register(r, temp);
         }
     }
 
-    template <Register r> void SM83::op_srl() {
+    template <Operand r> void SM83::op_srl() {
         uint8_t temp = get_register(r);
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             temp = bus_read_fn(get_rp(RegisterPair::HL));
         }
 
@@ -1083,17 +1083,17 @@ namespace GB {
         set_flags(FLAG_Z, temp == 0);
         set_flags(FLAG_N | FLAG_HC, false);
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             bus_write_fn(get_rp(RegisterPair::HL), temp);
         } else {
             set_register(r, temp);
         }
     }
 
-    template <uint8_t bit, Register r> void SM83::op_bit() {
+    template <uint8_t bit, Operand r> void SM83::op_bit() {
         uint8_t temp = get_register(r);
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             temp = bus_read_fn(get_rp(RegisterPair::HL));
         }
 
@@ -1103,32 +1103,32 @@ namespace GB {
         set_flags(FLAG_HC, true);
     }
 
-    template <uint8_t bit, Register r> void SM83::op_res() {
+    template <uint8_t bit, Operand r> void SM83::op_res() {
         uint8_t temp = get_register(r);
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             temp = bus_read_fn(get_rp(RegisterPair::HL));
         }
 
         temp &= ~(1 << bit);
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             bus_write_fn(get_rp(RegisterPair::HL), temp);
         } else {
             set_register(r, temp);
         }
     }
 
-    template <uint8_t bit, Register r> void SM83::op_set() {
+    template <uint8_t bit, Operand r> void SM83::op_set() {
         uint8_t temp = get_register(r);
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             temp = bus_read_fn(get_rp(RegisterPair::HL));
         }
 
         temp |= (1 << bit);
 
-        if constexpr (r == Register::HLAddress) {
+        if constexpr (r == Operand::HLAddress) {
             bus_write_fn(get_rp(RegisterPair::HL), temp);
         } else {
             set_register(r, temp);
@@ -1150,17 +1150,17 @@ namespace GB {
             &SM83::op_ld_rp_u16<RegisterPair::BC>,
             &SM83::op_ld_rp_a<RegisterPair::BC, NoDisplacement>,
             &SM83::op_inc_rp<RegisterPair::BC>,
-            &SM83::op_inc_r<Register::B>,
-            &SM83::op_dec_r<Register::B>,
-            &SM83::op_ld_r_u8<Register::B>,
+            &SM83::op_inc_r<Operand::B>,
+            &SM83::op_dec_r<Operand::B>,
+            &SM83::op_ld_r_u8<Operand::B>,
             &SM83::op_rlca,
             &SM83::op_ld_u16_sp,
             &SM83::op_add_hl_rp<RegisterPair::BC>,
             &SM83::op_ld_a_rp<RegisterPair::BC, NoDisplacement>,
             &SM83::op_dec_rp<RegisterPair::BC>,
-            &SM83::op_inc_r<Register::C>,
-            &SM83::op_dec_r<Register::C>,
-            &SM83::op_ld_r_u8<Register::C>,
+            &SM83::op_inc_r<Operand::C>,
+            &SM83::op_dec_r<Operand::C>,
+            &SM83::op_ld_r_u8<Operand::C>,
             &SM83::op_rrca,
 
             // 0x10 - 0x1F
@@ -1168,17 +1168,17 @@ namespace GB {
             &SM83::op_ld_rp_u16<RegisterPair::DE>,
             &SM83::op_ld_rp_a<RegisterPair::DE, NoDisplacement>,
             &SM83::op_inc_rp<RegisterPair::DE>,
-            &SM83::op_inc_r<Register::D>,
-            &SM83::op_dec_r<Register::D>,
-            &SM83::op_ld_r_u8<Register::D>,
+            &SM83::op_inc_r<Operand::D>,
+            &SM83::op_dec_r<Operand::D>,
+            &SM83::op_ld_r_u8<Operand::D>,
             &SM83::op_rla,
             &SM83::op_jr_i8,
             &SM83::op_add_hl_rp<RegisterPair::DE>,
             &SM83::op_ld_a_rp<RegisterPair::DE, NoDisplacement>,
             &SM83::op_dec_rp<RegisterPair::DE>,
-            &SM83::op_inc_r<Register::E>,
-            &SM83::op_dec_r<Register::E>,
-            &SM83::op_ld_r_u8<Register::E>,
+            &SM83::op_inc_r<Operand::E>,
+            &SM83::op_dec_r<Operand::E>,
+            &SM83::op_ld_r_u8<Operand::E>,
             &SM83::op_rra,
 
             // 0x20 - 0x2F
@@ -1186,17 +1186,17 @@ namespace GB {
             &SM83::op_ld_rp_u16<RegisterPair::HL>,
             &SM83::op_ld_rp_a<RegisterPair::HL, Increment>,
             &SM83::op_inc_rp<RegisterPair::HL>,
-            &SM83::op_inc_r<Register::H>,
-            &SM83::op_dec_r<Register::H>,
-            &SM83::op_ld_r_u8<Register::H>,
+            &SM83::op_inc_r<Operand::H>,
+            &SM83::op_dec_r<Operand::H>,
+            &SM83::op_ld_r_u8<Operand::H>,
             &SM83::op_daa,
             &SM83::op_jr_cc_i8<FLAG_Z, true>,
             &SM83::op_add_hl_rp<RegisterPair::HL>,
             &SM83::op_ld_a_rp<RegisterPair::HL, Increment>,
             &SM83::op_dec_rp<RegisterPair::HL>,
-            &SM83::op_inc_r<Register::L>,
-            &SM83::op_dec_r<Register::L>,
-            &SM83::op_ld_r_u8<Register::L>,
+            &SM83::op_inc_r<Operand::L>,
+            &SM83::op_dec_r<Operand::L>,
+            &SM83::op_ld_r_u8<Operand::L>,
             &SM83::op_cpl,
 
             // 0x30 - 0x3F
@@ -1204,163 +1204,163 @@ namespace GB {
             &SM83::op_ld_rp_u16<RegisterPair::SP>,
             &SM83::op_ld_rp_a<RegisterPair::HL, Decrement>,
             &SM83::op_inc_rp<RegisterPair::SP>,
-            &SM83::op_inc_r<Register::HLAddress>,
-            &SM83::op_dec_r<Register::HLAddress>,
-            &SM83::op_ld_r_u8<Register::HLAddress>,
+            &SM83::op_inc_r<Operand::HLAddress>,
+            &SM83::op_dec_r<Operand::HLAddress>,
+            &SM83::op_ld_r_u8<Operand::HLAddress>,
             &SM83::op_scf,
             &SM83::op_jr_cc_i8<FLAG_CY, true>,
             &SM83::op_add_hl_rp<RegisterPair::SP>,
             &SM83::op_ld_a_rp<RegisterPair::HL, Decrement>,
             &SM83::op_dec_rp<RegisterPair::SP>,
-            &SM83::op_inc_r<Register::A>,
-            &SM83::op_dec_r<Register::A>,
-            &SM83::op_ld_r_u8<Register::A>,
+            &SM83::op_inc_r<Operand::A>,
+            &SM83::op_dec_r<Operand::A>,
+            &SM83::op_ld_r_u8<Operand::A>,
             &SM83::op_ccf,
 
             // 0x40 - 0x4F
-            &SM83::op_ld_r_r<Register::B, Register::B>,
-            &SM83::op_ld_r_r<Register::B, Register::C>,
-            &SM83::op_ld_r_r<Register::B, Register::D>,
-            &SM83::op_ld_r_r<Register::B, Register::E>,
-            &SM83::op_ld_r_r<Register::B, Register::H>,
-            &SM83::op_ld_r_r<Register::B, Register::L>,
-            &SM83::op_ld_r_r<Register::B, Register::HLAddress>,
-            &SM83::op_ld_r_r<Register::B, Register::A>,
-            &SM83::op_ld_r_r<Register::C, Register::B>,
-            &SM83::op_ld_r_r<Register::C, Register::C>,
-            &SM83::op_ld_r_r<Register::C, Register::D>,
-            &SM83::op_ld_r_r<Register::C, Register::E>,
-            &SM83::op_ld_r_r<Register::C, Register::H>,
-            &SM83::op_ld_r_r<Register::C, Register::L>,
-            &SM83::op_ld_r_r<Register::C, Register::HLAddress>,
-            &SM83::op_ld_r_r<Register::C, Register::A>,
+            &SM83::op_ld_r_r<Operand::B, Operand::B>,
+            &SM83::op_ld_r_r<Operand::B, Operand::C>,
+            &SM83::op_ld_r_r<Operand::B, Operand::D>,
+            &SM83::op_ld_r_r<Operand::B, Operand::E>,
+            &SM83::op_ld_r_r<Operand::B, Operand::H>,
+            &SM83::op_ld_r_r<Operand::B, Operand::L>,
+            &SM83::op_ld_r_r<Operand::B, Operand::HLAddress>,
+            &SM83::op_ld_r_r<Operand::B, Operand::A>,
+            &SM83::op_ld_r_r<Operand::C, Operand::B>,
+            &SM83::op_ld_r_r<Operand::C, Operand::C>,
+            &SM83::op_ld_r_r<Operand::C, Operand::D>,
+            &SM83::op_ld_r_r<Operand::C, Operand::E>,
+            &SM83::op_ld_r_r<Operand::C, Operand::H>,
+            &SM83::op_ld_r_r<Operand::C, Operand::L>,
+            &SM83::op_ld_r_r<Operand::C, Operand::HLAddress>,
+            &SM83::op_ld_r_r<Operand::C, Operand::A>,
 
             // 0x50 - 0x5F
-            &SM83::op_ld_r_r<Register::D, Register::B>,
-            &SM83::op_ld_r_r<Register::D, Register::C>,
-            &SM83::op_ld_r_r<Register::D, Register::D>,
-            &SM83::op_ld_r_r<Register::D, Register::E>,
-            &SM83::op_ld_r_r<Register::D, Register::H>,
-            &SM83::op_ld_r_r<Register::D, Register::L>,
-            &SM83::op_ld_r_r<Register::D, Register::HLAddress>,
-            &SM83::op_ld_r_r<Register::D, Register::A>,
-            &SM83::op_ld_r_r<Register::E, Register::B>,
-            &SM83::op_ld_r_r<Register::E, Register::C>,
-            &SM83::op_ld_r_r<Register::E, Register::D>,
-            &SM83::op_ld_r_r<Register::E, Register::E>,
-            &SM83::op_ld_r_r<Register::E, Register::H>,
-            &SM83::op_ld_r_r<Register::E, Register::L>,
-            &SM83::op_ld_r_r<Register::E, Register::HLAddress>,
-            &SM83::op_ld_r_r<Register::E, Register::A>,
+            &SM83::op_ld_r_r<Operand::D, Operand::B>,
+            &SM83::op_ld_r_r<Operand::D, Operand::C>,
+            &SM83::op_ld_r_r<Operand::D, Operand::D>,
+            &SM83::op_ld_r_r<Operand::D, Operand::E>,
+            &SM83::op_ld_r_r<Operand::D, Operand::H>,
+            &SM83::op_ld_r_r<Operand::D, Operand::L>,
+            &SM83::op_ld_r_r<Operand::D, Operand::HLAddress>,
+            &SM83::op_ld_r_r<Operand::D, Operand::A>,
+            &SM83::op_ld_r_r<Operand::E, Operand::B>,
+            &SM83::op_ld_r_r<Operand::E, Operand::C>,
+            &SM83::op_ld_r_r<Operand::E, Operand::D>,
+            &SM83::op_ld_r_r<Operand::E, Operand::E>,
+            &SM83::op_ld_r_r<Operand::E, Operand::H>,
+            &SM83::op_ld_r_r<Operand::E, Operand::L>,
+            &SM83::op_ld_r_r<Operand::E, Operand::HLAddress>,
+            &SM83::op_ld_r_r<Operand::E, Operand::A>,
 
             // 0x60 - 0x6F
-            &SM83::op_ld_r_r<Register::H, Register::B>,
-            &SM83::op_ld_r_r<Register::H, Register::C>,
-            &SM83::op_ld_r_r<Register::H, Register::D>,
-            &SM83::op_ld_r_r<Register::H, Register::E>,
-            &SM83::op_ld_r_r<Register::H, Register::H>,
-            &SM83::op_ld_r_r<Register::H, Register::L>,
-            &SM83::op_ld_r_r<Register::H, Register::HLAddress>,
-            &SM83::op_ld_r_r<Register::H, Register::A>,
-            &SM83::op_ld_r_r<Register::L, Register::B>,
-            &SM83::op_ld_r_r<Register::L, Register::C>,
-            &SM83::op_ld_r_r<Register::L, Register::D>,
-            &SM83::op_ld_r_r<Register::L, Register::E>,
-            &SM83::op_ld_r_r<Register::L, Register::H>,
-            &SM83::op_ld_r_r<Register::L, Register::L>,
-            &SM83::op_ld_r_r<Register::L, Register::HLAddress>,
-            &SM83::op_ld_r_r<Register::L, Register::A>,
+            &SM83::op_ld_r_r<Operand::H, Operand::B>,
+            &SM83::op_ld_r_r<Operand::H, Operand::C>,
+            &SM83::op_ld_r_r<Operand::H, Operand::D>,
+            &SM83::op_ld_r_r<Operand::H, Operand::E>,
+            &SM83::op_ld_r_r<Operand::H, Operand::H>,
+            &SM83::op_ld_r_r<Operand::H, Operand::L>,
+            &SM83::op_ld_r_r<Operand::H, Operand::HLAddress>,
+            &SM83::op_ld_r_r<Operand::H, Operand::A>,
+            &SM83::op_ld_r_r<Operand::L, Operand::B>,
+            &SM83::op_ld_r_r<Operand::L, Operand::C>,
+            &SM83::op_ld_r_r<Operand::L, Operand::D>,
+            &SM83::op_ld_r_r<Operand::L, Operand::E>,
+            &SM83::op_ld_r_r<Operand::L, Operand::H>,
+            &SM83::op_ld_r_r<Operand::L, Operand::L>,
+            &SM83::op_ld_r_r<Operand::L, Operand::HLAddress>,
+            &SM83::op_ld_r_r<Operand::L, Operand::A>,
 
             // 0x70 - 0x7F
-            &SM83::op_ld_r_r<Register::HLAddress, Register::B>,
-            &SM83::op_ld_r_r<Register::HLAddress, Register::C>,
-            &SM83::op_ld_r_r<Register::HLAddress, Register::D>,
-            &SM83::op_ld_r_r<Register::HLAddress, Register::E>,
-            &SM83::op_ld_r_r<Register::HLAddress, Register::H>,
-            &SM83::op_ld_r_r<Register::HLAddress, Register::L>,
+            &SM83::op_ld_r_r<Operand::HLAddress, Operand::B>,
+            &SM83::op_ld_r_r<Operand::HLAddress, Operand::C>,
+            &SM83::op_ld_r_r<Operand::HLAddress, Operand::D>,
+            &SM83::op_ld_r_r<Operand::HLAddress, Operand::E>,
+            &SM83::op_ld_r_r<Operand::HLAddress, Operand::H>,
+            &SM83::op_ld_r_r<Operand::HLAddress, Operand::L>,
             // HALT
-            &SM83::op_ld_r_r<Register::HLAddress, Register::HLAddress>,
-            &SM83::op_ld_r_r<Register::HLAddress, Register::A>,
-            &SM83::op_ld_r_r<Register::A, Register::B>,
-            &SM83::op_ld_r_r<Register::A, Register::C>,
-            &SM83::op_ld_r_r<Register::A, Register::D>,
-            &SM83::op_ld_r_r<Register::A, Register::E>,
-            &SM83::op_ld_r_r<Register::A, Register::H>,
-            &SM83::op_ld_r_r<Register::A, Register::L>,
-            &SM83::op_ld_r_r<Register::A, Register::HLAddress>,
-            &SM83::op_ld_r_r<Register::A, Register::A>,
+            &SM83::op_ld_r_r<Operand::HLAddress, Operand::HLAddress>,
+            &SM83::op_ld_r_r<Operand::HLAddress, Operand::A>,
+            &SM83::op_ld_r_r<Operand::A, Operand::B>,
+            &SM83::op_ld_r_r<Operand::A, Operand::C>,
+            &SM83::op_ld_r_r<Operand::A, Operand::D>,
+            &SM83::op_ld_r_r<Operand::A, Operand::E>,
+            &SM83::op_ld_r_r<Operand::A, Operand::H>,
+            &SM83::op_ld_r_r<Operand::A, Operand::L>,
+            &SM83::op_ld_r_r<Operand::A, Operand::HLAddress>,
+            &SM83::op_ld_r_r<Operand::A, Operand::A>,
 
             // 0x80 - 0x8F
-            &SM83::op_add_a_r<Register::B, WithoutCarry>,
-            &SM83::op_add_a_r<Register::C, WithoutCarry>,
-            &SM83::op_add_a_r<Register::D, WithoutCarry>,
-            &SM83::op_add_a_r<Register::E, WithoutCarry>,
-            &SM83::op_add_a_r<Register::H, WithoutCarry>,
-            &SM83::op_add_a_r<Register::L, WithoutCarry>,
-            &SM83::op_add_a_r<Register::HLAddress, WithoutCarry>,
-            &SM83::op_add_a_r<Register::A, WithoutCarry>,
-            &SM83::op_add_a_r<Register::B, WithCarry>,
-            &SM83::op_add_a_r<Register::C, WithCarry>,
-            &SM83::op_add_a_r<Register::D, WithCarry>,
-            &SM83::op_add_a_r<Register::E, WithCarry>,
-            &SM83::op_add_a_r<Register::H, WithCarry>,
-            &SM83::op_add_a_r<Register::L, WithCarry>,
-            &SM83::op_add_a_r<Register::HLAddress, WithCarry>,
-            &SM83::op_add_a_r<Register::A, WithCarry>,
+            &SM83::op_add_a_r<Operand::B, WithoutCarry>,
+            &SM83::op_add_a_r<Operand::C, WithoutCarry>,
+            &SM83::op_add_a_r<Operand::D, WithoutCarry>,
+            &SM83::op_add_a_r<Operand::E, WithoutCarry>,
+            &SM83::op_add_a_r<Operand::H, WithoutCarry>,
+            &SM83::op_add_a_r<Operand::L, WithoutCarry>,
+            &SM83::op_add_a_r<Operand::HLAddress, WithoutCarry>,
+            &SM83::op_add_a_r<Operand::A, WithoutCarry>,
+            &SM83::op_add_a_r<Operand::B, WithCarry>,
+            &SM83::op_add_a_r<Operand::C, WithCarry>,
+            &SM83::op_add_a_r<Operand::D, WithCarry>,
+            &SM83::op_add_a_r<Operand::E, WithCarry>,
+            &SM83::op_add_a_r<Operand::H, WithCarry>,
+            &SM83::op_add_a_r<Operand::L, WithCarry>,
+            &SM83::op_add_a_r<Operand::HLAddress, WithCarry>,
+            &SM83::op_add_a_r<Operand::A, WithCarry>,
 
             // 0x90 - 0x9F
-            &SM83::op_sub_a_r<Register::B, WithoutCarry>,
-            &SM83::op_sub_a_r<Register::C, WithoutCarry>,
-            &SM83::op_sub_a_r<Register::D, WithoutCarry>,
-            &SM83::op_sub_a_r<Register::E, WithoutCarry>,
-            &SM83::op_sub_a_r<Register::H, WithoutCarry>,
-            &SM83::op_sub_a_r<Register::L, WithoutCarry>,
-            &SM83::op_sub_a_r<Register::HLAddress, WithoutCarry>,
-            &SM83::op_sub_a_r<Register::A, WithoutCarry>,
-            &SM83::op_sub_a_r<Register::B, WithCarry>,
-            &SM83::op_sub_a_r<Register::C, WithCarry>,
-            &SM83::op_sub_a_r<Register::D, WithCarry>,
-            &SM83::op_sub_a_r<Register::E, WithCarry>,
-            &SM83::op_sub_a_r<Register::H, WithCarry>,
-            &SM83::op_sub_a_r<Register::L, WithCarry>,
-            &SM83::op_sub_a_r<Register::HLAddress, WithCarry>,
-            &SM83::op_sub_a_r<Register::A, WithCarry>,
+            &SM83::op_sub_a_r<Operand::B, WithoutCarry>,
+            &SM83::op_sub_a_r<Operand::C, WithoutCarry>,
+            &SM83::op_sub_a_r<Operand::D, WithoutCarry>,
+            &SM83::op_sub_a_r<Operand::E, WithoutCarry>,
+            &SM83::op_sub_a_r<Operand::H, WithoutCarry>,
+            &SM83::op_sub_a_r<Operand::L, WithoutCarry>,
+            &SM83::op_sub_a_r<Operand::HLAddress, WithoutCarry>,
+            &SM83::op_sub_a_r<Operand::A, WithoutCarry>,
+            &SM83::op_sub_a_r<Operand::B, WithCarry>,
+            &SM83::op_sub_a_r<Operand::C, WithCarry>,
+            &SM83::op_sub_a_r<Operand::D, WithCarry>,
+            &SM83::op_sub_a_r<Operand::E, WithCarry>,
+            &SM83::op_sub_a_r<Operand::H, WithCarry>,
+            &SM83::op_sub_a_r<Operand::L, WithCarry>,
+            &SM83::op_sub_a_r<Operand::HLAddress, WithCarry>,
+            &SM83::op_sub_a_r<Operand::A, WithCarry>,
 
             // 0xA0 - 0xAF
-            &SM83::op_and_a_r<Register::B>,
-            &SM83::op_and_a_r<Register::C>,
-            &SM83::op_and_a_r<Register::D>,
-            &SM83::op_and_a_r<Register::E>,
-            &SM83::op_and_a_r<Register::H>,
-            &SM83::op_and_a_r<Register::L>,
-            &SM83::op_and_a_r<Register::HLAddress>,
-            &SM83::op_and_a_r<Register::A>,
-            &SM83::op_xor_a_r<Register::B>,
-            &SM83::op_xor_a_r<Register::C>,
-            &SM83::op_xor_a_r<Register::D>,
-            &SM83::op_xor_a_r<Register::E>,
-            &SM83::op_xor_a_r<Register::H>,
-            &SM83::op_xor_a_r<Register::L>,
-            &SM83::op_xor_a_r<Register::HLAddress>,
-            &SM83::op_xor_a_r<Register::A>,
+            &SM83::op_and_a_r<Operand::B>,
+            &SM83::op_and_a_r<Operand::C>,
+            &SM83::op_and_a_r<Operand::D>,
+            &SM83::op_and_a_r<Operand::E>,
+            &SM83::op_and_a_r<Operand::H>,
+            &SM83::op_and_a_r<Operand::L>,
+            &SM83::op_and_a_r<Operand::HLAddress>,
+            &SM83::op_and_a_r<Operand::A>,
+            &SM83::op_xor_a_r<Operand::B>,
+            &SM83::op_xor_a_r<Operand::C>,
+            &SM83::op_xor_a_r<Operand::D>,
+            &SM83::op_xor_a_r<Operand::E>,
+            &SM83::op_xor_a_r<Operand::H>,
+            &SM83::op_xor_a_r<Operand::L>,
+            &SM83::op_xor_a_r<Operand::HLAddress>,
+            &SM83::op_xor_a_r<Operand::A>,
 
             // 0xB0 - 0xBF
-            &SM83::op_or_a_r<Register::B>,
-            &SM83::op_or_a_r<Register::C>,
-            &SM83::op_or_a_r<Register::D>,
-            &SM83::op_or_a_r<Register::E>,
-            &SM83::op_or_a_r<Register::H>,
-            &SM83::op_or_a_r<Register::L>,
-            &SM83::op_or_a_r<Register::HLAddress>,
-            &SM83::op_or_a_r<Register::A>,
-            &SM83::op_cp_a_r<Register::B>,
-            &SM83::op_cp_a_r<Register::C>,
-            &SM83::op_cp_a_r<Register::D>,
-            &SM83::op_cp_a_r<Register::E>,
-            &SM83::op_cp_a_r<Register::H>,
-            &SM83::op_cp_a_r<Register::L>,
-            &SM83::op_cp_a_r<Register::HLAddress>,
-            &SM83::op_cp_a_r<Register::A>,
+            &SM83::op_or_a_r<Operand::B>,
+            &SM83::op_or_a_r<Operand::C>,
+            &SM83::op_or_a_r<Operand::D>,
+            &SM83::op_or_a_r<Operand::E>,
+            &SM83::op_or_a_r<Operand::H>,
+            &SM83::op_or_a_r<Operand::L>,
+            &SM83::op_or_a_r<Operand::HLAddress>,
+            &SM83::op_or_a_r<Operand::A>,
+            &SM83::op_cp_a_r<Operand::B>,
+            &SM83::op_cp_a_r<Operand::C>,
+            &SM83::op_cp_a_r<Operand::D>,
+            &SM83::op_cp_a_r<Operand::E>,
+            &SM83::op_cp_a_r<Operand::H>,
+            &SM83::op_cp_a_r<Operand::L>,
+            &SM83::op_cp_a_r<Operand::HLAddress>,
+            &SM83::op_cp_a_r<Operand::A>,
 
             // 0xC0 - 0xCF
             &SM83::op_ret_cc<FLAG_Z, false>,
@@ -1369,7 +1369,7 @@ namespace GB {
             &SM83::op_jp_u16,
             &SM83::op_call_cc_u16<FLAG_Z, false>,
             &SM83::op_push_rp<RegisterPair::BC>,
-            &SM83::op_add_a_r<Register::C8BitImmediate, WithoutCarry>,
+            &SM83::op_add_a_r<Operand::Immediate, WithoutCarry>,
             &SM83::op_rst_n<0x00>,
             &SM83::op_ret_cc<FLAG_Z, true>,
             &SM83::op_ret<IgnoreIME>,
@@ -1377,7 +1377,7 @@ namespace GB {
             &SM83::op_cb,
             &SM83::op_call_cc_u16<FLAG_Z, true>,
             &SM83::op_call_u16,
-            &SM83::op_add_a_r<Register::C8BitImmediate, WithCarry>,
+            &SM83::op_add_a_r<Operand::Immediate, WithCarry>,
             &SM83::op_rst_n<0x08>,
 
             // 0xD0 - 0xDF
@@ -1387,7 +1387,7 @@ namespace GB {
             &SM83::op_nop<true, 0xD3>,
             &SM83::op_call_cc_u16<FLAG_CY, false>,
             &SM83::op_push_rp<RegisterPair::DE>,
-            &SM83::op_sub_a_r<Register::C8BitImmediate, WithoutCarry>,
+            &SM83::op_sub_a_r<Operand::Immediate, WithoutCarry>,
             &SM83::op_rst_n<0x10>,
             &SM83::op_ret_cc<FLAG_CY, true>,
             &SM83::op_ret<SetIME>,
@@ -1395,7 +1395,7 @@ namespace GB {
             &SM83::op_nop<true, 0xDB>,
             &SM83::op_call_cc_u16<FLAG_CY, true>,
             &SM83::op_nop<true, 0xDD>,
-            &SM83::op_sub_a_r<Register::C8BitImmediate, WithCarry>,
+            &SM83::op_sub_a_r<Operand::Immediate, WithCarry>,
             &SM83::op_rst_n<0x18>,
 
             // 0xE0 - 0xEF
@@ -1405,7 +1405,7 @@ namespace GB {
             &SM83::op_nop<true, 0xE3>,
             &SM83::op_nop<true, 0xE4>,
             &SM83::op_push_rp<RegisterPair::HL>,
-            &SM83::op_and_a_r<Register::C8BitImmediate>,
+            &SM83::op_and_a_r<Operand::Immediate>,
             &SM83::op_rst_n<0x20>,
             &SM83::op_add_sp_i8,
             &SM83::op_jp_hl,
@@ -1413,7 +1413,7 @@ namespace GB {
             &SM83::op_nop<true, 0xEB>,
             &SM83::op_nop<true, 0xEC>,
             &SM83::op_nop<true, 0xED>,
-            &SM83::op_xor_a_r<Register::C8BitImmediate>,
+            &SM83::op_xor_a_r<Operand::Immediate>,
             &SM83::op_rst_n<0x28>,
 
             // 0xF0 - 0xFF
@@ -1423,7 +1423,7 @@ namespace GB {
             &SM83::op_di,
             &SM83::op_nop<true, 0xF4>,
             &SM83::op_push_rp<RegisterPair::AF>,
-            &SM83::op_or_a_r<Register::C8BitImmediate>,
+            &SM83::op_or_a_r<Operand::Immediate>,
             &SM83::op_rst_n<0x30>,
             &SM83::op_ld_hl_sp_i8,
             &SM83::op_ld_sp_hl,
@@ -1431,7 +1431,7 @@ namespace GB {
             &SM83::op_ei,
             &SM83::op_nop<true, 0xFC>,
             &SM83::op_nop<true, 0xFD>,
-            &SM83::op_cp_a_r<Register::C8BitImmediate>,
+            &SM83::op_cp_a_r<Operand::Immediate>,
             &SM83::op_rst_n<0x38>,
         };
     }
@@ -1439,308 +1439,308 @@ namespace GB {
     void SM83::gen_bitwise_opcodes() {
         bitwise_opcodes = {
             // 0x00 - 0x0F
-            &SM83::op_rlc<Register::B>,
-            &SM83::op_rlc<Register::C>,
-            &SM83::op_rlc<Register::D>,
-            &SM83::op_rlc<Register::E>,
-            &SM83::op_rlc<Register::H>,
-            &SM83::op_rlc<Register::L>,
-            &SM83::op_rlc<Register::HLAddress>,
-            &SM83::op_rlc<Register::A>,
+            &SM83::op_rlc<Operand::B>,
+            &SM83::op_rlc<Operand::C>,
+            &SM83::op_rlc<Operand::D>,
+            &SM83::op_rlc<Operand::E>,
+            &SM83::op_rlc<Operand::H>,
+            &SM83::op_rlc<Operand::L>,
+            &SM83::op_rlc<Operand::HLAddress>,
+            &SM83::op_rlc<Operand::A>,
 
-            &SM83::op_rrc<Register::B>,
-            &SM83::op_rrc<Register::C>,
-            &SM83::op_rrc<Register::D>,
-            &SM83::op_rrc<Register::E>,
-            &SM83::op_rrc<Register::H>,
-            &SM83::op_rrc<Register::L>,
-            &SM83::op_rrc<Register::HLAddress>,
-            &SM83::op_rrc<Register::A>,
+            &SM83::op_rrc<Operand::B>,
+            &SM83::op_rrc<Operand::C>,
+            &SM83::op_rrc<Operand::D>,
+            &SM83::op_rrc<Operand::E>,
+            &SM83::op_rrc<Operand::H>,
+            &SM83::op_rrc<Operand::L>,
+            &SM83::op_rrc<Operand::HLAddress>,
+            &SM83::op_rrc<Operand::A>,
 
             // 0x10 - 0x1F
-            &SM83::op_rl<Register::B>,
-            &SM83::op_rl<Register::C>,
-            &SM83::op_rl<Register::D>,
-            &SM83::op_rl<Register::E>,
-            &SM83::op_rl<Register::H>,
-            &SM83::op_rl<Register::L>,
-            &SM83::op_rl<Register::HLAddress>,
-            &SM83::op_rl<Register::A>,
+            &SM83::op_rl<Operand::B>,
+            &SM83::op_rl<Operand::C>,
+            &SM83::op_rl<Operand::D>,
+            &SM83::op_rl<Operand::E>,
+            &SM83::op_rl<Operand::H>,
+            &SM83::op_rl<Operand::L>,
+            &SM83::op_rl<Operand::HLAddress>,
+            &SM83::op_rl<Operand::A>,
 
-            &SM83::op_rr<Register::B>,
-            &SM83::op_rr<Register::C>,
-            &SM83::op_rr<Register::D>,
-            &SM83::op_rr<Register::E>,
-            &SM83::op_rr<Register::H>,
-            &SM83::op_rr<Register::L>,
-            &SM83::op_rr<Register::HLAddress>,
-            &SM83::op_rr<Register::A>,
+            &SM83::op_rr<Operand::B>,
+            &SM83::op_rr<Operand::C>,
+            &SM83::op_rr<Operand::D>,
+            &SM83::op_rr<Operand::E>,
+            &SM83::op_rr<Operand::H>,
+            &SM83::op_rr<Operand::L>,
+            &SM83::op_rr<Operand::HLAddress>,
+            &SM83::op_rr<Operand::A>,
 
             // 0x20 - 0x2F
-            &SM83::op_sla<Register::B>,
-            &SM83::op_sla<Register::C>,
-            &SM83::op_sla<Register::D>,
-            &SM83::op_sla<Register::E>,
-            &SM83::op_sla<Register::H>,
-            &SM83::op_sla<Register::L>,
-            &SM83::op_sla<Register::HLAddress>,
-            &SM83::op_sla<Register::A>,
+            &SM83::op_sla<Operand::B>,
+            &SM83::op_sla<Operand::C>,
+            &SM83::op_sla<Operand::D>,
+            &SM83::op_sla<Operand::E>,
+            &SM83::op_sla<Operand::H>,
+            &SM83::op_sla<Operand::L>,
+            &SM83::op_sla<Operand::HLAddress>,
+            &SM83::op_sla<Operand::A>,
 
-            &SM83::op_sra<Register::B>,
-            &SM83::op_sra<Register::C>,
-            &SM83::op_sra<Register::D>,
-            &SM83::op_sra<Register::E>,
-            &SM83::op_sra<Register::H>,
-            &SM83::op_sra<Register::L>,
-            &SM83::op_sra<Register::HLAddress>,
-            &SM83::op_sra<Register::A>,
+            &SM83::op_sra<Operand::B>,
+            &SM83::op_sra<Operand::C>,
+            &SM83::op_sra<Operand::D>,
+            &SM83::op_sra<Operand::E>,
+            &SM83::op_sra<Operand::H>,
+            &SM83::op_sra<Operand::L>,
+            &SM83::op_sra<Operand::HLAddress>,
+            &SM83::op_sra<Operand::A>,
 
             // 0x30 - 0x3F
-            &SM83::op_swap<Register::B>,
-            &SM83::op_swap<Register::C>,
-            &SM83::op_swap<Register::D>,
-            &SM83::op_swap<Register::E>,
-            &SM83::op_swap<Register::H>,
-            &SM83::op_swap<Register::L>,
-            &SM83::op_swap<Register::HLAddress>,
-            &SM83::op_swap<Register::A>,
+            &SM83::op_swap<Operand::B>,
+            &SM83::op_swap<Operand::C>,
+            &SM83::op_swap<Operand::D>,
+            &SM83::op_swap<Operand::E>,
+            &SM83::op_swap<Operand::H>,
+            &SM83::op_swap<Operand::L>,
+            &SM83::op_swap<Operand::HLAddress>,
+            &SM83::op_swap<Operand::A>,
 
-            &SM83::op_srl<Register::B>,
-            &SM83::op_srl<Register::C>,
-            &SM83::op_srl<Register::D>,
-            &SM83::op_srl<Register::E>,
-            &SM83::op_srl<Register::H>,
-            &SM83::op_srl<Register::L>,
-            &SM83::op_srl<Register::HLAddress>,
-            &SM83::op_srl<Register::A>,
+            &SM83::op_srl<Operand::B>,
+            &SM83::op_srl<Operand::C>,
+            &SM83::op_srl<Operand::D>,
+            &SM83::op_srl<Operand::E>,
+            &SM83::op_srl<Operand::H>,
+            &SM83::op_srl<Operand::L>,
+            &SM83::op_srl<Operand::HLAddress>,
+            &SM83::op_srl<Operand::A>,
 
             // 0x40 - 0x4F
-            &SM83::op_bit<0, Register::B>,
-            &SM83::op_bit<0, Register::C>,
-            &SM83::op_bit<0, Register::D>,
-            &SM83::op_bit<0, Register::E>,
-            &SM83::op_bit<0, Register::H>,
-            &SM83::op_bit<0, Register::L>,
-            &SM83::op_bit<0, Register::HLAddress>,
-            &SM83::op_bit<0, Register::A>,
+            &SM83::op_bit<0, Operand::B>,
+            &SM83::op_bit<0, Operand::C>,
+            &SM83::op_bit<0, Operand::D>,
+            &SM83::op_bit<0, Operand::E>,
+            &SM83::op_bit<0, Operand::H>,
+            &SM83::op_bit<0, Operand::L>,
+            &SM83::op_bit<0, Operand::HLAddress>,
+            &SM83::op_bit<0, Operand::A>,
 
-            &SM83::op_bit<1, Register::B>,
-            &SM83::op_bit<1, Register::C>,
-            &SM83::op_bit<1, Register::D>,
-            &SM83::op_bit<1, Register::E>,
-            &SM83::op_bit<1, Register::H>,
-            &SM83::op_bit<1, Register::L>,
-            &SM83::op_bit<1, Register::HLAddress>,
-            &SM83::op_bit<1, Register::A>,
+            &SM83::op_bit<1, Operand::B>,
+            &SM83::op_bit<1, Operand::C>,
+            &SM83::op_bit<1, Operand::D>,
+            &SM83::op_bit<1, Operand::E>,
+            &SM83::op_bit<1, Operand::H>,
+            &SM83::op_bit<1, Operand::L>,
+            &SM83::op_bit<1, Operand::HLAddress>,
+            &SM83::op_bit<1, Operand::A>,
 
             // 0x50 - 0x5F
-            &SM83::op_bit<2, Register::B>,
-            &SM83::op_bit<2, Register::C>,
-            &SM83::op_bit<2, Register::D>,
-            &SM83::op_bit<2, Register::E>,
-            &SM83::op_bit<2, Register::H>,
-            &SM83::op_bit<2, Register::L>,
-            &SM83::op_bit<2, Register::HLAddress>,
-            &SM83::op_bit<2, Register::A>,
+            &SM83::op_bit<2, Operand::B>,
+            &SM83::op_bit<2, Operand::C>,
+            &SM83::op_bit<2, Operand::D>,
+            &SM83::op_bit<2, Operand::E>,
+            &SM83::op_bit<2, Operand::H>,
+            &SM83::op_bit<2, Operand::L>,
+            &SM83::op_bit<2, Operand::HLAddress>,
+            &SM83::op_bit<2, Operand::A>,
 
-            &SM83::op_bit<3, Register::B>,
-            &SM83::op_bit<3, Register::C>,
-            &SM83::op_bit<3, Register::D>,
-            &SM83::op_bit<3, Register::E>,
-            &SM83::op_bit<3, Register::H>,
-            &SM83::op_bit<3, Register::L>,
-            &SM83::op_bit<3, Register::HLAddress>,
-            &SM83::op_bit<3, Register::A>,
+            &SM83::op_bit<3, Operand::B>,
+            &SM83::op_bit<3, Operand::C>,
+            &SM83::op_bit<3, Operand::D>,
+            &SM83::op_bit<3, Operand::E>,
+            &SM83::op_bit<3, Operand::H>,
+            &SM83::op_bit<3, Operand::L>,
+            &SM83::op_bit<3, Operand::HLAddress>,
+            &SM83::op_bit<3, Operand::A>,
 
             // 0x60 - 0x6F
-            &SM83::op_bit<4, Register::B>,
-            &SM83::op_bit<4, Register::C>,
-            &SM83::op_bit<4, Register::D>,
-            &SM83::op_bit<4, Register::E>,
-            &SM83::op_bit<4, Register::H>,
-            &SM83::op_bit<4, Register::L>,
-            &SM83::op_bit<4, Register::HLAddress>,
-            &SM83::op_bit<4, Register::A>,
+            &SM83::op_bit<4, Operand::B>,
+            &SM83::op_bit<4, Operand::C>,
+            &SM83::op_bit<4, Operand::D>,
+            &SM83::op_bit<4, Operand::E>,
+            &SM83::op_bit<4, Operand::H>,
+            &SM83::op_bit<4, Operand::L>,
+            &SM83::op_bit<4, Operand::HLAddress>,
+            &SM83::op_bit<4, Operand::A>,
 
-            &SM83::op_bit<5, Register::B>,
-            &SM83::op_bit<5, Register::C>,
-            &SM83::op_bit<5, Register::D>,
-            &SM83::op_bit<5, Register::E>,
-            &SM83::op_bit<5, Register::H>,
-            &SM83::op_bit<5, Register::L>,
-            &SM83::op_bit<5, Register::HLAddress>,
-            &SM83::op_bit<5, Register::A>,
+            &SM83::op_bit<5, Operand::B>,
+            &SM83::op_bit<5, Operand::C>,
+            &SM83::op_bit<5, Operand::D>,
+            &SM83::op_bit<5, Operand::E>,
+            &SM83::op_bit<5, Operand::H>,
+            &SM83::op_bit<5, Operand::L>,
+            &SM83::op_bit<5, Operand::HLAddress>,
+            &SM83::op_bit<5, Operand::A>,
 
             // 0x70 - 0x7F
-            &SM83::op_bit<6, Register::B>,
-            &SM83::op_bit<6, Register::C>,
-            &SM83::op_bit<6, Register::D>,
-            &SM83::op_bit<6, Register::E>,
-            &SM83::op_bit<6, Register::H>,
-            &SM83::op_bit<6, Register::L>,
-            &SM83::op_bit<6, Register::HLAddress>,
-            &SM83::op_bit<6, Register::A>,
+            &SM83::op_bit<6, Operand::B>,
+            &SM83::op_bit<6, Operand::C>,
+            &SM83::op_bit<6, Operand::D>,
+            &SM83::op_bit<6, Operand::E>,
+            &SM83::op_bit<6, Operand::H>,
+            &SM83::op_bit<6, Operand::L>,
+            &SM83::op_bit<6, Operand::HLAddress>,
+            &SM83::op_bit<6, Operand::A>,
 
-            &SM83::op_bit<7, Register::B>,
-            &SM83::op_bit<7, Register::C>,
-            &SM83::op_bit<7, Register::D>,
-            &SM83::op_bit<7, Register::E>,
-            &SM83::op_bit<7, Register::H>,
-            &SM83::op_bit<7, Register::L>,
-            &SM83::op_bit<7, Register::HLAddress>,
-            &SM83::op_bit<7, Register::A>,
+            &SM83::op_bit<7, Operand::B>,
+            &SM83::op_bit<7, Operand::C>,
+            &SM83::op_bit<7, Operand::D>,
+            &SM83::op_bit<7, Operand::E>,
+            &SM83::op_bit<7, Operand::H>,
+            &SM83::op_bit<7, Operand::L>,
+            &SM83::op_bit<7, Operand::HLAddress>,
+            &SM83::op_bit<7, Operand::A>,
 
             // 0x80 - 0x8F
-            &SM83::op_res<0, Register::B>,
-            &SM83::op_res<0, Register::C>,
-            &SM83::op_res<0, Register::D>,
-            &SM83::op_res<0, Register::E>,
-            &SM83::op_res<0, Register::H>,
-            &SM83::op_res<0, Register::L>,
-            &SM83::op_res<0, Register::HLAddress>,
-            &SM83::op_res<0, Register::A>,
+            &SM83::op_res<0, Operand::B>,
+            &SM83::op_res<0, Operand::C>,
+            &SM83::op_res<0, Operand::D>,
+            &SM83::op_res<0, Operand::E>,
+            &SM83::op_res<0, Operand::H>,
+            &SM83::op_res<0, Operand::L>,
+            &SM83::op_res<0, Operand::HLAddress>,
+            &SM83::op_res<0, Operand::A>,
 
-            &SM83::op_res<1, Register::B>,
-            &SM83::op_res<1, Register::C>,
-            &SM83::op_res<1, Register::D>,
-            &SM83::op_res<1, Register::E>,
-            &SM83::op_res<1, Register::H>,
-            &SM83::op_res<1, Register::L>,
-            &SM83::op_res<1, Register::HLAddress>,
-            &SM83::op_res<1, Register::A>,
+            &SM83::op_res<1, Operand::B>,
+            &SM83::op_res<1, Operand::C>,
+            &SM83::op_res<1, Operand::D>,
+            &SM83::op_res<1, Operand::E>,
+            &SM83::op_res<1, Operand::H>,
+            &SM83::op_res<1, Operand::L>,
+            &SM83::op_res<1, Operand::HLAddress>,
+            &SM83::op_res<1, Operand::A>,
 
             // 0x90 - 0x9F
-            &SM83::op_res<2, Register::B>,
-            &SM83::op_res<2, Register::C>,
-            &SM83::op_res<2, Register::D>,
-            &SM83::op_res<2, Register::E>,
-            &SM83::op_res<2, Register::H>,
-            &SM83::op_res<2, Register::L>,
-            &SM83::op_res<2, Register::HLAddress>,
-            &SM83::op_res<2, Register::A>,
+            &SM83::op_res<2, Operand::B>,
+            &SM83::op_res<2, Operand::C>,
+            &SM83::op_res<2, Operand::D>,
+            &SM83::op_res<2, Operand::E>,
+            &SM83::op_res<2, Operand::H>,
+            &SM83::op_res<2, Operand::L>,
+            &SM83::op_res<2, Operand::HLAddress>,
+            &SM83::op_res<2, Operand::A>,
 
-            &SM83::op_res<3, Register::B>,
-            &SM83::op_res<3, Register::C>,
-            &SM83::op_res<3, Register::D>,
-            &SM83::op_res<3, Register::E>,
-            &SM83::op_res<3, Register::H>,
-            &SM83::op_res<3, Register::L>,
-            &SM83::op_res<3, Register::HLAddress>,
-            &SM83::op_res<3, Register::A>,
+            &SM83::op_res<3, Operand::B>,
+            &SM83::op_res<3, Operand::C>,
+            &SM83::op_res<3, Operand::D>,
+            &SM83::op_res<3, Operand::E>,
+            &SM83::op_res<3, Operand::H>,
+            &SM83::op_res<3, Operand::L>,
+            &SM83::op_res<3, Operand::HLAddress>,
+            &SM83::op_res<3, Operand::A>,
 
             // 0xA0 - 0xAF
-            &SM83::op_res<4, Register::B>,
-            &SM83::op_res<4, Register::C>,
-            &SM83::op_res<4, Register::D>,
-            &SM83::op_res<4, Register::E>,
-            &SM83::op_res<4, Register::H>,
-            &SM83::op_res<4, Register::L>,
-            &SM83::op_res<4, Register::HLAddress>,
-            &SM83::op_res<4, Register::A>,
+            &SM83::op_res<4, Operand::B>,
+            &SM83::op_res<4, Operand::C>,
+            &SM83::op_res<4, Operand::D>,
+            &SM83::op_res<4, Operand::E>,
+            &SM83::op_res<4, Operand::H>,
+            &SM83::op_res<4, Operand::L>,
+            &SM83::op_res<4, Operand::HLAddress>,
+            &SM83::op_res<4, Operand::A>,
 
-            &SM83::op_res<5, Register::B>,
-            &SM83::op_res<5, Register::C>,
-            &SM83::op_res<5, Register::D>,
-            &SM83::op_res<5, Register::E>,
-            &SM83::op_res<5, Register::H>,
-            &SM83::op_res<5, Register::L>,
-            &SM83::op_res<5, Register::HLAddress>,
-            &SM83::op_res<5, Register::A>,
+            &SM83::op_res<5, Operand::B>,
+            &SM83::op_res<5, Operand::C>,
+            &SM83::op_res<5, Operand::D>,
+            &SM83::op_res<5, Operand::E>,
+            &SM83::op_res<5, Operand::H>,
+            &SM83::op_res<5, Operand::L>,
+            &SM83::op_res<5, Operand::HLAddress>,
+            &SM83::op_res<5, Operand::A>,
 
             // 0xB0 - 0xBF
-            &SM83::op_res<6, Register::B>,
-            &SM83::op_res<6, Register::C>,
-            &SM83::op_res<6, Register::D>,
-            &SM83::op_res<6, Register::E>,
-            &SM83::op_res<6, Register::H>,
-            &SM83::op_res<6, Register::L>,
-            &SM83::op_res<6, Register::HLAddress>,
-            &SM83::op_res<6, Register::A>,
+            &SM83::op_res<6, Operand::B>,
+            &SM83::op_res<6, Operand::C>,
+            &SM83::op_res<6, Operand::D>,
+            &SM83::op_res<6, Operand::E>,
+            &SM83::op_res<6, Operand::H>,
+            &SM83::op_res<6, Operand::L>,
+            &SM83::op_res<6, Operand::HLAddress>,
+            &SM83::op_res<6, Operand::A>,
 
-            &SM83::op_res<7, Register::B>,
-            &SM83::op_res<7, Register::C>,
-            &SM83::op_res<7, Register::D>,
-            &SM83::op_res<7, Register::E>,
-            &SM83::op_res<7, Register::H>,
-            &SM83::op_res<7, Register::L>,
-            &SM83::op_res<7, Register::HLAddress>,
-            &SM83::op_res<7, Register::A>,
+            &SM83::op_res<7, Operand::B>,
+            &SM83::op_res<7, Operand::C>,
+            &SM83::op_res<7, Operand::D>,
+            &SM83::op_res<7, Operand::E>,
+            &SM83::op_res<7, Operand::H>,
+            &SM83::op_res<7, Operand::L>,
+            &SM83::op_res<7, Operand::HLAddress>,
+            &SM83::op_res<7, Operand::A>,
 
             // 0xC0 - 0xCF
-            &SM83::op_set<0, Register::B>,
-            &SM83::op_set<0, Register::C>,
-            &SM83::op_set<0, Register::D>,
-            &SM83::op_set<0, Register::E>,
-            &SM83::op_set<0, Register::H>,
-            &SM83::op_set<0, Register::L>,
-            &SM83::op_set<0, Register::HLAddress>,
-            &SM83::op_set<0, Register::A>,
+            &SM83::op_set<0, Operand::B>,
+            &SM83::op_set<0, Operand::C>,
+            &SM83::op_set<0, Operand::D>,
+            &SM83::op_set<0, Operand::E>,
+            &SM83::op_set<0, Operand::H>,
+            &SM83::op_set<0, Operand::L>,
+            &SM83::op_set<0, Operand::HLAddress>,
+            &SM83::op_set<0, Operand::A>,
 
-            &SM83::op_set<1, Register::B>,
-            &SM83::op_set<1, Register::C>,
-            &SM83::op_set<1, Register::D>,
-            &SM83::op_set<1, Register::E>,
-            &SM83::op_set<1, Register::H>,
-            &SM83::op_set<1, Register::L>,
-            &SM83::op_set<1, Register::HLAddress>,
-            &SM83::op_set<1, Register::A>,
+            &SM83::op_set<1, Operand::B>,
+            &SM83::op_set<1, Operand::C>,
+            &SM83::op_set<1, Operand::D>,
+            &SM83::op_set<1, Operand::E>,
+            &SM83::op_set<1, Operand::H>,
+            &SM83::op_set<1, Operand::L>,
+            &SM83::op_set<1, Operand::HLAddress>,
+            &SM83::op_set<1, Operand::A>,
 
             // 0xD0 - 0xDF
-            &SM83::op_set<2, Register::B>,
-            &SM83::op_set<2, Register::C>,
-            &SM83::op_set<2, Register::D>,
-            &SM83::op_set<2, Register::E>,
-            &SM83::op_set<2, Register::H>,
-            &SM83::op_set<2, Register::L>,
-            &SM83::op_set<2, Register::HLAddress>,
-            &SM83::op_set<2, Register::A>,
+            &SM83::op_set<2, Operand::B>,
+            &SM83::op_set<2, Operand::C>,
+            &SM83::op_set<2, Operand::D>,
+            &SM83::op_set<2, Operand::E>,
+            &SM83::op_set<2, Operand::H>,
+            &SM83::op_set<2, Operand::L>,
+            &SM83::op_set<2, Operand::HLAddress>,
+            &SM83::op_set<2, Operand::A>,
 
-            &SM83::op_set<3, Register::B>,
-            &SM83::op_set<3, Register::C>,
-            &SM83::op_set<3, Register::D>,
-            &SM83::op_set<3, Register::E>,
-            &SM83::op_set<3, Register::H>,
-            &SM83::op_set<3, Register::L>,
-            &SM83::op_set<3, Register::HLAddress>,
-            &SM83::op_set<3, Register::A>,
+            &SM83::op_set<3, Operand::B>,
+            &SM83::op_set<3, Operand::C>,
+            &SM83::op_set<3, Operand::D>,
+            &SM83::op_set<3, Operand::E>,
+            &SM83::op_set<3, Operand::H>,
+            &SM83::op_set<3, Operand::L>,
+            &SM83::op_set<3, Operand::HLAddress>,
+            &SM83::op_set<3, Operand::A>,
 
             // 0xE0 - 0xEF
-            &SM83::op_set<4, Register::B>,
-            &SM83::op_set<4, Register::C>,
-            &SM83::op_set<4, Register::D>,
-            &SM83::op_set<4, Register::E>,
-            &SM83::op_set<4, Register::H>,
-            &SM83::op_set<4, Register::L>,
-            &SM83::op_set<4, Register::HLAddress>,
-            &SM83::op_set<4, Register::A>,
+            &SM83::op_set<4, Operand::B>,
+            &SM83::op_set<4, Operand::C>,
+            &SM83::op_set<4, Operand::D>,
+            &SM83::op_set<4, Operand::E>,
+            &SM83::op_set<4, Operand::H>,
+            &SM83::op_set<4, Operand::L>,
+            &SM83::op_set<4, Operand::HLAddress>,
+            &SM83::op_set<4, Operand::A>,
 
-            &SM83::op_set<5, Register::B>,
-            &SM83::op_set<5, Register::C>,
-            &SM83::op_set<5, Register::D>,
-            &SM83::op_set<5, Register::E>,
-            &SM83::op_set<5, Register::H>,
-            &SM83::op_set<5, Register::L>,
-            &SM83::op_set<5, Register::HLAddress>,
-            &SM83::op_set<5, Register::A>,
+            &SM83::op_set<5, Operand::B>,
+            &SM83::op_set<5, Operand::C>,
+            &SM83::op_set<5, Operand::D>,
+            &SM83::op_set<5, Operand::E>,
+            &SM83::op_set<5, Operand::H>,
+            &SM83::op_set<5, Operand::L>,
+            &SM83::op_set<5, Operand::HLAddress>,
+            &SM83::op_set<5, Operand::A>,
 
             // 0xF0 - 0xFF
-            &SM83::op_set<6, Register::B>,
-            &SM83::op_set<6, Register::C>,
-            &SM83::op_set<6, Register::D>,
-            &SM83::op_set<6, Register::E>,
-            &SM83::op_set<6, Register::H>,
-            &SM83::op_set<6, Register::L>,
-            &SM83::op_set<6, Register::HLAddress>,
-            &SM83::op_set<6, Register::A>,
+            &SM83::op_set<6, Operand::B>,
+            &SM83::op_set<6, Operand::C>,
+            &SM83::op_set<6, Operand::D>,
+            &SM83::op_set<6, Operand::E>,
+            &SM83::op_set<6, Operand::H>,
+            &SM83::op_set<6, Operand::L>,
+            &SM83::op_set<6, Operand::HLAddress>,
+            &SM83::op_set<6, Operand::A>,
 
-            &SM83::op_set<7, Register::B>,
-            &SM83::op_set<7, Register::C>,
-            &SM83::op_set<7, Register::D>,
-            &SM83::op_set<7, Register::E>,
-            &SM83::op_set<7, Register::H>,
-            &SM83::op_set<7, Register::L>,
-            &SM83::op_set<7, Register::HLAddress>,
-            &SM83::op_set<7, Register::A>,
+            &SM83::op_set<7, Operand::B>,
+            &SM83::op_set<7, Operand::C>,
+            &SM83::op_set<7, Operand::D>,
+            &SM83::op_set<7, Operand::E>,
+            &SM83::op_set<7, Operand::H>,
+            &SM83::op_set<7, Operand::L>,
+            &SM83::op_set<7, Operand::HLAddress>,
+            &SM83::op_set<7, Operand::A>,
         };
     }
 

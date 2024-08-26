@@ -23,7 +23,7 @@
 
 namespace GB {
 
-    enum class Register {
+    enum class Operand {
         B,
         C,
         D,
@@ -33,7 +33,7 @@ namespace GB {
         A,
         F,
         HLAddress,
-        C8BitImmediate,
+        Immediate,
     };
 
     enum class RegisterPair {
@@ -99,8 +99,8 @@ namespace GB {
         uint16_t get_rp(RegisterPair index) const;
         void set_rp(RegisterPair index, uint16_t value);
 
-        uint8_t get_register(Register reg) const;
-        void set_register(Register reg, uint8_t value);
+        uint8_t get_register(Operand reg) const;
+        void set_register(Operand reg, uint8_t value);
 
         void op_ld_u16_sp();
         void op_stop();
@@ -139,19 +139,19 @@ namespace GB {
         template <uint8_t cc, bool boolean_ver> void op_jr_cc_i8();
         template <RegisterPair rp> void op_add_hl_rp();
 
-        template <Register r> void op_inc_r();
-        template <Register r> void op_dec_r();
+        template <Operand r> void op_inc_r();
+        template <Operand r> void op_dec_r();
 
-        template <Register r> void op_ld_r_u8();
+        template <Operand r> void op_ld_r_u8();
         template <RegisterPair rp, int16_t displacement> void op_ld_a_rp();
-        template <Register r, Register r2> void op_ld_r_r();
+        template <Operand r, Operand r2> void op_ld_r_r();
 
-        template <Register r, bool with_carry> void op_add_a_r();
-        template <Register r, bool with_carry> void op_sub_a_r();
-        template <Register r> void op_and_a_r();
-        template <Register r> void op_xor_a_r();
-        template <Register r> void op_or_a_r();
-        template <Register r> void op_cp_a_r();
+        template <Operand r, bool with_carry> void op_add_a_r();
+        template <Operand r, bool with_carry> void op_sub_a_r();
+        template <Operand r> void op_and_a_r();
+        template <Operand r> void op_xor_a_r();
+        template <Operand r> void op_or_a_r();
+        template <Operand r> void op_cp_a_r();
 
         template <bool enable_interrupts> void op_ret();
         template <uint8_t cc, bool boolean_ver> void op_ret_cc();
@@ -163,18 +163,18 @@ namespace GB {
 
         template <uint16_t page> void op_rst_n();
 
-        template <Register r> void op_rlc();
-        template <Register r> void op_rrc();
-        template <Register r> void op_rl();
-        template <Register r> void op_rr();
-        template <Register r> void op_sla();
-        template <Register r> void op_sra();
-        template <Register r> void op_swap();
-        template <Register r> void op_srl();
+        template <Operand r> void op_rlc();
+        template <Operand r> void op_rrc();
+        template <Operand r> void op_rl();
+        template <Operand r> void op_rr();
+        template <Operand r> void op_sla();
+        template <Operand r> void op_sra();
+        template <Operand r> void op_swap();
+        template <Operand r> void op_srl();
 
-        template <uint8_t bit, Register r> void op_bit();
-        template <uint8_t bit, Register r> void op_res();
-        template <uint8_t bit, Register r> void op_set();
+        template <uint8_t bit, Operand r> void op_bit();
+        template <uint8_t bit, Operand r> void op_res();
+        template <uint8_t bit, Operand r> void op_set();
 
         void gen_opcodes();
         void gen_bitwise_opcodes();
