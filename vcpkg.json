@@ -12,5 +12,8 @@
   }, {
     "name" : "rapidjson",
     "version>=" : "2023-07-17#1"
+  }, {
+    "name" : "nlohmann-json",
+    "version>=" : "3.11.3"
   } ]
 }

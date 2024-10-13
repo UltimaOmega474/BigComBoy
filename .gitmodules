@@ -4,3 +4,6 @@
 [submodule "External/rapidjson"]
 	path = External/rapidjson
 	url = https://github.com/Tencent/rapidjson.git
+[submodule "Test/GameboyCPUTests"]
+	path = Test/GameboyCPUTests
+	url = https://github.com/adtennant/GameboyCPUTests.git
