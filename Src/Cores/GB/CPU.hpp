@@ -16,7 +16,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 #pragma once
 #include "SM83.hpp"
 #include <cinttypes>
@@ -73,23 +72,40 @@ namespace GB {
         auto set_rp(RegisterPair index, uint16_t value) -> void;
 
         auto fetch(uint16_t where) -> void;
+        auto op_nop() -> void;
+        auto op_halt() -> void;
         auto op_ld_r_r() -> void;
         auto op_ld_r_indirect(uint16_t address) -> void;
         auto op_ld_r_immediate() -> void;
         auto op_ld_indirect_r(uint16_t address) -> void;
-
         template <COperand3 rp> auto op_ld_indirect_rp_a() -> void;
         template <COperand3 rp> auto op_ld_a_indirect_rp() -> void;
+        auto op_ld_direct_a() -> void;
+        auto op_ld_a_direct() -> void;
         auto op_ld_indirect_immediate(uint16_t address) -> void;
         auto op_ld_rp_immediate() -> void;
+        auto op_ld_direct_sp() -> void;
+        auto op_ld_hl_sp_i8() -> void;
+        auto op_ld_sp_hl() -> void;
+        auto op_ld_zp_offset_a() -> void;
+        auto op_ld_a_zp_offset() -> void;
+        auto op_ld_zpc_a() -> void;
+        auto op_ld_a_zpc() -> void;
+
+        auto op_add_a_r() -> void;
+
+        struct {
+            bool cy = false;
+            bool hc = false;
+            bool n = false;
+            bool z = false;
+        } alu_flags;
 
         uint8_t ir = 0;
-        uint8_t f = 0;
         uint8_t z = 0;
         uint8_t w = 0;
-        uint8_t m_cycle = 1;
 
-        friend auto run_test(const std::filesystem::path &path, uint8_t opcode) -> void;
+        uint8_t m_cycle = 1;
     };
 
 }

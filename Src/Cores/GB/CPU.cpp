@@ -16,22 +16,37 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 #include "CPU.hpp"
 
 namespace GB {
-    auto CPU::force_next_opcode(uint8_t opcode) -> void { ir = opcode; }
+    auto CPU::force_next_opcode(const uint8_t opcode) -> void { ir = opcode; }
 
-    auto CPU::flags() const -> uint8_t { return f; }
+    auto CPU::flags() const -> uint8_t {
+        uint8_t flags = alu_flags.cy << 4;
+        flags |= alu_flags.hc << 5;
+        flags |= alu_flags.n << 6;
+        flags |= alu_flags.z << 7;
+        return flags;
+    }
 
-    auto CPU::set_flags(const uint8_t flags) -> void { f = flags & 0xF0; }
+    auto CPU::set_flags(uint8_t flags) -> void {
+        flags = flags & 0xF0;
+        alu_flags.cy = (flags >> 4) & 0x1;
+        alu_flags.hc = (flags >> 5) & 0x1;
+        alu_flags.n = (flags >> 6) & 0x1;
+        alu_flags.z = (flags >> 7) & 0x1;
+    }
 
     auto CPU::clock() -> void {
         switch (ir) {
             // clang-format off
 
+            // NOP
+        case 0x00: op_nop(); return;
             // LD RP, Immediate
         case 0x01: case 0x11: case 0x21: case 0x31: op_ld_rp_immediate(); return;
+            // LD (Direct), SP
+        case 0x08: op_ld_direct_sp(); return;
             // LD (Indirect RP), A
         case 0x02: op_ld_indirect_rp_a<COperand3::BC>(); return;
         case 0x12: op_ld_indirect_rp_a<COperand3::DE>(); return;
@@ -68,9 +83,27 @@ namespace GB {
             // LD (HL), SRC
         case 0x70: case 0x71: case 0x72: case 0x73: case 0x74: case 0x75: case 0x77:
             op_ld_indirect_r(get_rp(RegisterPair::HL)); return;
+            // HALT
+        case 0x76: op_halt(); return;
+            // LD (Direct), A
+        case 0xEA: op_ld_direct_a(); return;
+            // LD A, (Direct)
+        case 0xFA: op_ld_a_direct(); return;
+            // LD HL, SP + i8
+        case 0xF8: op_ld_hl_sp_i8(); return;
+            // LD HL, SP
+        case 0xF9: op_ld_sp_hl(); return;
+            // LD (FFXX), A
+        case 0xE0: op_ld_zp_offset_a(); return;
+            // LD (FF00 + C), A
+        case 0xE2: op_ld_zpc_a(); return;
+            // LD A, (FFXX)
+        case 0xF0: op_ld_a_zp_offset(); return;
+            // LD A, (FF00 + C)
+        case 0xF2: op_ld_a_zpc(); return;
 
             // clang-format on
-        default:
+        default: throw "Unknown opcode";
         }
     }
 
@@ -98,7 +131,8 @@ namespace GB {
         }
         case RegisterPair::AF: {
             high = a;
-            low = f;
+            low = flags();
+
             break;
         }
         }
@@ -129,7 +163,7 @@ namespace GB {
         }
         case RegisterPair::AF: {
             a = static_cast<uint8_t>((temp & 0xFF00) >> 8);
-            f = static_cast<uint8_t>(temp & 0x00FF) & 0xF0;
+            set_flags(static_cast<uint8_t>(temp & 0x00FF) & 0xF0);
             return;
         }
         }
@@ -144,7 +178,7 @@ namespace GB {
         case COperand2::H: return h;
         case COperand2::L: return l;
         case COperand2::A: return a;
-        default:
+        default:;
         }
         return 0;
     }
@@ -158,7 +192,7 @@ namespace GB {
         case COperand2::H: h = value; return;
         case COperand2::L: l = value; return;
         case COperand2::A: a = value; return;
-        default:
+        default:;
         }
     }
 
@@ -167,6 +201,15 @@ namespace GB {
         program_counter = where + 1;
         m_cycle = 1;
         // TODO: check interrupts here
+    }
+    auto CPU::op_nop() -> void {
+        m_cycle++;
+        fetch(program_counter);
+    }
+
+    auto CPU::op_halt() -> void {
+        m_cycle++;
+        fetch(program_counter);
     }
 
     auto CPU::op_ld_r_r() -> void {
@@ -188,7 +231,7 @@ namespace GB {
             fetch(program_counter);
             break;
         }
-        default:
+        default:;
         }
     }
     auto CPU::op_ld_r_immediate() -> void {
@@ -203,7 +246,7 @@ namespace GB {
             fetch(program_counter);
             break;
         }
-        default:
+        default:;
         }
     }
 
@@ -219,7 +262,7 @@ namespace GB {
             fetch(program_counter);
             break;
         }
-        default:
+        default:;
         }
     }
 
@@ -256,7 +299,7 @@ namespace GB {
             fetch(program_counter);
             break;
         }
-        default:
+        default:;
         }
     }
 
@@ -292,7 +335,53 @@ namespace GB {
             fetch(program_counter);
             break;
         }
-        default:
+        default:;
+        }
+    }
+
+    auto CPU::op_ld_direct_a() -> void {
+        m_cycle++;
+        switch (m_cycle) {
+        case 2: {
+            z = bus_read_fn(program_counter++);
+            break;
+        }
+        case 3: {
+            w = bus_read_fn(program_counter++);
+            break;
+        }
+        case 4: {
+            bus_write_fn(z | (w << 8), a);
+            break;
+        }
+        case 5: {
+            fetch(program_counter);
+            break;
+        }
+        default:;
+        }
+    }
+
+    auto CPU::op_ld_a_direct() -> void {
+        m_cycle++;
+        switch (m_cycle) {
+        case 2: {
+            z = bus_read_fn(program_counter++);
+            break;
+        }
+        case 3: {
+            w = bus_read_fn(program_counter++);
+            break;
+        }
+        case 4: {
+            a = bus_read_fn(z | (w << 8));
+            break;
+        }
+        case 5: {
+            fetch(program_counter);
+            break;
+        }
+        default:;
         }
     }
 
@@ -311,7 +400,7 @@ namespace GB {
             fetch(program_counter);
             break;
         }
-        default:
+        default:;
         }
     }
 
@@ -331,8 +420,171 @@ namespace GB {
             fetch(program_counter);
             break;
         }
-        default:
+        default:;
         }
+    }
+
+    auto CPU::op_ld_direct_sp() -> void {
+        m_cycle++;
+        switch (m_cycle) {
+        case 2: {
+            z = bus_read_fn(program_counter++);
+            break;
+        }
+        case 3: {
+            w = bus_read_fn(program_counter++);
+            break;
+        }
+        case 4: {
+            const auto address = z | (w << 8);
+            bus_write_fn(address, stack_pointer & 0xFF);
+            z++;
+            break;
+        }
+        case 5: {
+            const auto address = z | (w << 8);
+            bus_write_fn(address, (stack_pointer >> 8) & 0xFF);
+            break;
+        }
+        case 6: {
+            fetch(program_counter);
+            break;
+        }
+        default:;
+        }
+    }
+
+    auto CPU::op_ld_hl_sp_i8() -> void {
+        m_cycle++;
+        switch (m_cycle) {
+        case 2: {
+            z = bus_read_fn(program_counter++);
+            break;
+        }
+        case 3: {
+            const uint16_t result = stack_pointer + static_cast<int8_t>(z);
+            set_rp(RegisterPair::HL, result);
+            alu_flags.hc = ((stack_pointer & 0xF) + (z & 0xF)) > 0xF;
+            alu_flags.cy = ((stack_pointer & 0xFF) + (z & 0xFF)) > 0xFF;
+            alu_flags.n = false;
+            alu_flags.z = false;
+            break;
+        }
+        case 4: {
+            fetch(program_counter);
+            break;
+        }
+        default:;
+        }
+    }
+
+    auto CPU::op_ld_sp_hl() -> void {
+        m_cycle++;
+        switch (m_cycle) {
+        case 2: {
+            stack_pointer = get_rp(RegisterPair::HL);
+            break;
+        }
+        case 3: {
+            fetch(program_counter);
+            break;
+        }
+        default:;
+        }
+    }
+
+    auto CPU::op_ld_zp_offset_a() -> void {
+        m_cycle++;
+        switch (m_cycle) {
+        case 2: {
+            z = bus_read_fn(program_counter++);
+            break;
+        }
+        case 3: {
+            bus_write_fn(0xFF00 + z, a);
+            break;
+        }
+        case 4: {
+            fetch(program_counter);
+            break;
+        }
+        default:;
+        }
+    }
+
+    auto CPU::op_ld_a_zp_offset() -> void {
+        m_cycle++;
+        switch (m_cycle) {
+        case 2: {
+            z = bus_read_fn(program_counter++);
+            break;
+        }
+        case 3: {
+            a = bus_read_fn(0xFF00 + z);
+            break;
+        }
+        case 4: {
+            fetch(program_counter);
+            break;
+        }
+        default:;
+        }
+    }
+
+    auto CPU::op_ld_zpc_a() -> void {
+        m_cycle++;
+        switch (m_cycle) {
+        case 2: {
+            bus_write_fn(0xFF00 + c, a);
+            break;
+        }
+        case 3: {
+            fetch(program_counter);
+            break;
+        }
+        default:;
+        }
+    }
+
+    auto CPU::op_ld_a_zpc() -> void {
+        m_cycle++;
+        switch (m_cycle) {
+        case 2: {
+            a = bus_read_fn(0xFF00 + c);
+            break;
+        }
+        case 3: {
+            fetch(program_counter);
+            break;
+        }
+        default:;
+        }
+    }
+
+    auto CPU::op_add_a_r() -> void {
+        auto left = static_cast<uint16_t>(a);
+        uint16_t right = get_register(static_cast<COperand2>((ir >> 3) & 0x3));
+
+        if constexpr (r == Operand::HLAddress) {
+            right = static_cast<uint16_t>(bus_read_fn(get_rp(RegisterPair::HL)));
+        } else if constexpr (r == Operand::Immediate) {
+            right = static_cast<uint16_t>(bus_read_fn(program_counter + 1));
+            ++program_counter;
+        } else {
+            right = static_cast<uint16_t>(get_register(r));
+        }
+
+        uint16_t cy = with_carry ? get_flag(FLAG_CY) : 0;
+
+        uint16_t result = left + right + cy;
+        auto masked_result = static_cast<uint8_t>(result & 0xFF);
+
+        set_flags(FLAG_HC, ((left & 0xF) + (right & 0xF) + (cy & 0xF)) > 0xF);
+        set_flags(FLAG_CY, result > 0xFF);
+        set_flags(FLAG_Z, masked_result == 0);
+        set_flags(FLAG_N, false);
+
+        a = masked_result;
     }
 
 } // GB

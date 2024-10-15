@@ -48,6 +48,9 @@ void from_json(const nlohmann::json &j, TestState &value) {
 }
 
 void from_json(const nlohmann::json &j, TestCycle &value) {
+    if (j.is_null()) {
+        return;
+    }
     value.address = j[0].get_to(value.address);
     value.value = j[1].get_to(value.value);
     value.access = j[2].get_to(value.access);

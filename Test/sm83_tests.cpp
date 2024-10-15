@@ -72,10 +72,11 @@ void run_test(uint8_t opcode) {
 
     if (file) {
         std::vector<TestCase> test_data = json::parse(file);
+
         cpu.bus_read_fn = test_read;
         cpu.bus_write_fn = test_write;
 
-        for (const auto &test : test_data) {
+        for (auto &test : test_data) {
             INFO("TEST: " + test.name);
             const auto &init = test.initial;
 
@@ -101,6 +102,7 @@ void run_test(uint8_t opcode) {
             for (int i = 0; i < test.cycles.size(); ++i) {
                 cpu.clock();
             }
+            std::erase_if(test.cycles, [](const TestCycle &x) { return x.access.empty(); });
 
             FAIL_IF_DIFFERENT(cpu.a, test.final.a, "a")
             FAIL_IF_DIFFERENT(cpu.b, test.final.b, "b")
@@ -116,8 +118,8 @@ void run_test(uint8_t opcode) {
             for (const auto &[address, value] : test.final.ram) {
 
                 CHECKED_IF(memory[address] != value) {
-                    FAIL(fmt::format("\n{:#x}: {:#x} - expected: {:#x}\n", address, memory[address],
-                                     value));
+                    FAIL(fmt::format("\nAddress:{:#x}: {:#x} - expected: {:#x}\n", address,
+                                     memory[address], value));
                 }
             }
 
@@ -169,6 +171,17 @@ TEST_CASE("ld rp, u16") {
     run_test(0x11);
     run_test(0x21);
     run_test(0x31);
+}
+
+TEST_CASE("miscellaneous ld commands") {
+    run_test(0x08); // ld (direct), sp
+    run_test(0xEA); // ld (direct), a
+    run_test(0xFA); // ld a, (direct)
+    run_test(0xF8); // ld hl, sp + i8
+    run_test(0xE0); // ld (ffxx), a
+    run_test(0xF0); // ld a, (ffxx)
+    run_test(0xE2);
+    run_test(0xF2);
 }
 
 TEST_CASE("ld r,r") {
