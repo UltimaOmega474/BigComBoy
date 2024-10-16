@@ -29,6 +29,11 @@
 #define FAIL_IF_DIFFERENT(a, b, name)                                                              \
     CHECKED_IF(a != b) { FAIL(fmt::format("{}: {} - expected {}: {}\n", name, a, name, b)); }
 
+#define BATCH_RUN_TESTS(from, to)                                                                  \
+    for (int i = from; i <= to; ++i) {                                                             \
+        run_test(static_cast<uint8_t>(i));                                                         \
+    }
+
 enum class BusActivityType { Read = 0, Write = 1 };
 
 struct BusActivity {
@@ -67,10 +72,9 @@ GB::CPU cpu;
 
 void run_test(uint8_t opcode) {
     using json = nlohmann::json;
-    auto path_str = fmt::format("v2/{:02x}.json", opcode);
-    std::ifstream file({path_str});
+    auto path_str = std::filesystem::path(fmt::format("v2/{:02x}.json", opcode));
 
-    if (file) {
+    if (std::ifstream file(path_str); file) {
         std::vector<TestCase> test_data = json::parse(file);
 
         cpu.bus_read_fn = test_read;
@@ -150,8 +154,6 @@ void run_test(uint8_t opcode) {
                 }
             }
         }
-    } else {
-        FAIL("Cannot find file for test." + path_str);
     }
 }
 
@@ -193,14 +195,11 @@ TEST_CASE("ld r,r") {
     run_test(0x1E);
     run_test(0x2E);
     run_test(0x3E);
-    return;
-    for (int i = 0x40; i < 0x80; i++) {
-        if (i == 0x76) { // no test for halt
-            continue;
-        }
-        run_test(static_cast<uint8_t>(i));
-    }
+
+    BATCH_RUN_TESTS(0x40, 0x7F)
 }
+
+TEST_CASE("add/adc") { BATCH_RUN_TESTS(0x80, 0x8F) }
 
 int main(const int argc, char *argv[]) {
     const int result = Catch::Session().run(argc, argv);

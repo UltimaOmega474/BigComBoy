@@ -24,13 +24,14 @@
 namespace GB {
 
     enum class COperand2 {
-        B = 0,
-        C = 1,
-        D = 2,
-        E = 3,
-        H = 4,
-        L = 5,
-        A = 7,
+        B,
+        C,
+        D,
+        E,
+        H,
+        L,
+        Memory,
+        A,
     };
 
     enum class COperand3 {
@@ -72,27 +73,27 @@ namespace GB {
         auto set_rp(RegisterPair index, uint16_t value) -> void;
 
         auto fetch(uint16_t where) -> void;
-        auto op_nop() -> void;
-        auto op_halt() -> void;
-        auto op_ld_r_r() -> void;
+        auto nop() -> void;
+        auto halt() -> void;
+        template<COperand2 dst, COperand2 src> auto ld() -> void;
         auto op_ld_r_indirect(uint16_t address) -> void;
-        auto op_ld_r_immediate() -> void;
+        template <COperand2 reg> auto ld_immediate() -> void;
         auto op_ld_indirect_r(uint16_t address) -> void;
-        template <COperand3 rp> auto op_ld_indirect_rp_a() -> void;
-        template <COperand3 rp> auto op_ld_a_indirect_rp() -> void;
-        auto op_ld_direct_a() -> void;
-        auto op_ld_a_direct() -> void;
+        template <COperand3 rp> auto ld_indirect_accumulator() -> void;
+        template <COperand3 rp> auto ld_accumulator_indirect() -> void;
+        auto ld_direct_a() -> void;
+        auto ld_a_direct() -> void;
         auto op_ld_indirect_immediate(uint16_t address) -> void;
-        auto op_ld_rp_immediate() -> void;
-        auto op_ld_direct_sp() -> void;
-        auto op_ld_hl_sp_i8() -> void;
-        auto op_ld_sp_hl() -> void;
-        auto op_ld_zp_offset_a() -> void;
-        auto op_ld_a_zp_offset() -> void;
-        auto op_ld_zpc_a() -> void;
-        auto op_ld_a_zpc() -> void;
+        template <RegisterPair rp> auto ld_rp_immediate() -> void;
+        auto ld_direct_sp() -> void;
+        auto ld_hl_sp_i8() -> void;
+        auto ld_sp_hl() -> void;
+        auto ldh_offset_a() -> void;
+        auto ldh_a_offset() -> void;
+        auto ldh_c_a() -> void;
+        auto ldh_a_c() -> void;
 
-        auto op_add_a_r() -> void;
+        template<COperand2 operand, bool with_carry> auto add() -> void;
 
         struct {
             bool cy = false;

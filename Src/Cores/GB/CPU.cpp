@@ -39,70 +39,128 @@ namespace GB {
 
     auto CPU::clock() -> void {
         switch (ir) {
-            // clang-format off
 
-            // NOP
-        case 0x00: op_nop(); return;
-            // LD RP, Immediate
-        case 0x01: case 0x11: case 0x21: case 0x31: op_ld_rp_immediate(); return;
-            // LD (Direct), SP
-        case 0x08: op_ld_direct_sp(); return;
-            // LD (Indirect RP), A
-        case 0x02: op_ld_indirect_rp_a<COperand3::BC>(); return;
-        case 0x12: op_ld_indirect_rp_a<COperand3::DE>(); return;
-        case 0x22: op_ld_indirect_rp_a<COperand3::HLIncrement>(); return;
-        case 0x32: op_ld_indirect_rp_a<COperand3::HLDecrement>(); return;
-            // LD R, Immediate
-        case 0x06: case 0x16: case 0x26: case 0x0E:
-        case 0x1E: case 0x2E: case 0x3E: op_ld_r_immediate(); return;
-            // LD A, (Indirect RP)
-        case 0x0A: op_ld_a_indirect_rp<COperand3::BC>(); return;
-        case 0x1A: op_ld_a_indirect_rp<COperand3::DE>(); return;
-        case 0x2A: op_ld_a_indirect_rp<COperand3::HLIncrement>(); return;
-        case 0x3A: op_ld_a_indirect_rp<COperand3::HLDecrement>(); return;
-            // LD (HL), Immediate
-        case 0x36: op_ld_indirect_immediate(get_rp(RegisterPair::HL)); return;
-            // LD B, SRC
-        case 0x40: case 0x41: case 0x42: case 0x43: case 0x44: case 0x45: case 0x47:
-            // LD C, SRC
-        case 0x48: case 0x49: case 0x4A: case 0x4B: case 0x4C: case 0x4D: case 0x4F:
-            // LD D, SRC
-        case 0x50: case 0x51: case 0x52: case 0x53: case 0x54: case 0x55: case 0x57:
-            // LD E, SRC
-        case 0x58: case 0x59: case 0x5A: case 0x5B: case 0x5C: case 0x5D: case 0x5F:
-            // LD H, SRC
-        case 0x60: case 0x61: case 0x62: case 0x63: case 0x64: case 0x65: case 0x67:
-            // LD L, SRC
-        case 0x68: case 0x69: case 0x6A: case 0x6B: case 0x6C: case 0x6D: case 0x6F:
-            // LD A, SRC
-        case 0x78: case 0x79: case 0x7A: case 0x7B: case 0x7C: case 0x7D: case 0x7F:
-            op_ld_r_r(); return;
-            // LD R, (HL)
-        case 0x46: case 0x56: case 0x66: case 0x4E: case 0x5E: case 0x6E: case 0x7E:
-            op_ld_r_indirect(get_rp(RegisterPair::HL)); return;
-            // LD (HL), SRC
-        case 0x70: case 0x71: case 0x72: case 0x73: case 0x74: case 0x75: case 0x77:
-            op_ld_indirect_r(get_rp(RegisterPair::HL)); return;
-            // HALT
-        case 0x76: op_halt(); return;
-            // LD (Direct), A
-        case 0xEA: op_ld_direct_a(); return;
-            // LD A, (Direct)
-        case 0xFA: op_ld_a_direct(); return;
-            // LD HL, SP + i8
-        case 0xF8: op_ld_hl_sp_i8(); return;
-            // LD HL, SP
-        case 0xF9: op_ld_sp_hl(); return;
-            // LD (FFXX), A
-        case 0xE0: op_ld_zp_offset_a(); return;
-            // LD (FF00 + C), A
-        case 0xE2: op_ld_zpc_a(); return;
-            // LD A, (FFXX)
-        case 0xF0: op_ld_a_zp_offset(); return;
-            // LD A, (FF00 + C)
-        case 0xF2: op_ld_a_zpc(); return;
+        case 0x00: nop(); return;
+        case 0x01: ld_rp_immediate<RegisterPair::BC>(); return;
+        case 0x02: ld_indirect_accumulator<COperand3::BC>(); return;
+        case 0x06: ld_immediate<COperand2::B>(); return;
+        case 0x08: ld_direct_sp(); return;
+        case 0x0A: ld_accumulator_indirect<COperand3::BC>(); return;
+        case 0x0E: ld_immediate<COperand2::C>(); return;
 
-            // clang-format on
+        case 0x11: ld_rp_immediate<RegisterPair::DE>(); return;
+        case 0x12: ld_indirect_accumulator<COperand3::DE>(); return;
+        case 0x16: ld_immediate<COperand2::D>(); return;
+        case 0x1A: ld_accumulator_indirect<COperand3::DE>(); return;
+        case 0x1E: ld_immediate<COperand2::E>(); return;
+
+        case 0x21: ld_rp_immediate<RegisterPair::HL>(); return;
+        case 0x22: ld_indirect_accumulator<COperand3::HLIncrement>(); return;
+        case 0x26: ld_immediate<COperand2::H>(); return;
+        case 0x2A: ld_accumulator_indirect<COperand3::HLIncrement>(); return;
+        case 0x2E: ld_immediate<COperand2::L>(); return;
+
+        case 0x31: ld_rp_immediate<RegisterPair::SP>(); return;
+        case 0x32: ld_indirect_accumulator<COperand3::HLDecrement>(); return;
+        case 0x36: ld_immediate<COperand2::Memory>(); return;
+        case 0x3A: ld_accumulator_indirect<COperand3::HLDecrement>(); return;
+        case 0x3E: ld_immediate<COperand2::A>(); return;
+
+        case 0x40: ld<COperand2::B, COperand2::B>(); return;
+        case 0x41: ld<COperand2::B, COperand2::C>(); return;
+        case 0x42: ld<COperand2::B, COperand2::D>(); return;
+        case 0x43: ld<COperand2::B, COperand2::E>(); return;
+        case 0x44: ld<COperand2::B, COperand2::H>(); return;
+        case 0x45: ld<COperand2::B, COperand2::L>(); return;
+        case 0x46: ld<COperand2::B, COperand2::Memory>(); return;
+        case 0x47: ld<COperand2::B, COperand2::A>(); return;
+        case 0x48: ld<COperand2::C, COperand2::B>(); return;
+        case 0x49: ld<COperand2::C, COperand2::C>(); return;
+        case 0x4A: ld<COperand2::C, COperand2::D>(); return;
+        case 0x4B: ld<COperand2::C, COperand2::E>(); return;
+        case 0x4C: ld<COperand2::C, COperand2::H>(); return;
+        case 0x4D: ld<COperand2::C, COperand2::L>(); return;
+        case 0x4E: ld<COperand2::C, COperand2::Memory>(); return;
+        case 0x4F: ld<COperand2::C, COperand2::A>(); return;
+
+        case 0x50: ld<COperand2::D, COperand2::B>(); return;
+        case 0x51: ld<COperand2::D, COperand2::C>(); return;
+        case 0x52: ld<COperand2::D, COperand2::D>(); return;
+        case 0x53: ld<COperand2::D, COperand2::E>(); return;
+        case 0x54: ld<COperand2::D, COperand2::H>(); return;
+        case 0x55: ld<COperand2::D, COperand2::L>(); return;
+        case 0x56: ld<COperand2::D, COperand2::Memory>(); return;
+        case 0x57: ld<COperand2::D, COperand2::A>(); return;
+        case 0x58: ld<COperand2::E, COperand2::B>(); return;
+        case 0x59: ld<COperand2::E, COperand2::C>(); return;
+        case 0x5A: ld<COperand2::E, COperand2::D>(); return;
+        case 0x5B: ld<COperand2::E, COperand2::E>(); return;
+        case 0x5C: ld<COperand2::E, COperand2::H>(); return;
+        case 0x5D: ld<COperand2::E, COperand2::L>(); return;
+        case 0x5E: ld<COperand2::E, COperand2::Memory>(); return;
+        case 0x5F: ld<COperand2::E, COperand2::A>(); return;
+
+        case 0x60: ld<COperand2::H, COperand2::B>(); return;
+        case 0x61: ld<COperand2::H, COperand2::C>(); return;
+        case 0x62: ld<COperand2::H, COperand2::D>(); return;
+        case 0x63: ld<COperand2::H, COperand2::E>(); return;
+        case 0x64: ld<COperand2::H, COperand2::H>(); return;
+        case 0x65: ld<COperand2::H, COperand2::L>(); return;
+        case 0x66: ld<COperand2::H, COperand2::Memory>(); return;
+        case 0x67: ld<COperand2::H, COperand2::A>(); return;
+        case 0x68: ld<COperand2::L, COperand2::B>(); return;
+        case 0x69: ld<COperand2::L, COperand2::C>(); return;
+        case 0x6A: ld<COperand2::L, COperand2::D>(); return;
+        case 0x6B: ld<COperand2::L, COperand2::E>(); return;
+        case 0x6C: ld<COperand2::L, COperand2::H>(); return;
+        case 0x6D: ld<COperand2::L, COperand2::L>(); return;
+        case 0x6E: ld<COperand2::L, COperand2::Memory>(); return;
+        case 0x6F: ld<COperand2::L, COperand2::A>(); return;
+
+        case 0x70: ld<COperand2::Memory, COperand2::B>(); return;
+        case 0x71: ld<COperand2::Memory, COperand2::C>(); return;
+        case 0x72: ld<COperand2::Memory, COperand2::D>(); return;
+        case 0x73: ld<COperand2::Memory, COperand2::E>(); return;
+        case 0x74: ld<COperand2::Memory, COperand2::H>(); return;
+        case 0x75: ld<COperand2::Memory, COperand2::L>(); return;
+        case 0x76: halt(); return;
+        case 0x77: ld<COperand2::Memory, COperand2::A>(); return;
+        case 0x78: ld<COperand2::A, COperand2::B>(); return;
+        case 0x79: ld<COperand2::A, COperand2::C>(); return;
+        case 0x7A: ld<COperand2::A, COperand2::D>(); return;
+        case 0x7B: ld<COperand2::A, COperand2::E>(); return;
+        case 0x7C: ld<COperand2::A, COperand2::H>(); return;
+        case 0x7D: ld<COperand2::A, COperand2::L>(); return;
+        case 0x7E: ld<COperand2::A, COperand2::Memory>(); return;
+        case 0x7F: ld<COperand2::A, COperand2::A>(); return;
+
+        case 0x80: add<COperand2::B, false>(); return;
+        case 0x81: add<COperand2::C, false>(); return;
+        case 0x82: add<COperand2::D, false>(); return;
+        case 0x83: add<COperand2::E, false>(); return;
+        case 0x84: add<COperand2::H, false>(); return;
+        case 0x85: add<COperand2::L, false>(); return;
+        case 0x86: add<COperand2::Memory, false>(); return;
+        case 0x87: add<COperand2::A, false>(); return;
+        case 0x88: add<COperand2::B, true>(); return;
+        case 0x89: add<COperand2::C, true>(); return;
+        case 0x8A: add<COperand2::D, true>(); return;
+        case 0x8B: add<COperand2::E, true>(); return;
+        case 0x8C: add<COperand2::H, true>(); return;
+        case 0x8D: add<COperand2::L, true>(); return;
+        case 0x8E: add<COperand2::Memory, true>(); return;
+        case 0x8F: add<COperand2::A, true>(); return;
+
+        case 0xE0: ldh_offset_a(); return;
+        case 0xE2: ldh_c_a(); return;
+        case 0xEA: ld_direct_a(); return;
+
+        case 0xF0: ldh_a_offset(); return;
+        case 0xF2: ldh_a_c(); return;
+        case 0xF8: ld_hl_sp_i8(); return;
+        case 0xF9: ld_sp_hl(); return;
+        case 0xFA: ld_a_direct(); return;
+
         default: throw "Unknown opcode";
         }
     }
@@ -202,20 +260,55 @@ namespace GB {
         m_cycle = 1;
         // TODO: check interrupts here
     }
-    auto CPU::op_nop() -> void {
+    auto CPU::nop() -> void {
         m_cycle++;
         fetch(program_counter);
     }
 
-    auto CPU::op_halt() -> void {
+    auto CPU::halt() -> void {
         m_cycle++;
         fetch(program_counter);
     }
 
-    auto CPU::op_ld_r_r() -> void {
+    template <COperand2 dst, COperand2 src> auto CPU::ld() -> void {
         m_cycle++;
-        const auto src_value = get_register(static_cast<COperand2>(ir & 0x7));
-        set_register(static_cast<COperand2>((ir >> 3) & 0x7), src_value);
+
+        // ld (hl), reg
+        if constexpr (dst == COperand2::Memory) {
+            switch (m_cycle) {
+            case 2: {
+                bus_write_fn(get_rp(RegisterPair::HL), get_register(src));
+                break;
+            }
+            case 3: {
+                fetch(program_counter);
+                break;
+            }
+            default:;
+            }
+            return;
+        }
+
+        // ld reg, (hl)
+        if constexpr (src == COperand2::Memory) {
+            switch (m_cycle) {
+            case 2: {
+                z = bus_read_fn(get_rp(RegisterPair::HL));
+                break;
+            }
+            case 3: {
+                set_register(dst, z);
+                fetch(program_counter);
+                break;
+            }
+            default:;
+            }
+            return;
+        }
+
+        // ld reg, reg
+        const auto src_value = get_register(src);
+        set_register(dst, src_value);
         fetch(program_counter);
     }
 
@@ -234,15 +327,36 @@ namespace GB {
         default:;
         }
     }
-    auto CPU::op_ld_r_immediate() -> void {
+
+    template <COperand2 reg> auto CPU::ld_immediate() -> void {
         m_cycle++;
+
+        if constexpr (reg == COperand2::Memory) {
+            switch (m_cycle) {
+            case 2: {
+                z = bus_read_fn(program_counter++);
+                break;
+            }
+            case 3: {
+                bus_write_fn(get_rp(RegisterPair::HL), z);
+                break;
+            }
+            case 4: {
+                fetch(program_counter);
+                break;
+            }
+            default:;
+            }
+            return;
+        }
+
         switch (m_cycle) {
         case 2: {
             z = bus_read_fn(program_counter++);
             break;
         }
         case 3: {
-            set_register(static_cast<COperand2>((ir >> 3) & 0x7), z);
+            set_register(reg, z);
             fetch(program_counter);
             break;
         }
@@ -266,7 +380,7 @@ namespace GB {
         }
     }
 
-    template <COperand3 rp> auto CPU::op_ld_indirect_rp_a() -> void {
+    template <COperand3 rp> auto CPU::ld_indirect_accumulator() -> void {
         m_cycle++;
         switch (m_cycle) {
         case 2: {
@@ -303,7 +417,7 @@ namespace GB {
         }
     }
 
-    template <COperand3 rp> auto CPU::op_ld_a_indirect_rp() -> void {
+    template <COperand3 rp> auto CPU::ld_accumulator_indirect() -> void {
         m_cycle++;
         switch (m_cycle) {
         case 2: {
@@ -339,7 +453,7 @@ namespace GB {
         }
     }
 
-    auto CPU::op_ld_direct_a() -> void {
+    auto CPU::ld_direct_a() -> void {
         m_cycle++;
         switch (m_cycle) {
         case 2: {
@@ -362,7 +476,7 @@ namespace GB {
         }
     }
 
-    auto CPU::op_ld_a_direct() -> void {
+    auto CPU::ld_a_direct() -> void {
         m_cycle++;
         switch (m_cycle) {
         case 2: {
@@ -404,7 +518,7 @@ namespace GB {
         }
     }
 
-    auto CPU::op_ld_rp_immediate() -> void {
+    template <RegisterPair rp> auto CPU::ld_rp_immediate() -> void {
         m_cycle++;
         switch (m_cycle) {
         case 2: {
@@ -416,7 +530,7 @@ namespace GB {
             break;
         }
         case 4: {
-            set_rp(static_cast<RegisterPair>((ir >> 4) & 0x3), z | (w << 8));
+            set_rp(rp, z | (w << 8));
             fetch(program_counter);
             break;
         }
@@ -424,7 +538,7 @@ namespace GB {
         }
     }
 
-    auto CPU::op_ld_direct_sp() -> void {
+    auto CPU::ld_direct_sp() -> void {
         m_cycle++;
         switch (m_cycle) {
         case 2: {
@@ -454,7 +568,7 @@ namespace GB {
         }
     }
 
-    auto CPU::op_ld_hl_sp_i8() -> void {
+    auto CPU::ld_hl_sp_i8() -> void {
         m_cycle++;
         switch (m_cycle) {
         case 2: {
@@ -478,7 +592,7 @@ namespace GB {
         }
     }
 
-    auto CPU::op_ld_sp_hl() -> void {
+    auto CPU::ld_sp_hl() -> void {
         m_cycle++;
         switch (m_cycle) {
         case 2: {
@@ -493,7 +607,7 @@ namespace GB {
         }
     }
 
-    auto CPU::op_ld_zp_offset_a() -> void {
+    auto CPU::ldh_offset_a() -> void {
         m_cycle++;
         switch (m_cycle) {
         case 2: {
@@ -512,7 +626,7 @@ namespace GB {
         }
     }
 
-    auto CPU::op_ld_a_zp_offset() -> void {
+    auto CPU::ldh_a_offset() -> void {
         m_cycle++;
         switch (m_cycle) {
         case 2: {
@@ -531,7 +645,7 @@ namespace GB {
         }
     }
 
-    auto CPU::op_ld_zpc_a() -> void {
+    auto CPU::ldh_c_a() -> void {
         m_cycle++;
         switch (m_cycle) {
         case 2: {
@@ -546,7 +660,7 @@ namespace GB {
         }
     }
 
-    auto CPU::op_ld_a_zpc() -> void {
+    auto CPU::ldh_a_c() -> void {
         m_cycle++;
         switch (m_cycle) {
         case 2: {
@@ -561,30 +675,37 @@ namespace GB {
         }
     }
 
-    auto CPU::op_add_a_r() -> void {
-        auto left = static_cast<uint16_t>(a);
-        uint16_t right = get_register(static_cast<COperand2>((ir >> 3) & 0x3));
+    template <COperand2 operand, bool with_carry> auto CPU::add() -> void {
+        m_cycle++;
+        auto do_add = [this](const uint8_t left, const uint8_t right, const uint8_t cy) -> uint8_t {
+            const int32_t result = left + right + cy;
+            const auto masked_result = static_cast<uint8_t>(result & 0xFF);
 
-        if constexpr (r == Operand::HLAddress) {
-            right = static_cast<uint16_t>(bus_read_fn(get_rp(RegisterPair::HL)));
-        } else if constexpr (r == Operand::Immediate) {
-            right = static_cast<uint16_t>(bus_read_fn(program_counter + 1));
-            ++program_counter;
-        } else {
-            right = static_cast<uint16_t>(get_register(r));
+            alu_flags.hc = ((left & 0xF) + (right & 0xF) + (cy & 0xF)) > 0xF;
+            alu_flags.cy = result > 0xFF;
+            alu_flags.z = masked_result == 0;
+            alu_flags.n = false;
+            return masked_result;
+        };
+
+        switch (m_cycle) {
+        case 2: {
+            if constexpr (operand == COperand2::Memory) {
+                z = bus_read_fn(get_rp(RegisterPair::HL));
+            } else {
+                a = do_add(a, get_register(operand),
+                           with_carry ? static_cast<uint8_t>(alu_flags.cy) : 0);
+                fetch(program_counter);
+            }
+            break;
         }
-
-        uint16_t cy = with_carry ? get_flag(FLAG_CY) : 0;
-
-        uint16_t result = left + right + cy;
-        auto masked_result = static_cast<uint8_t>(result & 0xFF);
-
-        set_flags(FLAG_HC, ((left & 0xF) + (right & 0xF) + (cy & 0xF)) > 0xF);
-        set_flags(FLAG_CY, result > 0xFF);
-        set_flags(FLAG_Z, masked_result == 0);
-        set_flags(FLAG_N, false);
-
-        a = masked_result;
+        case 3: {
+            a = do_add(a, z, with_carry ? static_cast<uint8_t>(alu_flags.cy) : 0);
+            fetch(program_counter);
+            break;
+        }
+        default:;
+        }
     }
 
 } // GB
