@@ -201,6 +201,8 @@ TEST_CASE("ld r,r") {
 
 TEST_CASE("add/adc") { BATCH_RUN_TESTS(0x80, 0x8F) }
 
+TEST_CASE("sub/sbc") { BATCH_RUN_TESTS(0x90, 0x9F) }
+
 int main(const int argc, char *argv[]) {
     const int result = Catch::Session().run(argc, argv);
     return result;

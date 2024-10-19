@@ -41,6 +41,12 @@ namespace GB {
         HLDecrement,
     };
 
+    enum class BusAction {
+        None,
+        ReadOpSrc,
+        WriteOpResult,
+    };
+
     class CPU {
     public:
         uint8_t b = 0;
@@ -75,7 +81,7 @@ namespace GB {
         auto fetch(uint16_t where) -> void;
         auto nop() -> void;
         auto halt() -> void;
-        template<COperand2 dst, COperand2 src> auto ld() -> void;
+        template <COperand2 dst, COperand2 src> auto ld() -> void;
         auto op_ld_r_indirect(uint16_t address) -> void;
         template <COperand2 reg> auto ld_immediate() -> void;
         auto op_ld_indirect_r(uint16_t address) -> void;
@@ -93,8 +99,13 @@ namespace GB {
         auto ldh_c_a() -> void;
         auto ldh_a_c() -> void;
 
-        template<COperand2 operand, bool with_carry> auto add() -> void;
-
+        using Fww = decltype([](auto a, auto b) -> decltype(auto) {});
+        using ArithmeticOperation = void (CPU::*)(int32_t, int32_t);
+        template <COperand2 operand, bool with_carry> auto add() -> void;
+        template <COperand2 operand, bool with_carry> auto sub() -> void;
+        template <COperand2 operand, bool with_carry> auto adc() -> void;
+        template <COperand2 operand, bool with_carry> auto sbc() -> void;
+        template <BusAction act, typename F> auto alu_operation(F&&) -> void;
         struct {
             bool cy = false;
             bool hc = false;

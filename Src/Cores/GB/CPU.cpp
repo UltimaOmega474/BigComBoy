@@ -134,7 +134,7 @@ namespace GB {
         case 0x7E: ld<COperand2::A, COperand2::Memory>(); return;
         case 0x7F: ld<COperand2::A, COperand2::A>(); return;
 
-        case 0x80: add<COperand2::B, false>(); return;
+        case 0x80: alu_operation(&CPU::adc<COperand2::B, false>); return;
         case 0x81: add<COperand2::C, false>(); return;
         case 0x82: add<COperand2::D, false>(); return;
         case 0x83: add<COperand2::E, false>(); return;
@@ -150,6 +150,27 @@ namespace GB {
         case 0x8D: add<COperand2::L, true>(); return;
         case 0x8E: add<COperand2::Memory, true>(); return;
         case 0x8F: add<COperand2::A, true>(); return;
+
+        case 0x90: sub<COperand2::B, false>(); return;
+        case 0x91: sub<COperand2::C, false>(); return;
+        case 0x92: sub<COperand2::D, false>(); return;
+        case 0x93: sub<COperand2::E, false>(); return;
+        case 0x94: sub<COperand2::H, false>(); return;
+        case 0x95: sub<COperand2::L, false>(); return;
+        case 0x96: sub<COperand2::Memory, false>(); return;
+        case 0x97: sub<COperand2::A, false>(); return;
+        case 0x98: sub<COperand2::B, true>(); return;
+        case 0x99: sub<COperand2::C, true>(); return;
+        case 0x9A: sub<COperand2::D, true>(); return;
+        case 0x9B: sub<COperand2::E, true>(); return;
+        case 0x9C: sub<COperand2::H, true>(); return;
+        case 0x9D: sub<COperand2::L, true>(); return;
+        case 0x9E: sub<COperand2::Memory, true>(); return;
+        case 0x9F:
+            sub<COperand2::A, true>();
+            return;
+
+            //   case 0xA0: arith_operation<COperand2::B, &CPU::adc<false>>(); return;
 
         case 0xE0: ldh_offset_a(); return;
         case 0xE2: ldh_c_a(); return;
@@ -235,6 +256,7 @@ namespace GB {
         case COperand2::E: return e;
         case COperand2::H: return h;
         case COperand2::L: return l;
+        case COperand2::Memory: return z;
         case COperand2::A: return a;
         default:;
         }
@@ -705,6 +727,111 @@ namespace GB {
             break;
         }
         default:;
+        }
+    }
+
+    template <COperand2 operand, bool with_carry> auto CPU::sub() -> void {
+        m_cycle++;
+        auto do_sbc = [this](const int32_t left, const int32_t right, int32_t cy) -> uint8_t {
+            const int32_t result = left - right - cy;
+            const auto masked_result = static_cast<uint8_t>(result & 0xFF);
+
+            alu_flags.hc = ((left & 0xF) - (right & 0xF) - (cy & 0xF)) < 0;
+            alu_flags.cy = result < 0;
+            alu_flags.z = masked_result == 0;
+            alu_flags.n = true;
+
+            return masked_result;
+        };
+
+        switch (m_cycle) {
+        case 2: {
+            if constexpr (operand == COperand2::Memory) {
+                z = bus_read_fn(get_rp(RegisterPair::HL));
+            } else {
+                a = do_sbc(a, get_register(operand),
+                           with_carry ? static_cast<uint8_t>(alu_flags.cy) : 0);
+                fetch(program_counter);
+            }
+            break;
+        }
+        case 3: {
+            a = do_sbc(a, z, with_carry ? static_cast<uint8_t>(alu_flags.cy) : 0);
+            fetch(program_counter);
+            break;
+        }
+        default:;
+        }
+    }
+
+    template <COperand2 operand, bool with_carry> auto CPU::adc() -> void {
+        const int32_t left = a;
+        const int32_t right = (operand == COperand2::Memory) ? z : get_register(operand);
+
+        const int32_t cy = with_carry ? alu_flags.cy : 0;
+        const int32_t result = left + right + cy;
+        const auto masked_result = static_cast<uint8_t>(result & 0xFF);
+
+        alu_flags.hc = ((left & 0xF) + (right & 0xF) + (cy & 0xF)) > 0xF;
+        alu_flags.cy = result > 0xFF;
+        alu_flags.z = masked_result == 0;
+        alu_flags.n = false;
+
+        a = masked_result;
+    }
+
+    template <COperand2 operand, bool with_carry> auto CPU::sbc() -> void {
+        const int32_t left = a;
+        const int32_t right = operand == COperand2::Memory ? z : get_register(operand);
+
+        const int32_t cy = with_carry ? alu_flags.cy : 0;
+        const int32_t result = left - right - cy;
+        const auto masked_result = static_cast<uint8_t>(result & 0xFF);
+
+        alu_flags.hc = ((left & 0xF) - (right & 0xF) - (cy & 0xF)) < 0;
+        alu_flags.cy = result < 0;
+        alu_flags.z = masked_result == 0;
+        alu_flags.n = true;
+    }
+
+    template <BusAction act, typename F> auto CPU::alu_operation(F &&fn) -> void {
+        m_cycle++;
+
+        switch (act) {
+        case BusAction::None: {
+            (this->*fn)();
+            fetch(program_counter);
+            return;
+        }
+        case BusAction::ReadOpSrc: {
+            switch (m_cycle) {
+            case 2: {
+                z = bus_read_fn(get_rp(RegisterPair::HL));
+                break;
+            }
+            case 3: {
+                (this->*fn)();
+                fetch(program_counter);
+                break;
+            }
+            default:;
+            }
+
+            return;
+        }
+        case BusAction::WriteOpResult: {
+            switch (m_cycle) {
+            case 2: {
+                bus_write_fn(get_rp(RegisterPair::HL), (this->*fn)());
+                break;
+            }
+            case 3: {
+                fetch(program_counter);
+                break;
+            }
+            default:;
+            }
+        }
         }
     }
 
