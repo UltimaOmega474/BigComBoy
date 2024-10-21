@@ -39,7 +39,6 @@ namespace GB {
 
     auto CPU::clock() -> void {
         switch (ir) {
-
         case 0x00: nop(); return;
         case 0x01: ld_rp_immediate<RegisterPair::BC>(); return;
         case 0x02: ld_indirect_accumulator<COperand3::BC>(); return;
@@ -134,43 +133,73 @@ namespace GB {
         case 0x7E: ld<COperand2::A, COperand2::Memory>(); return;
         case 0x7F: ld<COperand2::A, COperand2::A>(); return;
 
-        case 0x80: alu_operation(&CPU::adc<COperand2::B, false>); return;
-        case 0x81: add<COperand2::C, false>(); return;
-        case 0x82: add<COperand2::D, false>(); return;
-        case 0x83: add<COperand2::E, false>(); return;
-        case 0x84: add<COperand2::H, false>(); return;
-        case 0x85: add<COperand2::L, false>(); return;
-        case 0x86: add<COperand2::Memory, false>(); return;
-        case 0x87: add<COperand2::A, false>(); return;
-        case 0x88: add<COperand2::B, true>(); return;
-        case 0x89: add<COperand2::C, true>(); return;
-        case 0x8A: add<COperand2::D, true>(); return;
-        case 0x8B: add<COperand2::E, true>(); return;
-        case 0x8C: add<COperand2::H, true>(); return;
-        case 0x8D: add<COperand2::L, true>(); return;
-        case 0x8E: add<COperand2::Memory, true>(); return;
-        case 0x8F: add<COperand2::A, true>(); return;
+        case 0x80: immediate_addr(&CPU::adc<COperand2::B, false>); return;
+        case 0x81: immediate_addr(&CPU::adc<COperand2::C, false>); return;
+        case 0x82: immediate_addr(&CPU::adc<COperand2::D, false>); return;
+        case 0x83: immediate_addr(&CPU::adc<COperand2::E, false>); return;
+        case 0x84: immediate_addr(&CPU::adc<COperand2::H, false>); return;
+        case 0x85: immediate_addr(&CPU::adc<COperand2::L, false>); return;
+        case 0x86: mem_read_addr(&CPU::adc<COperand2::Memory, false>); return;
+        case 0x87: immediate_addr(&CPU::adc<COperand2::A, false>); return;
+        case 0x88: immediate_addr(&CPU::adc<COperand2::B, true>); return;
+        case 0x89: immediate_addr(&CPU::adc<COperand2::C, true>); return;
+        case 0x8A: immediate_addr(&CPU::adc<COperand2::D, true>); return;
+        case 0x8B: immediate_addr(&CPU::adc<COperand2::E, true>); return;
+        case 0x8C: immediate_addr(&CPU::adc<COperand2::H, true>); return;
+        case 0x8D: immediate_addr(&CPU::adc<COperand2::L, true>); return;
+        case 0x8E: mem_read_addr(&CPU::adc<COperand2::Memory, true>); return;
+        case 0x8F: immediate_addr(&CPU::adc<COperand2::A, true>); return;
 
-        case 0x90: sub<COperand2::B, false>(); return;
-        case 0x91: sub<COperand2::C, false>(); return;
-        case 0x92: sub<COperand2::D, false>(); return;
-        case 0x93: sub<COperand2::E, false>(); return;
-        case 0x94: sub<COperand2::H, false>(); return;
-        case 0x95: sub<COperand2::L, false>(); return;
-        case 0x96: sub<COperand2::Memory, false>(); return;
-        case 0x97: sub<COperand2::A, false>(); return;
-        case 0x98: sub<COperand2::B, true>(); return;
-        case 0x99: sub<COperand2::C, true>(); return;
-        case 0x9A: sub<COperand2::D, true>(); return;
-        case 0x9B: sub<COperand2::E, true>(); return;
-        case 0x9C: sub<COperand2::H, true>(); return;
-        case 0x9D: sub<COperand2::L, true>(); return;
-        case 0x9E: sub<COperand2::Memory, true>(); return;
-        case 0x9F:
-            sub<COperand2::A, true>();
-            return;
+        case 0x90: immediate_addr(&CPU::sbc<COperand2::B, false>); return;
+        case 0x91: immediate_addr(&CPU::sbc<COperand2::C, false>); return;
+        case 0x92: immediate_addr(&CPU::sbc<COperand2::D, false>); return;
+        case 0x93: immediate_addr(&CPU::sbc<COperand2::E, false>); return;
+        case 0x94: immediate_addr(&CPU::sbc<COperand2::H, false>); return;
+        case 0x95: immediate_addr(&CPU::sbc<COperand2::L, false>); return;
+        case 0x96: mem_read_addr(&CPU::sbc<COperand2::Memory, false>); return;
+        case 0x97: immediate_addr(&CPU::sbc<COperand2::A, false>); return;
+        case 0x98: immediate_addr(&CPU::sbc<COperand2::B, true>); return;
+        case 0x99: immediate_addr(&CPU::sbc<COperand2::C, true>); return;
+        case 0x9A: immediate_addr(&CPU::sbc<COperand2::D, true>); return;
+        case 0x9B: immediate_addr(&CPU::sbc<COperand2::E, true>); return;
+        case 0x9C: immediate_addr(&CPU::sbc<COperand2::H, true>); return;
+        case 0x9D: immediate_addr(&CPU::sbc<COperand2::L, true>); return;
+        case 0x9E: mem_read_addr(&CPU::sbc<COperand2::Memory, true>); return;
+        case 0x9F: immediate_addr(&CPU::sbc<COperand2::A, true>); return;
 
-            //   case 0xA0: arith_operation<COperand2::B, &CPU::adc<false>>(); return;
+        case 0xA0: immediate_addr(&CPU::and_op<COperand2::B>); return;
+        case 0xA1: immediate_addr(&CPU::and_op<COperand2::C>); return;
+        case 0xA2: immediate_addr(&CPU::and_op<COperand2::D>); return;
+        case 0xA3: immediate_addr(&CPU::and_op<COperand2::E>); return;
+        case 0xA4: immediate_addr(&CPU::and_op<COperand2::H>); return;
+        case 0xA5: immediate_addr(&CPU::and_op<COperand2::L>); return;
+        case 0xA6: mem_read_addr(&CPU::and_op<COperand2::Memory>); return;
+        case 0xA7: immediate_addr(&CPU::and_op<COperand2::A>); return;
+        case 0xA8: immediate_addr(&CPU::xor_op<COperand2::B>); return;
+        case 0xA9: immediate_addr(&CPU::xor_op<COperand2::C>); return;
+        case 0xAA: immediate_addr(&CPU::xor_op<COperand2::D>); return;
+        case 0xAB: immediate_addr(&CPU::xor_op<COperand2::E>); return;
+        case 0xAC: immediate_addr(&CPU::xor_op<COperand2::H>); return;
+        case 0xAD: immediate_addr(&CPU::xor_op<COperand2::L>); return;
+        case 0xAE: mem_read_addr(&CPU::xor_op<COperand2::Memory>); return;
+        case 0xAF: immediate_addr(&CPU::xor_op<COperand2::A>); return;
+
+        case 0xB0: immediate_addr(&CPU::or_op<COperand2::B>); return;
+        case 0xB1: immediate_addr(&CPU::or_op<COperand2::C>); return;
+        case 0xB2: immediate_addr(&CPU::or_op<COperand2::D>); return;
+        case 0xB3: immediate_addr(&CPU::or_op<COperand2::E>); return;
+        case 0xB4: immediate_addr(&CPU::or_op<COperand2::H>); return;
+        case 0xB5: immediate_addr(&CPU::or_op<COperand2::L>); return;
+        case 0xB6: mem_read_addr(&CPU::or_op<COperand2::Memory>); return;
+        case 0xB7: immediate_addr(&CPU::or_op<COperand2::A>); return;
+        case 0xB8: immediate_addr(&CPU::cp<COperand2::B>); return;
+        case 0xB9: immediate_addr(&CPU::cp<COperand2::C>); return;
+        case 0xBA: immediate_addr(&CPU::cp<COperand2::D>); return;
+        case 0xBB: immediate_addr(&CPU::cp<COperand2::E>); return;
+        case 0xBC: immediate_addr(&CPU::cp<COperand2::H>); return;
+        case 0xBD: immediate_addr(&CPU::cp<COperand2::L>); return;
+        case 0xBE: mem_read_addr(&CPU::cp<COperand2::Memory>); return;
+        case 0xBF: immediate_addr(&CPU::cp<COperand2::A>); return;
 
         case 0xE0: ldh_offset_a(); return;
         case 0xE2: ldh_c_a(); return;
@@ -697,73 +726,6 @@ namespace GB {
         }
     }
 
-    template <COperand2 operand, bool with_carry> auto CPU::add() -> void {
-        m_cycle++;
-        auto do_add = [this](const uint8_t left, const uint8_t right, const uint8_t cy) -> uint8_t {
-            const int32_t result = left + right + cy;
-            const auto masked_result = static_cast<uint8_t>(result & 0xFF);
-
-            alu_flags.hc = ((left & 0xF) + (right & 0xF) + (cy & 0xF)) > 0xF;
-            alu_flags.cy = result > 0xFF;
-            alu_flags.z = masked_result == 0;
-            alu_flags.n = false;
-            return masked_result;
-        };
-
-        switch (m_cycle) {
-        case 2: {
-            if constexpr (operand == COperand2::Memory) {
-                z = bus_read_fn(get_rp(RegisterPair::HL));
-            } else {
-                a = do_add(a, get_register(operand),
-                           with_carry ? static_cast<uint8_t>(alu_flags.cy) : 0);
-                fetch(program_counter);
-            }
-            break;
-        }
-        case 3: {
-            a = do_add(a, z, with_carry ? static_cast<uint8_t>(alu_flags.cy) : 0);
-            fetch(program_counter);
-            break;
-        }
-        default:;
-        }
-    }
-
-    template <COperand2 operand, bool with_carry> auto CPU::sub() -> void {
-        m_cycle++;
-        auto do_sbc = [this](const int32_t left, const int32_t right, int32_t cy) -> uint8_t {
-            const int32_t result = left - right - cy;
-            const auto masked_result = static_cast<uint8_t>(result & 0xFF);
-
-            alu_flags.hc = ((left & 0xF) - (right & 0xF) - (cy & 0xF)) < 0;
-            alu_flags.cy = result < 0;
-            alu_flags.z = masked_result == 0;
-            alu_flags.n = true;
-
-            return masked_result;
-        };
-
-        switch (m_cycle) {
-        case 2: {
-            if constexpr (operand == COperand2::Memory) {
-                z = bus_read_fn(get_rp(RegisterPair::HL));
-            } else {
-                a = do_sbc(a, get_register(operand),
-                           with_carry ? static_cast<uint8_t>(alu_flags.cy) : 0);
-                fetch(program_counter);
-            }
-            break;
-        }
-        case 3: {
-            a = do_sbc(a, z, with_carry ? static_cast<uint8_t>(alu_flags.cy) : 0);
-            fetch(program_counter);
-            break;
-        }
-        default:;
-        }
-    }
-
     template <COperand2 operand, bool with_carry> auto CPU::adc() -> void {
         const int32_t left = a;
         const int32_t right = (operand == COperand2::Memory) ? z : get_register(operand);
@@ -792,46 +754,90 @@ namespace GB {
         alu_flags.cy = result < 0;
         alu_flags.z = masked_result == 0;
         alu_flags.n = true;
+
+        a = masked_result;
     }
 
-    template <BusAction act, typename F> auto CPU::alu_operation(F &&fn) -> void {
+    template <COperand2 operand> auto CPU::and_op() -> void {
+        const int32_t left = a;
+        const int32_t right = operand == COperand2::Memory ? z : get_register(operand);
+        const int32_t result = left & right;
+
+        alu_flags.hc = true;
+        alu_flags.cy = false;
+        alu_flags.z = result == 0;
+        alu_flags.n = false;
+
+        a = static_cast<uint8_t>(result & 0xFF);
+    }
+
+    template <COperand2 operand> auto CPU::xor_op() -> void {
+        const int32_t left = a;
+        const int32_t right = operand == COperand2::Memory ? z : get_register(operand);
+        const int32_t result = left ^ right;
+
+        alu_flags.hc = false;
+        alu_flags.cy = false;
+        alu_flags.z = result == 0;
+        alu_flags.n = false;
+
+        a = static_cast<uint8_t>(result & 0xFF);
+    }
+
+    template <COperand2 operand> auto CPU::or_op() -> void {
+        const int32_t left = a;
+        const int32_t right = operand == COperand2::Memory ? z : get_register(operand);
+        const int32_t result = left | right;
+
+        alu_flags.hc = false;
+        alu_flags.cy = false;
+        alu_flags.z = result == 0;
+        alu_flags.n = false;
+
+        a = static_cast<uint8_t>(result & 0xFF);
+    }
+
+    template <COperand2 operand> auto CPU::cp() -> void {
+        const uint8_t temp = a;
+        sbc<operand, false>();
+        a = temp;
+    }
+
+    template <typename Fn> auto CPU::immediate_addr(Fn &&func) -> void {
+        m_cycle++;
+        (this->*func)();
+        fetch(program_counter);
+    }
+
+    template <typename Fn> auto CPU::mem_read_addr(Fn &&func) -> void {
         m_cycle++;
 
-        switch (act) {
-        case BusAction::None: {
-            (this->*fn)();
+        switch (m_cycle) {
+        case 2: {
+            z = bus_read_fn(get_rp(RegisterPair::HL));
+            break;
+        }
+        case 3: {
+            (this->*func)();
             fetch(program_counter);
-            return;
+            break;
         }
-        case BusAction::ReadOpSrc: {
-            switch (m_cycle) {
-            case 2: {
-                z = bus_read_fn(get_rp(RegisterPair::HL));
-                break;
-            }
-            case 3: {
-                (this->*fn)();
-                fetch(program_counter);
-                break;
-            }
-            default:;
-            }
+        default:;
+        }
+    }
 
-            return;
+    template <typename Fn> auto CPU::mem_write_addr(Fn &&func) -> void {
+        m_cycle++;
+        switch (m_cycle) {
+        case 2: {
+            bus_write_fn(get_rp(RegisterPair::HL), (this->*func)());
+            break;
         }
-        case BusAction::WriteOpResult: {
-            switch (m_cycle) {
-            case 2: {
-                bus_write_fn(get_rp(RegisterPair::HL), (this->*fn)());
-                break;
-            }
-            case 3: {
-                fetch(program_counter);
-                break;
-            }
-            default:;
-            }
+        case 3: {
+            fetch(program_counter);
+            break;
         }
+        default:;
         }
     }
 

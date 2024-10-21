@@ -199,9 +199,15 @@ TEST_CASE("ld r,r") {
     BATCH_RUN_TESTS(0x40, 0x7F)
 }
 
-TEST_CASE("add/adc") { BATCH_RUN_TESTS(0x80, 0x8F) }
+TEST_CASE("add/adc"){BATCH_RUN_TESTS(0x80, 0x8F)}
 
-TEST_CASE("sub/sbc") { BATCH_RUN_TESTS(0x90, 0x9F) }
+TEST_CASE("sub/sbc"){BATCH_RUN_TESTS(0x90, 0x9F)}
+
+TEST_CASE("and/xor"){BATCH_RUN_TESTS(0xA0, 0xAF)}
+
+TEST_CASE("or/cp") {
+    BATCH_RUN_TESTS(0xB0, 0xBF)
+}
 
 int main(const int argc, char *argv[]) {
     const int result = Catch::Session().run(argc, argv);
