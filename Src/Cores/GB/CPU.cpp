@@ -64,6 +64,7 @@ namespace GB {
         case 0x15: immediate_addr(&CPU::dec_r<COperand2::D>); return;
         case 0x16: ld_immediate<COperand2::D>(); return;
         case 0x17: rla(); return;
+        case 0x18: jr<ConditionCode::Always, false>(); return;
         case 0x19: add_hl_rp<RegisterPair::DE>(); return;
         case 0x1A: ld_accumulator_indirect<COperand3::DE>(); return;
         case 0x1B: adjust_rp<RegisterPair::DE, -1>(); return;
@@ -72,6 +73,7 @@ namespace GB {
         case 0x1E: ld_immediate<COperand2::E>(); return;
         case 0x1F: rra(); return;
 
+        case 0x20: jr<ConditionCode::IfZero, false>(); return;
         case 0x21: ld_rp_immediate<RegisterPair::HL>(); return;
         case 0x22: ld_indirect_accumulator<COperand3::HLIncrement>(); return;
         case 0x23: adjust_rp<RegisterPair::HL, 1>(); return;
@@ -79,6 +81,7 @@ namespace GB {
         case 0x25: immediate_addr(&CPU::dec_r<COperand2::H>); return;
         case 0x26: ld_immediate<COperand2::H>(); return;
         case 0x27: daa(); return;
+        case 0x28: jr<ConditionCode::IfZero, true>(); return;
         case 0x29: add_hl_rp<RegisterPair::HL>(); return;
         case 0x2A: ld_accumulator_indirect<COperand3::HLIncrement>(); return;
         case 0x2B: adjust_rp<RegisterPair::HL, -1>(); return;
@@ -87,6 +90,7 @@ namespace GB {
         case 0x2E: ld_immediate<COperand2::L>(); return;
         case 0x2F: cpl(); return;
 
+        case 0x30: jr<ConditionCode::IfCarry, false>(); return;
         case 0x31: ld_rp_immediate<RegisterPair::SP>(); return;
         case 0x32: ld_indirect_accumulator<COperand3::HLDecrement>(); return;
         case 0x33: adjust_rp<RegisterPair::SP, 1>(); return;
@@ -94,6 +98,7 @@ namespace GB {
         case 0x35: read_modify_write(&CPU::dec_r<COperand2::Memory>); return;
         case 0x36: ld_immediate<COperand2::Memory>(); return;
         case 0x37: scf(); return;
+        case 0x38: jr<ConditionCode::IfCarry, true>(); return;
         case 0x39: add_hl_rp<RegisterPair::SP>(); return;
         case 0x3A: ld_accumulator_indirect<COperand3::HLDecrement>(); return;
         case 0x3B: adjust_rp<RegisterPair::SP, -1>(); return;
@@ -1098,6 +1103,56 @@ namespace GB {
         alu_flags.hc = false;
         alu_flags.cy = !alu_flags.cy;
         fetch(program_counter);
+    }
+
+    template <ConditionCode cc, bool is_set> auto CPU::jr() -> void {
+        m_cycle++;
+
+        auto calc_address = [this]() {
+            const int32_t pcl = (program_counter & 0xFF);
+            const int32_t result = z + pcl;
+            const bool cy = result > 0xFF;
+
+            w = (z & 0x80) ? 255 : 0;
+            z = static_cast<uint8_t>(result & 0xFF);
+            w += static_cast<uint8_t>(program_counter >> 8) + static_cast<uint8_t>(cy);
+        };
+
+        switch (m_cycle) {
+        case 2: {
+            z = bus_read_fn(program_counter++);
+            break;
+        }
+        case 3: {
+            if constexpr (cc == ConditionCode::Always) {
+                calc_address();
+            }
+
+            if constexpr (cc == ConditionCode::IfZero) {
+                if (alu_flags.z == is_set) {
+                    calc_address();
+                } else {
+                    fetch(program_counter);
+                }
+            }
+
+            if constexpr (cc == ConditionCode::IfCarry) {
+                if (alu_flags.cy == is_set) {
+                    calc_address();
+                } else {
+                    fetch(program_counter);
+                }
+            }
+
+            break;
+        }
+
+        case 4: {
+            fetch((w << 8) | z);
+            break;
+        }
+        default:;
+        }
     }
 
     template <typename Fn> auto CPU::immediate_addr(Fn &&func) -> void {

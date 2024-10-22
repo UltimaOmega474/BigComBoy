@@ -274,6 +274,14 @@ TEST_CASE("1byte bit ops") {
     run_test(0x3F);
 }
 
+TEST_CASE("jr i8/jr cc, i8") {
+    run_test(0x18);
+    run_test(0x20);
+    run_test(0x28);
+    run_test(0x30);
+    run_test(0x38);
+}
+
 int main(const int argc, char *argv[]) {
     const int result = Catch::Session().run(argc, argv);
     return result;

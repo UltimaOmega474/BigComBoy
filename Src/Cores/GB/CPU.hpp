@@ -41,6 +41,12 @@ namespace GB {
         HLDecrement,
     };
 
+    enum class ConditionCode {
+        Always,
+        IfZero,
+        IfCarry,
+    };
+
     enum class MemRead { HL, PC };
 
     class CPU {
@@ -120,6 +126,8 @@ namespace GB {
         auto cpl() -> void;
         auto scf() -> void;
         auto ccf() -> void;
+
+        template<ConditionCode cc, bool is_set> auto jr() -> void;
 
         template <typename Fn> auto immediate_addr(Fn &&) -> void;
         template <MemRead address, typename Fn> auto mem_read_addr(Fn &&) -> void;
