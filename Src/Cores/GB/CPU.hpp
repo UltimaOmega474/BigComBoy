@@ -41,6 +41,8 @@ namespace GB {
         HLDecrement,
     };
 
+    enum class MemRead { HL, PC };
+
     class CPU {
     public:
         uint8_t b = 0;
@@ -98,8 +100,7 @@ namespace GB {
         auto ldh_c_a() -> void;
         auto ldh_a_c() -> void;
 
-
-        template<RegisterPair src> auto add_hl_rp() -> void;
+        template <RegisterPair src> auto add_hl_rp() -> void;
         auto add_sp_i8() -> void;
         template <COperand2 operand, bool with_carry> auto adc() -> void;
         template <COperand2 operand, bool with_carry> auto sbc() -> void;
@@ -107,9 +108,9 @@ namespace GB {
         template <COperand2 operand> auto xor_op() -> void;
         template <COperand2 operand> auto or_op() -> void;
         template <COperand2 operand> auto cp() -> void;
-        template<COperand2 operand> auto inc_r() -> void;
-        template<COperand2 operand> auto dec_r() -> void;
-        template<RegisterPair rp, int32_t adjustment> auto adjust_rp() -> void;
+        template <COperand2 operand> auto inc_r() -> void;
+        template <COperand2 operand> auto dec_r() -> void;
+        template <RegisterPair rp, int32_t adjustment> auto adjust_rp() -> void;
 
         auto rlca() -> void;
         auto rrca() -> void;
@@ -120,10 +121,10 @@ namespace GB {
         auto scf() -> void;
         auto ccf() -> void;
 
-        template <typename Fn> auto immediate_addr(Fn&&) -> void;
-        template<typename Fn> auto mem_read_addr(Fn&&) -> void;
-        template<typename Fn> auto mem_write_addr(Fn&&) -> void;
-        template<typename Fn> auto read_modify_write(Fn&&) -> void;
+        template <typename Fn> auto immediate_addr(Fn &&) -> void;
+        template <MemRead address, typename Fn> auto mem_read_addr(Fn &&) -> void;
+        template <typename Fn> auto mem_write_addr(Fn &&) -> void;
+        template <typename Fn> auto read_modify_write(Fn &&) -> void;
 
         struct {
             bool cy = false;

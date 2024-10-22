@@ -220,6 +220,17 @@ TEST_CASE("or/cp") {
     BATCH_RUN_TESTS(0xB0, 0xBF)
 }
 
+TEST_CASE("add/adc/sub/sbc/and/xor/or/cp a, u8") {
+    run_test(0xC6);
+    run_test(0xCE);
+    run_test(0xD6);
+    run_test(0xDE);
+    run_test(0xE6);
+    run_test(0xEE);
+    run_test(0xF6);
+    run_test(0xFE);
+}
+
 TEST_CASE("inc rp/dec rp") {
     run_test(0x03);
     run_test(0x13);

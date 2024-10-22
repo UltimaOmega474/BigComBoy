@@ -176,7 +176,7 @@ namespace GB {
         case 0x83: immediate_addr(&CPU::adc<COperand2::E, false>); return;
         case 0x84: immediate_addr(&CPU::adc<COperand2::H, false>); return;
         case 0x85: immediate_addr(&CPU::adc<COperand2::L, false>); return;
-        case 0x86: mem_read_addr(&CPU::adc<COperand2::Memory, false>); return;
+        case 0x86: mem_read_addr<MemRead::HL>(&CPU::adc<COperand2::Memory, false>); return;
         case 0x87: immediate_addr(&CPU::adc<COperand2::A, false>); return;
         case 0x88: immediate_addr(&CPU::adc<COperand2::B, true>); return;
         case 0x89: immediate_addr(&CPU::adc<COperand2::C, true>); return;
@@ -184,7 +184,7 @@ namespace GB {
         case 0x8B: immediate_addr(&CPU::adc<COperand2::E, true>); return;
         case 0x8C: immediate_addr(&CPU::adc<COperand2::H, true>); return;
         case 0x8D: immediate_addr(&CPU::adc<COperand2::L, true>); return;
-        case 0x8E: mem_read_addr(&CPU::adc<COperand2::Memory, true>); return;
+        case 0x8E: mem_read_addr<MemRead::HL>(&CPU::adc<COperand2::Memory, true>); return;
         case 0x8F: immediate_addr(&CPU::adc<COperand2::A, true>); return;
 
         case 0x90: immediate_addr(&CPU::sbc<COperand2::B, false>); return;
@@ -193,7 +193,7 @@ namespace GB {
         case 0x93: immediate_addr(&CPU::sbc<COperand2::E, false>); return;
         case 0x94: immediate_addr(&CPU::sbc<COperand2::H, false>); return;
         case 0x95: immediate_addr(&CPU::sbc<COperand2::L, false>); return;
-        case 0x96: mem_read_addr(&CPU::sbc<COperand2::Memory, false>); return;
+        case 0x96: mem_read_addr<MemRead::HL>(&CPU::sbc<COperand2::Memory, false>); return;
         case 0x97: immediate_addr(&CPU::sbc<COperand2::A, false>); return;
         case 0x98: immediate_addr(&CPU::sbc<COperand2::B, true>); return;
         case 0x99: immediate_addr(&CPU::sbc<COperand2::C, true>); return;
@@ -201,7 +201,7 @@ namespace GB {
         case 0x9B: immediate_addr(&CPU::sbc<COperand2::E, true>); return;
         case 0x9C: immediate_addr(&CPU::sbc<COperand2::H, true>); return;
         case 0x9D: immediate_addr(&CPU::sbc<COperand2::L, true>); return;
-        case 0x9E: mem_read_addr(&CPU::sbc<COperand2::Memory, true>); return;
+        case 0x9E: mem_read_addr<MemRead::HL>(&CPU::sbc<COperand2::Memory, true>); return;
         case 0x9F: immediate_addr(&CPU::sbc<COperand2::A, true>); return;
 
         case 0xA0: immediate_addr(&CPU::and_op<COperand2::B>); return;
@@ -210,7 +210,7 @@ namespace GB {
         case 0xA3: immediate_addr(&CPU::and_op<COperand2::E>); return;
         case 0xA4: immediate_addr(&CPU::and_op<COperand2::H>); return;
         case 0xA5: immediate_addr(&CPU::and_op<COperand2::L>); return;
-        case 0xA6: mem_read_addr(&CPU::and_op<COperand2::Memory>); return;
+        case 0xA6: mem_read_addr<MemRead::HL>(&CPU::and_op<COperand2::Memory>); return;
         case 0xA7: immediate_addr(&CPU::and_op<COperand2::A>); return;
         case 0xA8: immediate_addr(&CPU::xor_op<COperand2::B>); return;
         case 0xA9: immediate_addr(&CPU::xor_op<COperand2::C>); return;
@@ -218,7 +218,7 @@ namespace GB {
         case 0xAB: immediate_addr(&CPU::xor_op<COperand2::E>); return;
         case 0xAC: immediate_addr(&CPU::xor_op<COperand2::H>); return;
         case 0xAD: immediate_addr(&CPU::xor_op<COperand2::L>); return;
-        case 0xAE: mem_read_addr(&CPU::xor_op<COperand2::Memory>); return;
+        case 0xAE: mem_read_addr<MemRead::HL>(&CPU::xor_op<COperand2::Memory>); return;
         case 0xAF: immediate_addr(&CPU::xor_op<COperand2::A>); return;
 
         case 0xB0: immediate_addr(&CPU::or_op<COperand2::B>); return;
@@ -227,7 +227,7 @@ namespace GB {
         case 0xB3: immediate_addr(&CPU::or_op<COperand2::E>); return;
         case 0xB4: immediate_addr(&CPU::or_op<COperand2::H>); return;
         case 0xB5: immediate_addr(&CPU::or_op<COperand2::L>); return;
-        case 0xB6: mem_read_addr(&CPU::or_op<COperand2::Memory>); return;
+        case 0xB6: mem_read_addr<MemRead::HL>(&CPU::or_op<COperand2::Memory>); return;
         case 0xB7: immediate_addr(&CPU::or_op<COperand2::A>); return;
         case 0xB8: immediate_addr(&CPU::cp<COperand2::B>); return;
         case 0xB9: immediate_addr(&CPU::cp<COperand2::C>); return;
@@ -235,33 +235,42 @@ namespace GB {
         case 0xBB: immediate_addr(&CPU::cp<COperand2::E>); return;
         case 0xBC: immediate_addr(&CPU::cp<COperand2::H>); return;
         case 0xBD: immediate_addr(&CPU::cp<COperand2::L>); return;
-        case 0xBE: mem_read_addr(&CPU::cp<COperand2::Memory>); return;
+        case 0xBE: mem_read_addr<MemRead::HL>(&CPU::cp<COperand2::Memory>); return;
         case 0xBF: immediate_addr(&CPU::cp<COperand2::A>); return;
 
+        case 0xC6: mem_read_addr<MemRead::PC>(&CPU::adc<COperand2::Memory, false>); return;
+        case 0xCE: mem_read_addr<MemRead::PC>(&CPU::adc<COperand2::Memory, true>); return;
+
         case 0xD3: illegal(); return;
+        case 0xD6: mem_read_addr<MemRead::PC>(&CPU::sbc<COperand2::Memory, false>); return;
         case 0xDB: illegal(); return;
         case 0xDD: illegal(); return;
+        case 0xDE: mem_read_addr<MemRead::PC>(&CPU::sbc<COperand2::Memory, true>); return;
 
         case 0xE0: ldh_offset_a(); return;
         case 0xE2: ldh_c_a(); return;
         case 0xE3:
         case 0xE4: illegal(); return;
+        case 0xE6: mem_read_addr<MemRead::PC>(&CPU::and_op<COperand2::Memory>); return;
         case 0xE8: add_sp_i8(); return;
         case 0xEA: ld_direct_a(); return;
         case 0xEB:
         case 0xEC:
         case 0xED: illegal(); return;
+        case 0xEE: mem_read_addr<MemRead::PC>(&CPU::xor_op<COperand2::Memory>); return;
 
         case 0xF0: ldh_a_offset(); return;
         case 0xF2: ldh_a_c(); return;
         case 0xF3: di(); return;
         case 0xF4: illegal(); return;
+        case 0xF6: mem_read_addr<MemRead::PC>(&CPU::or_op<COperand2::Memory>); return;
         case 0xF8: ld_hl_sp_i8(); return;
         case 0xF9: ld_sp_hl(); return;
         case 0xFA: ld_a_direct(); return;
         case 0xFB: ei(); return;
         case 0xFC:
         case 0xFD: illegal(); return;
+        case 0xFE: mem_read_addr<MemRead::PC>(&CPU::cp<COperand2::Memory>); return;
 
         default: throw "Unknown opcode";
         }
@@ -1097,12 +1106,16 @@ namespace GB {
         fetch(program_counter);
     }
 
-    template <typename Fn> auto CPU::mem_read_addr(Fn &&func) -> void {
+    template <MemRead address, typename Fn> auto CPU::mem_read_addr(Fn &&func) -> void {
         m_cycle++;
 
         switch (m_cycle) {
         case 2: {
-            z = bus_read_fn(get_rp(RegisterPair::HL));
+            if constexpr (address == MemRead::PC) {
+                z = bus_read_fn(program_counter++);
+            } else {
+                z = bus_read_fn(get_rp(RegisterPair::HL));
+            }
             break;
         }
         case 3: {
