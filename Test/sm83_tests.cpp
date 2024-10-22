@@ -199,6 +199,17 @@ TEST_CASE("ld r,r") {
     BATCH_RUN_TESTS(0x40, 0x7F)
 }
 
+TEST_CASE("add hl, rp") {
+    run_test(0x09);
+    run_test(0x19);
+    run_test(0x29);
+    run_test(0x39);
+}
+
+TEST_CASE("add sp, i8") {
+    run_test(0xE8);
+}
+
 TEST_CASE("add/adc"){BATCH_RUN_TESTS(0x80, 0x8F)}
 
 TEST_CASE("sub/sbc"){BATCH_RUN_TESTS(0x90, 0x9F)}

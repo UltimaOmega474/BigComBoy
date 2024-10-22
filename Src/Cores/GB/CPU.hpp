@@ -74,7 +74,12 @@ namespace GB {
 
         auto fetch(uint16_t where) -> void;
         auto nop() -> void;
+        auto stop() -> void;
         auto halt() -> void;
+        auto illegal() -> void;
+        auto ei() -> void;
+        auto di() -> void;
+
         template <COperand2 dst, COperand2 src> auto ld() -> void;
         auto op_ld_r_indirect(uint16_t address) -> void;
         template <COperand2 reg> auto ld_immediate() -> void;
@@ -93,6 +98,9 @@ namespace GB {
         auto ldh_c_a() -> void;
         auto ldh_a_c() -> void;
 
+
+        template<RegisterPair src> auto add_hl_rp() -> void;
+        auto add_sp_i8() -> void;
         template <COperand2 operand, bool with_carry> auto adc() -> void;
         template <COperand2 operand, bool with_carry> auto sbc() -> void;
         template <COperand2 operand> auto and_op() -> void;

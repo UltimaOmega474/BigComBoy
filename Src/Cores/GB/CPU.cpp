@@ -48,6 +48,7 @@ namespace GB {
         case 0x06: ld_immediate<COperand2::B>(); return;
         case 0x07: rlca(); return;
         case 0x08: ld_direct_sp(); return;
+        case 0x09: add_hl_rp<RegisterPair::BC>(); return;
         case 0x0A: ld_accumulator_indirect<COperand3::BC>(); return;
         case 0x0B: adjust_rp<RegisterPair::BC, -1>(); return;
         case 0x0C: immediate_addr(&CPU::inc_r<COperand2::C>); return;
@@ -55,6 +56,7 @@ namespace GB {
         case 0x0E: ld_immediate<COperand2::C>(); return;
         case 0x0F: rrca(); return;
 
+        case 0x10: stop(); return;
         case 0x11: ld_rp_immediate<RegisterPair::DE>(); return;
         case 0x12: ld_indirect_accumulator<COperand3::DE>(); return;
         case 0x13: adjust_rp<RegisterPair::DE, 1>(); return;
@@ -62,6 +64,7 @@ namespace GB {
         case 0x15: immediate_addr(&CPU::dec_r<COperand2::D>); return;
         case 0x16: ld_immediate<COperand2::D>(); return;
         case 0x17: rla(); return;
+        case 0x19: add_hl_rp<RegisterPair::DE>(); return;
         case 0x1A: ld_accumulator_indirect<COperand3::DE>(); return;
         case 0x1B: adjust_rp<RegisterPair::DE, -1>(); return;
         case 0x1C: immediate_addr(&CPU::inc_r<COperand2::E>); return;
@@ -76,6 +79,7 @@ namespace GB {
         case 0x25: immediate_addr(&CPU::dec_r<COperand2::H>); return;
         case 0x26: ld_immediate<COperand2::H>(); return;
         case 0x27: daa(); return;
+        case 0x29: add_hl_rp<RegisterPair::HL>(); return;
         case 0x2A: ld_accumulator_indirect<COperand3::HLIncrement>(); return;
         case 0x2B: adjust_rp<RegisterPair::HL, -1>(); return;
         case 0x2C: immediate_addr(&CPU::inc_r<COperand2::L>); return;
@@ -90,6 +94,7 @@ namespace GB {
         case 0x35: read_modify_write(&CPU::dec_r<COperand2::Memory>); return;
         case 0x36: ld_immediate<COperand2::Memory>(); return;
         case 0x37: scf(); return;
+        case 0x39: add_hl_rp<RegisterPair::SP>(); return;
         case 0x3A: ld_accumulator_indirect<COperand3::HLDecrement>(); return;
         case 0x3B: adjust_rp<RegisterPair::SP, -1>(); return;
         case 0x3C: immediate_addr(&CPU::inc_r<COperand2::A>); return;
@@ -233,15 +238,30 @@ namespace GB {
         case 0xBE: mem_read_addr(&CPU::cp<COperand2::Memory>); return;
         case 0xBF: immediate_addr(&CPU::cp<COperand2::A>); return;
 
+        case 0xD3: illegal(); return;
+        case 0xDB: illegal(); return;
+        case 0xDD: illegal(); return;
+
         case 0xE0: ldh_offset_a(); return;
         case 0xE2: ldh_c_a(); return;
+        case 0xE3:
+        case 0xE4: illegal(); return;
+        case 0xE8: add_sp_i8(); return;
         case 0xEA: ld_direct_a(); return;
+        case 0xEB:
+        case 0xEC:
+        case 0xED: illegal(); return;
 
         case 0xF0: ldh_a_offset(); return;
         case 0xF2: ldh_a_c(); return;
+        case 0xF3: di(); return;
+        case 0xF4: illegal(); return;
         case 0xF8: ld_hl_sp_i8(); return;
         case 0xF9: ld_sp_hl(); return;
         case 0xFA: ld_a_direct(); return;
+        case 0xFB: ei(); return;
+        case 0xFC:
+        case 0xFD: illegal(); return;
 
         default: throw "Unknown opcode";
         }
@@ -348,10 +368,26 @@ namespace GB {
         m_cycle++;
         fetch(program_counter);
     }
+    auto CPU::stop() -> void {
+        m_cycle++;
+        // TODO: implement this again
+    }
 
     auto CPU::halt() -> void {
         m_cycle++;
-        fetch(program_counter);
+        // TODO: implement this again
+    }
+    auto CPU::illegal() -> void {
+        m_cycle = 2;
+        // never fetches
+    }
+
+    auto CPU::ei() -> void {
+        // TODO: implement this again
+    }
+
+    auto CPU::di() -> void {
+        // TODO: implement this again
     }
 
     template <COperand2 dst, COperand2 src> auto CPU::ld() -> void {
@@ -660,15 +696,22 @@ namespace GB {
             break;
         }
         case 3: {
-            const uint16_t result = stack_pointer + static_cast<int8_t>(z);
-            set_rp(RegisterPair::HL, result);
-            alu_flags.hc = ((stack_pointer & 0xF) + (z & 0xF)) > 0xF;
-            alu_flags.cy = ((stack_pointer & 0xFF) + (z & 0xFF)) > 0xFF;
+            w = (z & 0x80) ? 255 : 0;
+
+            const int32_t spl = (stack_pointer & 0xFF);
+            const int32_t result = z + spl;
+
+            alu_flags.hc = ((z & 0xF) + (spl & 0xF)) > 0xF;
+            alu_flags.cy = result > 0xFF;
             alu_flags.n = false;
             alu_flags.z = false;
+            z = static_cast<uint8_t>(result & 0xFF);
+
             break;
         }
         case 4: {
+            w += static_cast<uint8_t>(stack_pointer >> 8) + static_cast<uint8_t>(alu_flags.cy);
+            set_rp(RegisterPair::HL, (w << 8) | z);
             fetch(program_counter);
             break;
         }
@@ -752,6 +795,69 @@ namespace GB {
             break;
         }
         case 3: {
+            fetch(program_counter);
+            break;
+        }
+        default:;
+        }
+    }
+
+    auto CPU::add_sp_i8() -> void {
+        m_cycle++;
+
+        switch (m_cycle) {
+        case 2: {
+            z = bus_read_fn(program_counter++);
+            break;
+        }
+        case 3: {
+            w = (z & 0x80) ? 255 : 0;
+
+            const int32_t spl = (stack_pointer & 0xFF);
+            const int32_t result = z + spl;
+
+            alu_flags.hc = ((z & 0xF) + (spl & 0xF)) > 0xF;
+            alu_flags.cy = result > 0xFF;
+            alu_flags.n = false;
+            alu_flags.z = false;
+            z = static_cast<uint8_t>(result & 0xFF);
+            break;
+        }
+        case 4: {
+            w += static_cast<uint8_t>(stack_pointer >> 8) + static_cast<uint8_t>(alu_flags.cy);
+            break;
+        }
+        case 5: {
+            stack_pointer = (w << 8) | z;
+            fetch(program_counter);
+            break;
+        }
+        default:;
+        }
+    }
+
+    template <RegisterPair src> auto CPU::add_hl_rp() -> void {
+        m_cycle++;
+        auto add_8bit = [this](const int32_t left, const int32_t right,
+                               const int32_t cy) -> uint8_t {
+            const int32_t result = left + right + cy;
+            const auto masked_result = static_cast<uint8_t>(result & 0xFF);
+
+            alu_flags.hc = ((left & 0xF) + (right & 0xF) + (cy & 0xF)) > 0xF;
+            alu_flags.cy = result > 0xFF;
+            alu_flags.n = false;
+            return masked_result;
+        };
+
+        switch (m_cycle) {
+        case 2: {
+            const auto rp = get_rp(src);
+            l = add_8bit(l, rp & 0xFF, 0);
+            break;
+        }
+        case 3: {
+            const auto rp = get_rp(src);
+            h = add_8bit(h, rp >> 8, alu_flags.cy);
             fetch(program_counter);
             break;
         }
