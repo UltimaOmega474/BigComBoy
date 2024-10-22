@@ -209,6 +209,49 @@ TEST_CASE("or/cp") {
     BATCH_RUN_TESTS(0xB0, 0xBF)
 }
 
+TEST_CASE("inc rp/dec rp") {
+    run_test(0x03);
+    run_test(0x13);
+    run_test(0x23);
+    run_test(0x33);
+
+    run_test(0x0B);
+    run_test(0x1B);
+    run_test(0x2B);
+    run_test(0x3B);
+}
+
+TEST_CASE("inc r/dec r") {
+    run_test(0x04);
+    run_test(0x0C);
+    run_test(0x14);
+    run_test(0x1C);
+    run_test(0x24);
+    run_test(0x2C);
+    run_test(0x34);
+    run_test(0x3C);
+
+    run_test(0x05);
+    run_test(0x0D);
+    run_test(0x15);
+    run_test(0x1D);
+    run_test(0x25);
+    run_test(0x2D);
+    run_test(0x35);
+    run_test(0x3D);
+}
+
+TEST_CASE("1byte bit ops") {
+    run_test(0x07);
+    run_test(0x0F);
+    run_test(0x17);
+    run_test(0x1F);
+    run_test(0x27);
+    run_test(0x2F);
+    run_test(0x37);
+    run_test(0x3F);
+}
+
 int main(const int argc, char *argv[]) {
     const int result = Catch::Session().run(argc, argv);
     return result;

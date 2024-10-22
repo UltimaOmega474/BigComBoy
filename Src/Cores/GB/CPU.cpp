@@ -42,28 +42,60 @@ namespace GB {
         case 0x00: nop(); return;
         case 0x01: ld_rp_immediate<RegisterPair::BC>(); return;
         case 0x02: ld_indirect_accumulator<COperand3::BC>(); return;
+        case 0x03: adjust_rp<RegisterPair::BC, 1>(); return;
+        case 0x04: immediate_addr(&CPU::inc_r<COperand2::B>); return;
+        case 0x05: immediate_addr(&CPU::dec_r<COperand2::B>); return;
         case 0x06: ld_immediate<COperand2::B>(); return;
+        case 0x07: rlca(); return;
         case 0x08: ld_direct_sp(); return;
         case 0x0A: ld_accumulator_indirect<COperand3::BC>(); return;
+        case 0x0B: adjust_rp<RegisterPair::BC, -1>(); return;
+        case 0x0C: immediate_addr(&CPU::inc_r<COperand2::C>); return;
+        case 0x0D: immediate_addr(&CPU::dec_r<COperand2::C>); return;
         case 0x0E: ld_immediate<COperand2::C>(); return;
+        case 0x0F: rrca(); return;
 
         case 0x11: ld_rp_immediate<RegisterPair::DE>(); return;
         case 0x12: ld_indirect_accumulator<COperand3::DE>(); return;
+        case 0x13: adjust_rp<RegisterPair::DE, 1>(); return;
+        case 0x14: immediate_addr(&CPU::inc_r<COperand2::D>); return;
+        case 0x15: immediate_addr(&CPU::dec_r<COperand2::D>); return;
         case 0x16: ld_immediate<COperand2::D>(); return;
+        case 0x17: rla(); return;
         case 0x1A: ld_accumulator_indirect<COperand3::DE>(); return;
+        case 0x1B: adjust_rp<RegisterPair::DE, -1>(); return;
+        case 0x1C: immediate_addr(&CPU::inc_r<COperand2::E>); return;
+        case 0x1D: immediate_addr(&CPU::dec_r<COperand2::E>); return;
         case 0x1E: ld_immediate<COperand2::E>(); return;
+        case 0x1F: rra(); return;
 
         case 0x21: ld_rp_immediate<RegisterPair::HL>(); return;
         case 0x22: ld_indirect_accumulator<COperand3::HLIncrement>(); return;
+        case 0x23: adjust_rp<RegisterPair::HL, 1>(); return;
+        case 0x24: immediate_addr(&CPU::inc_r<COperand2::H>); return;
+        case 0x25: immediate_addr(&CPU::dec_r<COperand2::H>); return;
         case 0x26: ld_immediate<COperand2::H>(); return;
+        case 0x27: daa(); return;
         case 0x2A: ld_accumulator_indirect<COperand3::HLIncrement>(); return;
+        case 0x2B: adjust_rp<RegisterPair::HL, -1>(); return;
+        case 0x2C: immediate_addr(&CPU::inc_r<COperand2::L>); return;
+        case 0x2D: immediate_addr(&CPU::dec_r<COperand2::L>); return;
         case 0x2E: ld_immediate<COperand2::L>(); return;
+        case 0x2F: cpl(); return;
 
         case 0x31: ld_rp_immediate<RegisterPair::SP>(); return;
         case 0x32: ld_indirect_accumulator<COperand3::HLDecrement>(); return;
+        case 0x33: adjust_rp<RegisterPair::SP, 1>(); return;
+        case 0x34: read_modify_write(&CPU::inc_r<COperand2::Memory>); return;
+        case 0x35: read_modify_write(&CPU::dec_r<COperand2::Memory>); return;
         case 0x36: ld_immediate<COperand2::Memory>(); return;
+        case 0x37: scf(); return;
         case 0x3A: ld_accumulator_indirect<COperand3::HLDecrement>(); return;
+        case 0x3B: adjust_rp<RegisterPair::SP, -1>(); return;
+        case 0x3C: immediate_addr(&CPU::inc_r<COperand2::A>); return;
+        case 0x3D: immediate_addr(&CPU::dec_r<COperand2::A>); return;
         case 0x3E: ld_immediate<COperand2::A>(); return;
+        case 0x3F: ccf(); return;
 
         case 0x40: ld<COperand2::B, COperand2::B>(); return;
         case 0x41: ld<COperand2::B, COperand2::C>(); return;
@@ -300,6 +332,7 @@ namespace GB {
         case COperand2::E: e = value; return;
         case COperand2::H: h = value; return;
         case COperand2::L: l = value; return;
+        case COperand2::Memory: z = value; return;
         case COperand2::A: a = value; return;
         default:;
         }
@@ -803,6 +836,155 @@ namespace GB {
         a = temp;
     }
 
+    template <COperand2 operand> auto CPU::inc_r() -> void {
+        auto op = operand;
+        const int32_t left = (operand == COperand2::Memory) ? z : get_register(operand);
+        constexpr int32_t right = 1;
+
+        const int32_t result = left + right;
+        const auto masked_result = static_cast<uint8_t>(result & 0xFF);
+
+        alu_flags.hc = ((left & 0xF) + (right & 0xF)) > 0xF;
+        alu_flags.z = masked_result == 0;
+        alu_flags.n = false;
+        set_register(operand, masked_result);
+    }
+
+    template <COperand2 operand> auto CPU::dec_r() -> void {
+        const int32_t left = (operand == COperand2::Memory) ? z : get_register(operand);
+        constexpr int32_t right = 1;
+
+        const int32_t result = left - right;
+        const auto masked_result = static_cast<uint8_t>(result & 0xFF);
+
+        alu_flags.hc = ((left & 0xF) - (right & 0xF)) < 0;
+        alu_flags.z = masked_result == 0;
+        alu_flags.n = true;
+        set_register(operand, masked_result);
+    }
+
+    template <RegisterPair rp, int32_t adjustment> auto CPU::adjust_rp() -> void {
+        m_cycle++;
+        switch (m_cycle) {
+        case 2: {
+            set_rp(rp, get_rp(rp) + adjustment);
+            break;
+        }
+        case 3: {
+            fetch(program_counter);
+            break;
+        }
+        default:;
+        }
+    }
+
+    auto CPU::rlca() -> void {
+        m_cycle++;
+        int32_t temp = a;
+        const int32_t bit7 = (temp & 0x80) >> 7;
+
+        alu_flags.cy = static_cast<bool>(bit7);
+        alu_flags.z = false;
+        alu_flags.n = false;
+        alu_flags.hc = false;
+
+        temp = (temp << 1) | bit7;
+        a = static_cast<uint8_t>(temp & 0xFF);
+        fetch(program_counter);
+    }
+
+    auto CPU::rrca() -> void {
+        m_cycle++;
+        int32_t temp = a;
+        const int32_t bit0 = (temp & 0x01);
+
+        alu_flags.cy = static_cast<bool>(bit0);
+        alu_flags.z = false;
+        alu_flags.n = false;
+        alu_flags.hc = false;
+
+        temp = (temp >> 1) | (bit0 << 7);
+        a = static_cast<uint8_t>(temp & 0xFF);
+        fetch(program_counter);
+    }
+
+    auto CPU::rla() -> void {
+        m_cycle++;
+        const auto cy = static_cast<uint8_t>(alu_flags.cy);
+
+        alu_flags.cy = static_cast<bool>(a & 0x80);
+        alu_flags.z = false;
+        alu_flags.n = false;
+        alu_flags.hc = false;
+
+        a = (a << 1) | cy;
+        fetch(program_counter);
+    }
+
+    auto CPU::rra() -> void {
+        m_cycle++;
+        const uint8_t cy = static_cast<uint8_t>(alu_flags.cy) << 7;
+
+        alu_flags.cy = static_cast<bool>(a & 0x01);
+        alu_flags.z = false;
+        alu_flags.n = false;
+        alu_flags.hc = false;
+
+        a = (a >> 1) | cy;
+        fetch(program_counter);
+    }
+
+    auto CPU::daa() -> void {
+        // Implementation adapted from: https://ehaskins.com/2018-01-30%20Z80%20DAA/
+        m_cycle++;
+        uint8_t correct = 0;
+        auto temp = static_cast<uint16_t>(a);
+        bool cy = false;
+
+        if (alu_flags.hc || (!alu_flags.n && (temp & 0xF) > 9)) {
+            correct |= 6;
+        }
+
+        if (alu_flags.cy || (!alu_flags.n && temp > 0x99)) {
+            correct |= 0x60;
+            cy = true;
+        }
+
+        temp += alu_flags.n ? -correct : correct;
+        temp &= 0xFF;
+
+        alu_flags.z = temp == 0;
+        alu_flags.hc = false;
+        alu_flags.cy = cy;
+
+        a = static_cast<uint8_t>(temp);
+        fetch(program_counter);
+    }
+
+    auto CPU::cpl() -> void {
+        m_cycle++;
+        a = ~a;
+        alu_flags.n = true;
+        alu_flags.hc = true;
+        fetch(program_counter);
+    }
+
+    auto CPU::scf() -> void {
+        m_cycle++;
+        alu_flags.n = false;
+        alu_flags.hc = false;
+        alu_flags.cy = true;
+        fetch(program_counter);
+    }
+
+    auto CPU::ccf() -> void {
+        m_cycle++;
+        alu_flags.n = false;
+        alu_flags.hc = false;
+        alu_flags.cy = !alu_flags.cy;
+        fetch(program_counter);
+    }
+
     template <typename Fn> auto CPU::immediate_addr(Fn &&func) -> void {
         m_cycle++;
         (this->*func)();
@@ -834,6 +1016,26 @@ namespace GB {
             break;
         }
         case 3: {
+            fetch(program_counter);
+            break;
+        }
+        default:;
+        }
+    }
+
+    template <typename Fn> auto CPU::read_modify_write(Fn &&func) -> void {
+        m_cycle++;
+        switch (m_cycle) {
+        case 2: {
+            z = bus_read_fn(get_rp(RegisterPair::HL));
+            break;
+        }
+        case 3: {
+            (this->*func)();
+            bus_write_fn(get_rp(RegisterPair::HL), z);
+            break;
+        }
+        case 4: {
             fetch(program_counter);
             break;
         }

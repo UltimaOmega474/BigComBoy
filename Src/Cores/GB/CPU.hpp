@@ -99,10 +99,23 @@ namespace GB {
         template <COperand2 operand> auto xor_op() -> void;
         template <COperand2 operand> auto or_op() -> void;
         template <COperand2 operand> auto cp() -> void;
+        template<COperand2 operand> auto inc_r() -> void;
+        template<COperand2 operand> auto dec_r() -> void;
+        template<RegisterPair rp, int32_t adjustment> auto adjust_rp() -> void;
 
-        template<typename Fn> auto immediate_addr(Fn&&) -> void;
+        auto rlca() -> void;
+        auto rrca() -> void;
+        auto rla() -> void;
+        auto rra() -> void;
+        auto daa() -> void;
+        auto cpl() -> void;
+        auto scf() -> void;
+        auto ccf() -> void;
+
+        template <typename Fn> auto immediate_addr(Fn&&) -> void;
         template<typename Fn> auto mem_read_addr(Fn&&) -> void;
         template<typename Fn> auto mem_write_addr(Fn&&) -> void;
+        template<typename Fn> auto read_modify_write(Fn&&) -> void;
 
         struct {
             bool cy = false;
