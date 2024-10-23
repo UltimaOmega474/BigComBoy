@@ -128,6 +128,10 @@ namespace GB {
         auto ccf() -> void;
 
         template<ConditionCode cc, bool is_set> auto jr() -> void;
+        template<ConditionCode cc, bool is_set, bool from_hl> auto jp() -> void;
+        template<ConditionCode cc, bool is_set> auto call() -> void;
+        template<ConditionCode cc, bool is_set, bool enable_interrupts> auto ret() -> void;
+        template<uint16_t vector> auto rst() -> void;
 
         template <typename Fn> auto immediate_addr(Fn &&) -> void;
         template <MemRead address, typename Fn> auto mem_read_addr(Fn &&) -> void;

@@ -282,6 +282,15 @@ TEST_CASE("jr i8/jr cc, i8") {
     run_test(0x38);
 }
 
+TEST_CASE("jp u16/jp cc, u16/jp hl") {
+    run_test(0xC3);
+    run_test(0xC2);
+    run_test(0xCA);
+    run_test(0xD2);
+    run_test(0xDA);
+    run_test(0xE9);
+}
+
 int main(const int argc, char *argv[]) {
     const int result = Catch::Session().run(argc, argv);
     return result;

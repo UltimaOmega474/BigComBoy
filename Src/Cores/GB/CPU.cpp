@@ -243,11 +243,16 @@ namespace GB {
         case 0xBE: mem_read_addr<MemRead::HL>(&CPU::cp<COperand2::Memory>); return;
         case 0xBF: immediate_addr(&CPU::cp<COperand2::A>); return;
 
+        case 0xC2: jp<ConditionCode::IfZero, false, false>(); return;
+        case 0xC3: jp<ConditionCode::Always, false, false>(); return;
+        case 0xCA: jp<ConditionCode::IfZero, true, false>(); return;
         case 0xC6: mem_read_addr<MemRead::PC>(&CPU::adc<COperand2::Memory, false>); return;
         case 0xCE: mem_read_addr<MemRead::PC>(&CPU::adc<COperand2::Memory, true>); return;
 
+        case 0xD2: jp<ConditionCode::IfCarry, false, false>(); return;
         case 0xD3: illegal(); return;
         case 0xD6: mem_read_addr<MemRead::PC>(&CPU::sbc<COperand2::Memory, false>); return;
+        case 0xDA: jp<ConditionCode::IfCarry, true, false>(); return;
         case 0xDB: illegal(); return;
         case 0xDD: illegal(); return;
         case 0xDE: mem_read_addr<MemRead::PC>(&CPU::sbc<COperand2::Memory, true>); return;
@@ -258,6 +263,7 @@ namespace GB {
         case 0xE4: illegal(); return;
         case 0xE6: mem_read_addr<MemRead::PC>(&CPU::and_op<COperand2::Memory>); return;
         case 0xE8: add_sp_i8(); return;
+        case 0xE9: jp<ConditionCode::Always, false, true>(); return;
         case 0xEA: ld_direct_a(); return;
         case 0xEB:
         case 0xEC:
@@ -1154,6 +1160,64 @@ namespace GB {
         default:;
         }
     }
+
+    template <ConditionCode cc, bool is_set, bool from_hl> auto CPU::jp() -> void {
+        m_cycle++;
+
+        if constexpr (from_hl) {
+            fetch(get_rp(RegisterPair::HL));
+        } else {
+            switch (m_cycle) {
+            case 2: {
+                z = bus_read_fn(program_counter++);
+                break;
+            }
+            case 3: {
+                w = bus_read_fn(program_counter++);
+                break;
+            }
+            case 4: {
+                if constexpr (cc == ConditionCode::Always) {
+                    program_counter = (w << 8) | z;
+                }
+
+                if constexpr (cc == ConditionCode::IfZero) {
+                    if(alu_flags.z == is_set) {
+                        program_counter = (w << 8) | z;
+                    }
+                    else {
+                        fetch(program_counter);
+                    }
+                }
+
+                if constexpr (cc == ConditionCode::IfCarry) {
+                    if(alu_flags.cy == is_set) {
+                        program_counter = (w << 8) | z;
+                    }
+                    else {
+                        fetch(program_counter);
+                    }
+                }
+
+                break;
+            }
+            case 5: {
+                fetch(program_counter);
+                break;
+            }
+
+            default:;
+            }
+        }
+    }
+
+    template <ConditionCode cc, bool is_set> auto CPU::call() -> void {
+
+    }
+
+    template <ConditionCode cc, bool is_set, bool enable_interrupts> auto CPU::ret() -> void {}
+
+    template <uint16_t vector> auto CPU::rst() -> void {}
 
     template <typename Fn> auto CPU::immediate_addr(Fn &&func) -> void {
         m_cycle++;
