@@ -199,6 +199,17 @@ TEST_CASE("ld r,r") {
     BATCH_RUN_TESTS(0x40, 0x7F)
 }
 
+TEST_CASE("pop/push rp") {
+    run_test(0xC1);
+    run_test(0xC5);
+    run_test(0xD1);
+    run_test(0xD5);
+    run_test(0xE1);
+    run_test(0xE5);
+    run_test(0xF1);
+    run_test(0xF5);
+}
+
 TEST_CASE("add hl, rp") {
     run_test(0x09);
     run_test(0x19);

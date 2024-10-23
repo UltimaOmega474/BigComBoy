@@ -138,6 +138,9 @@ namespace GB {
         template <ConditionCode cc, bool is_set> auto ret_cc() -> void;
         auto rst() -> void;
 
+        template<RegisterPair rp> auto push() -> void;
+        template<RegisterPair rp> auto pop() -> void;
+
         template <typename Fn> auto immediate_addr(Fn &&) -> void;
         template <MemRead address, typename Fn> auto mem_read_addr(Fn &&) -> void;
         template <typename Fn> auto mem_write_addr(Fn &&) -> void;

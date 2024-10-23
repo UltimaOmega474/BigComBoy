@@ -244,23 +244,27 @@ namespace GB {
         case 0xBF: immediate_addr(&CPU::cp<COperand2::A>); return;
 
         case 0xC0: ret_cc<ConditionCode::IfZero, false>(); return;
+        case 0xC1: pop<RegisterPair::BC>(); return;
         case 0xC2: jp<ConditionCode::IfZero, false, false>(); return;
         case 0xC3: jp<ConditionCode::Always, false, false>(); return;
+        case 0xC4: call<ConditionCode::IfZero, false>(); return;
+        case 0xC5: push<RegisterPair::BC>(); return;
+        case 0xC6: mem_read_addr<MemRead::PC>(&CPU::adc<COperand2::Memory, false>); return;
         case 0xC7: rst(); return;
         case 0xC8: ret_cc<ConditionCode::IfZero, true>(); return;
         case 0xC9: ret<false>(); return;
-        case 0xC4: call<ConditionCode::IfZero, false>(); return;
         case 0xCA: jp<ConditionCode::IfZero, true, false>(); return;
-        case 0xC6: mem_read_addr<MemRead::PC>(&CPU::adc<COperand2::Memory, false>); return;
         case 0xCC: call<ConditionCode::IfZero, true>(); return;
         case 0xCD: call<ConditionCode::Always, false>(); return;
         case 0xCE: mem_read_addr<MemRead::PC>(&CPU::adc<COperand2::Memory, true>); return;
         case 0xCF: rst(); return;
 
         case 0xD0: ret_cc<ConditionCode::IfCarry, false>(); return;
+        case 0xD1: pop<RegisterPair::DE>(); return;
         case 0xD2: jp<ConditionCode::IfCarry, false, false>(); return;
         case 0xD3: illegal(); return;
         case 0xD4: call<ConditionCode::IfCarry, false>(); return;
+        case 0xD5: push<RegisterPair::DE>(); return;
         case 0xD6: mem_read_addr<MemRead::PC>(&CPU::sbc<COperand2::Memory, false>); return;
         case 0xD7: rst(); return;
         case 0xD8: ret_cc<ConditionCode::IfCarry, true>(); return;
@@ -273,9 +277,11 @@ namespace GB {
         case 0xDF: rst(); return;
 
         case 0xE0: ldh_offset_a(); return;
+        case 0xE1: pop<RegisterPair::HL>(); return;
         case 0xE2: ldh_c_a(); return;
         case 0xE3:
         case 0xE4: illegal(); return;
+        case 0xE5: push<RegisterPair::HL>(); return;
         case 0xE6: mem_read_addr<MemRead::PC>(&CPU::and_op<COperand2::Memory>); return;
         case 0xE7: rst(); return;
         case 0xE8: add_sp_i8(); return;
@@ -288,9 +294,11 @@ namespace GB {
         case 0xEF: rst(); return;
 
         case 0xF0: ldh_a_offset(); return;
+        case 0xF1: pop<RegisterPair::AF>(); return;
         case 0xF2: ldh_a_c(); return;
         case 0xF3: di(); return;
         case 0xF4: illegal(); return;
+        case 0xF5: push<RegisterPair::AF>(); return;
         case 0xF6: mem_read_addr<MemRead::PC>(&CPU::or_op<COperand2::Memory>); return;
         case 0xF7: rst(); return;
         case 0xF8: ld_hl_sp_i8(); return;
@@ -1368,6 +1376,49 @@ namespace GB {
             break;
         }
 
+        default:;
+        }
+    }
+
+    template <RegisterPair rp> auto CPU::push() -> void {
+        m_cycle++;
+        switch (m_cycle) {
+        case 2: {
+            stack_pointer--;
+            break;
+        }
+        case 3: {
+            bus_write_fn(stack_pointer--, get_rp(rp) >> 8);
+            break;
+        }
+        case 4: {
+            bus_write_fn(stack_pointer, get_rp(rp) & 0xFF);
+            break;
+        }
+        case 5: {
+            fetch(program_counter);
+            break;
+        }
+        default:;
+        }
+    }
+
+    template <RegisterPair rp> auto CPU::pop() -> void {
+        m_cycle++;
+        switch (m_cycle) {
+        case 2: {
+            z = bus_read_fn(stack_pointer++);
+            break;
+        }
+        case 3: {
+            w = bus_read_fn(stack_pointer++);
+            break;
+        }
+        case 4: {
+            set_rp(rp, (w << 8) | z);
+            fetch(program_counter);
+            break;
+        }
         default:;
         }
     }
