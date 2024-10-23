@@ -304,6 +304,17 @@ TEST_CASE("ret/reti/ret cc") {
     run_test(0xD8);
 }
 
+TEST_CASE("rst") {
+    run_test(0xC7);
+    run_test(0xCF);
+    run_test(0xD7);
+    run_test(0xDF);
+    run_test(0xE7);
+    run_test(0xEF);
+    run_test(0xF7);
+    run_test(0xFF);
+}
+
 int main(const int argc, char *argv[]) {
     const int result = Catch::Session().run(argc, argv);
     return result;

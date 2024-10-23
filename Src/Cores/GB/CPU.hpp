@@ -47,7 +47,10 @@ namespace GB {
         IfCarry,
     };
 
-    enum class MemRead { HL, PC };
+    enum class MemRead {
+        HL,
+        PC,
+    };
 
     class CPU {
     public:
@@ -128,12 +131,12 @@ namespace GB {
         auto scf() -> void;
         auto ccf() -> void;
 
-        template<ConditionCode cc, bool is_set> auto jr() -> void;
-        template<ConditionCode cc, bool is_set, bool from_hl> auto jp() -> void;
-        template<ConditionCode cc, bool is_set> auto call() -> void;
-        template<bool enable_interrupts> auto ret() -> void;
-        template<ConditionCode cc, bool is_set> auto ret_cc() -> void;
-        template<uint16_t vector> auto rst() -> void;
+        template <ConditionCode cc, bool is_set> auto jr() -> void;
+        template <ConditionCode cc, bool is_set, bool from_hl> auto jp() -> void;
+        template <ConditionCode cc, bool is_set> auto call() -> void;
+        template <bool enable_interrupts> auto ret() -> void;
+        template <ConditionCode cc, bool is_set> auto ret_cc() -> void;
+        auto rst() -> void;
 
         template <typename Fn> auto immediate_addr(Fn &&) -> void;
         template <MemRead address, typename Fn> auto mem_read_addr(Fn &&) -> void;
