@@ -291,6 +291,14 @@ TEST_CASE("jp u16/jp cc, u16/jp hl") {
     run_test(0xE9);
 }
 
+TEST_CASE("call u16/call cc, u16") {
+    run_test(0xCD);
+    run_test(0xC4);
+    run_test(0xCC);
+    run_test(0xD4);
+    run_test(0xDC);
+}
+
 int main(const int argc, char *argv[]) {
     const int result = Catch::Session().run(argc, argv);
     return result;

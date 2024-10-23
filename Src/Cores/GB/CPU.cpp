@@ -245,15 +245,20 @@ namespace GB {
 
         case 0xC2: jp<ConditionCode::IfZero, false, false>(); return;
         case 0xC3: jp<ConditionCode::Always, false, false>(); return;
+        case 0xC4: call<ConditionCode::IfZero, false>(); return;
         case 0xCA: jp<ConditionCode::IfZero, true, false>(); return;
         case 0xC6: mem_read_addr<MemRead::PC>(&CPU::adc<COperand2::Memory, false>); return;
+        case 0xCC: call<ConditionCode::IfZero, true>(); return;
+        case 0xCD: call<ConditionCode::Always, false>(); return;
         case 0xCE: mem_read_addr<MemRead::PC>(&CPU::adc<COperand2::Memory, true>); return;
 
         case 0xD2: jp<ConditionCode::IfCarry, false, false>(); return;
         case 0xD3: illegal(); return;
+        case 0xD4: call<ConditionCode::IfCarry, false>(); return;
         case 0xD6: mem_read_addr<MemRead::PC>(&CPU::sbc<COperand2::Memory, false>); return;
         case 0xDA: jp<ConditionCode::IfCarry, true, false>(); return;
         case 0xDB: illegal(); return;
+        case 0xDC: call<ConditionCode::IfCarry, true>(); return;
         case 0xDD: illegal(); return;
         case 0xDE: mem_read_addr<MemRead::PC>(&CPU::sbc<COperand2::Memory, true>); return;
 
@@ -1182,19 +1187,17 @@ namespace GB {
                 }
 
                 if constexpr (cc == ConditionCode::IfZero) {
-                    if(alu_flags.z == is_set) {
+                    if (alu_flags.z == is_set) {
                         program_counter = (w << 8) | z;
-                    }
-                    else {
+                    } else {
                         fetch(program_counter);
                     }
                 }
 
                 if constexpr (cc == ConditionCode::IfCarry) {
-                    if(alu_flags.cy == is_set) {
+                    if (alu_flags.cy == is_set) {
                         program_counter = (w << 8) | z;
-                    }
-                    else {
+                    } else {
                         fetch(program_counter);
                     }
                 }
@@ -1212,7 +1215,55 @@ namespace GB {
     }
 
     template <ConditionCode cc, bool is_set> auto CPU::call() -> void {
+        m_cycle++;
 
+        switch (m_cycle) {
+        case 2: {
+            z = bus_read_fn(program_counter++);
+            break;
+        }
+        case 3: {
+            w = bus_read_fn(program_counter++);
+            break;
+        }
+        case 4: {
+            if constexpr (cc == ConditionCode::Always) {
+                stack_pointer--;
+            }
+
+            if constexpr (cc == ConditionCode::IfZero) {
+                if (alu_flags.z == is_set) {
+                    stack_pointer--;
+                } else {
+                    fetch(program_counter);
+                }
+            }
+
+            if constexpr (cc == ConditionCode::IfCarry) {
+                if (alu_flags.cy == is_set) {
+                    stack_pointer--;
+                } else {
+                    fetch(program_counter);
+                }
+            }
+
+            break;
+        }
+        case 5: {
+            bus_write_fn(stack_pointer--, program_counter >> 8);
+            break;
+        }
+        case 6: {
+            bus_write_fn(stack_pointer, program_counter & 0xFF);
+            program_counter = (w << 8) | z;
+            break;
+        }
+        case 7: {
+            fetch(program_counter);
+            break;
+        }
+        default:;
+        }
     }
 
     template <ConditionCode cc, bool is_set, bool enable_interrupts> auto CPU::ret() -> void {}
