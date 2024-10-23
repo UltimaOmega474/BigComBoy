@@ -206,9 +206,7 @@ TEST_CASE("add hl, rp") {
     run_test(0x39);
 }
 
-TEST_CASE("add sp, i8") {
-    run_test(0xE8);
-}
+TEST_CASE("add sp, i8") { run_test(0xE8); }
 
 TEST_CASE("add/adc"){BATCH_RUN_TESTS(0x80, 0x8F)}
 
@@ -216,9 +214,7 @@ TEST_CASE("sub/sbc"){BATCH_RUN_TESTS(0x90, 0x9F)}
 
 TEST_CASE("and/xor"){BATCH_RUN_TESTS(0xA0, 0xAF)}
 
-TEST_CASE("or/cp") {
-    BATCH_RUN_TESTS(0xB0, 0xBF)
-}
+TEST_CASE("or/cp"){BATCH_RUN_TESTS(0xB0, 0xBF)}
 
 TEST_CASE("add/adc/sub/sbc/and/xor/or/cp a, u8") {
     run_test(0xC6);
@@ -297,6 +293,15 @@ TEST_CASE("call u16/call cc, u16") {
     run_test(0xCC);
     run_test(0xD4);
     run_test(0xDC);
+}
+
+TEST_CASE("ret/reti/ret cc") {
+    run_test(0xC9);
+    run_test(0xD9);
+    run_test(0xC0);
+    run_test(0xC8);
+    run_test(0xD0);
+    run_test(0xD8);
 }
 
 int main(const int argc, char *argv[]) {

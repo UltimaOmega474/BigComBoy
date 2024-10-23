@@ -59,6 +59,7 @@ namespace GB {
         uint8_t l = 0;
         uint8_t a = 0;
 
+        bool master_interrupt_enable_ = true;
         uint8_t interrupt_flag = 0;
         uint8_t interrupt_enable = 0;
         uint8_t KEY1 = 0;
@@ -130,7 +131,8 @@ namespace GB {
         template<ConditionCode cc, bool is_set> auto jr() -> void;
         template<ConditionCode cc, bool is_set, bool from_hl> auto jp() -> void;
         template<ConditionCode cc, bool is_set> auto call() -> void;
-        template<ConditionCode cc, bool is_set, bool enable_interrupts> auto ret() -> void;
+        template<bool enable_interrupts> auto ret() -> void;
+        template<ConditionCode cc, bool is_set> auto ret_cc() -> void;
         template<uint16_t vector> auto rst() -> void;
 
         template <typename Fn> auto immediate_addr(Fn &&) -> void;
