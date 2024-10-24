@@ -1005,6 +1005,34 @@ namespace GB {
         fetch(program_counter);
     }
 
+    template <COperand2 operand> auto CPU::rlc() -> void {
+        int32_t temp = (operand == COperand2::Memory) ? z : get_register(operand);
+        const int32_t bit7 = temp >> 7;
+
+        alu_flags.n = false;
+        alu_flags.hc = false;
+        alu_flags.z = temp == 0;
+        alu_flags.cy = static_cast<bool>(bit7);
+
+        temp = (temp << 1) | bit7;
+
+        set_register(operand, static_cast<uint8_t>(temp & 0xFF));
+    }
+
+    template <COperand2 operand> auto CPU::rrc() -> void {
+        int32_t temp = (operand == COperand2::Memory) ? z : get_register(operand);
+        const int32_t bit0 = (temp & 0x01) << 7;
+
+        alu_flags.n = false;
+        alu_flags.hc = false;
+        alu_flags.z = temp == 0;
+        alu_flags.cy = static_cast<bool>(temp & 0x01);
+
+        temp = (temp >> 1) | bit0;
+
+        set_register(operand, static_cast<uint8_t>(temp & 0xFF));
+    }
+
     template <ConditionCode cc, bool is_set> auto CPU::jr() -> void {
         m_cycle++;
 
@@ -1630,6 +1658,44 @@ namespace GB {
         }
     }
 
-    auto CPU::decode_execute_bitops() -> void {}
+    auto CPU::decode_execute_bitops() -> void {
+        switch (ir) {
+        case 0x00: immediate_addr(&CPU::rlc<COperand2::B>); return;
+        case 0x01: immediate_addr(&CPU::rlc<COperand2::C>); return;
+        case 0x02: immediate_addr(&CPU::rlc<COperand2::D>); return;
+        case 0x03: immediate_addr(&CPU::rlc<COperand2::E>); return;
+        case 0x04: immediate_addr(&CPU::rlc<COperand2::H>); return;
+        case 0x05: immediate_addr(&CPU::rlc<COperand2::L>); return;
+        case 0x06: read_modify_write(&CPU::rlc<COperand2::Memory>); return;
+        case 0x07: immediate_addr(&CPU::rlc<COperand2::A>); return;
+        case 0x08: immediate_addr(&CPU::rrc<COperand2::B>); return;
+        case 0x09: immediate_addr(&CPU::rrc<COperand2::C>); return;
+        case 0x0A: immediate_addr(&CPU::rrc<COperand2::D>); return;
+        case 0x0B: immediate_addr(&CPU::rrc<COperand2::E>); return;
+        case 0x0C: immediate_addr(&CPU::rrc<COperand2::H>); return;
+        case 0x0D: immediate_addr(&CPU::rrc<COperand2::L>); return;
+        case 0x0E: read_modify_write(&CPU::rrc<COperand2::Memory>); return;
+        case 0x0F: immediate_addr(&CPU::rrc<COperand2::A>); return;
+
+        case 0x10: immediate_addr(&CPU::rl<COperand2::B>); return;
+        case 0x11: immediate_addr(&CPU::rl<COperand2::C>); return;
+        case 0x12: immediate_addr(&CPU::rl<COperand2::D>); return;
+        case 0x13: immediate_addr(&CPU::rl<COperand2::E>); return;
+        case 0x14: immediate_addr(&CPU::rl<COperand2::H>); return;
+        case 0x15: immediate_addr(&CPU::rl<COperand2::L>); return;
+        case 0x16: read_modify_write(&CPU::rl<COperand2::Memory>); return;
+        case 0x17: immediate_addr(&CPU::rl<COperand2::A>); return;
+        case 0x18: immediate_addr(&CPU::rr<COperand2::B>); return;
+        case 0x19: immediate_addr(&CPU::rr<COperand2::C>); return;
+        case 0x1A: immediate_addr(&CPU::rr<COperand2::D>); return;
+        case 0x1B: immediate_addr(&CPU::rr<COperand2::E>); return;
+        case 0x1C: immediate_addr(&CPU::rr<COperand2::H>); return;
+        case 0x1D: immediate_addr(&CPU::rr<COperand2::L>); return;
+        case 0x1E: read_modify_write(&CPU::rr<COperand2::Memory>); return;
+        case 0x1F: immediate_addr(&CPU::rr<COperand2::A>); return;
+
+        default: throw "Unknown opcode";
+        }
+    }
 
 } // GB

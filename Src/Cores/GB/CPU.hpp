@@ -146,15 +146,27 @@ namespace GB {
         auto scf() -> void;
         auto ccf() -> void;
 
+        template<COperand2 operand> auto rlc() -> void;
+        template<COperand2 operand> auto rrc() -> void;
+        template<COperand2 operand> auto rl() -> void;
+        template<COperand2 operand> auto rr() -> void;
+        template<COperand2 operand> auto sla() -> void;
+        template<COperand2 operand> auto sra() -> void;
+        template<COperand2 operand> auto swap() -> void;
+        template<COperand2 operand> auto srl() -> void;
+        template<COperand2 operand, uint8_t bit_num> auto bit() -> void;
+        template<COperand2 operand, uint8_t bit_num> auto res() -> void;
+        template<COperand2 operand, uint8_t bit_num> auto set() -> void;
+
         template <ConditionCode cc, bool is_set> auto jr() -> void;
         template <ConditionCode cc, bool is_set, bool from_hl> auto jp() -> void;
         template <ConditionCode cc, bool is_set> auto call() -> void;
         template <bool enable_interrupts> auto ret() -> void;
         template <ConditionCode cc, bool is_set> auto ret_cc() -> void;
         auto rst() -> void;
-
         template <RegisterPair rp> auto push() -> void;
         template <RegisterPair rp> auto pop() -> void;
+
 
         template <typename Fn> auto immediate_addr(Fn &&) -> void;
         template <MemRead address, typename Fn> auto mem_read_addr(Fn &&) -> void;

@@ -281,6 +281,10 @@ TEST_CASE("1byte bit ops") {
     run_test(0x3F);
 }
 
+TEST_CASE("All 2byte bit ops") {
+    run_test(0xCB);
+}
+
 TEST_CASE("jr i8/jr cc, i8") {
     run_test(0x18);
     run_test(0x20);
