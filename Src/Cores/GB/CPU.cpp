@@ -20,6 +20,10 @@
 #include "Constants.hpp"
 
 namespace GB {
+    CPU::CPU(std::function<void(uint16_t, uint8_t)> bus_write_fn,
+             std::function<uint8_t(uint16_t)> bus_read_fn)
+        : bus_write_fn(std::move(bus_write_fn)), bus_read_fn(std::move(bus_read_fn)) {}
+
     auto CPU::force_next_opcode(const uint8_t opcode) -> void { ir = opcode; }
 
     auto CPU::flags() const -> uint8_t {
@@ -81,8 +85,9 @@ namespace GB {
             program_counter = new_pc;
             stack_pointer = 0xFFFE;
         }
-
     }
+
+    auto CPU::request_interrupt(uint8_t interrupt) -> void { interrupt_flag |= interrupt; }
 
     auto CPU::clock() -> void {
         // TODO: Probably need a state for HALT and STOP
@@ -98,7 +103,7 @@ namespace GB {
                 exec = ExecutionMode::Interrupt;
                 master_interrupt_enable_ = false;
                 ir = bus_read_fn(program_counter++);
-            }else {
+            } else {
                 ir = bus_read_fn(program_counter);
             }
             return;
@@ -273,9 +278,7 @@ namespace GB {
         }
     }
 
-    auto CPU::halt() -> void {
-        exec = ExecutionMode::Halted;
-    }
+    auto CPU::halt() -> void { exec = ExecutionMode::Halted; }
 
     auto CPU::illegal_instruction() -> void {
         m_cycle = 2;

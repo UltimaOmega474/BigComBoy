@@ -88,7 +88,8 @@ namespace GB {
     uint8_t Timer::read_div() { return div_cycles >> 8; }
 
     void Timer::update(int32_t cycles) {
-        if (core->cpu.stopped()) {
+        // core->cpu.stopped()
+        if (false) {
             change_div(0);
         } else {
             change_div(div_cycles + cycles);

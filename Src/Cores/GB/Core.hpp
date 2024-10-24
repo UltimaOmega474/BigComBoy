@@ -19,11 +19,11 @@
 #pragma once
 #include "APU.hpp"
 #include "Bus.hpp"
+#include "CPU.hpp"
 #include "Cartridge.hpp"
 #include "DMA.hpp"
 #include "PPU.hpp"
 #include "Pad.hpp"
-#include "SM83.hpp"
 #include "Timer.hpp"
 #include <cinttypes>
 #include <filesystem>
@@ -32,18 +32,12 @@
 namespace GB {
     class Core {
         std::function<uint8_t(uint16_t)> bus_read_fn = [this](uint16_t address) -> uint8_t {
-            tick_subcomponents(4);
             return bus.read(address);
         };
 
         std::function<void(uint16_t, uint8_t)> bus_write_fn = [this](uint16_t address,
                                                                      uint8_t value) -> void {
-            tick_subcomponents(4);
             bus.write(address, value);
-        };
-
-        std::function<void(int32_t)> run_external_state_fn = [this](int32_t cycles) -> void {
-            tick_subcomponents(cycles);
         };
 
     public:
@@ -52,7 +46,7 @@ namespace GB {
         PPU ppu;
         APU apu;
         Timer timer;
-        SM83 cpu;
+        CPU cpu;
         DMAController dma;
         Core();
 

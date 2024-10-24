@@ -68,7 +68,7 @@ void test_write(uint16_t address, uint8_t value) {
     activity_list.push_back(last_activity);
 }
 
-GB::CPU cpu;
+GB::CPU cpu{test_write, test_read};
 
 void run_test(uint8_t opcode) {
     using json = nlohmann::json;

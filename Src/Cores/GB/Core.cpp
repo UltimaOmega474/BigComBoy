@@ -22,7 +22,7 @@
 #include <fstream>
 
 namespace GB {
-    Core::Core() : bus(this), ppu(this), timer(this), cpu(run_external_state_fn, bus_write_fn, bus_read_fn), dma(this) {}
+    Core::Core() : bus(this), ppu(this), timer(this), cpu(bus_write_fn, bus_read_fn), dma(this) {}
 
     void Core::initialize(Cartridge *cart) {
         ready_to_run = cart ? true : false;
@@ -95,6 +95,25 @@ namespace GB {
 
     void Core::run_for_frames(int32_t frames) {
         while (frames-- && ready_to_run) {
+            while (cycle_count < CYCLES_PER_FRAME) {
+                timer.update(4);
+                ppu.step(4);
+                apu.step(4);
+                bus.cart->tick(4);
+
+                dma.tick();
+                if (cpu.double_speed()) {
+                    cpu.clock();
+                    cpu.clock();
+                    cycle_count += 2;
+                } else {
+                    cpu.clock();
+                    cycle_count += 4;
+                }
+
+
+            }
+            /*
             while (cycle_count < CYCLES_PER_FRAME && !cpu.stopped()) {
                 dma.tick();
                 cpu.step();
@@ -103,6 +122,7 @@ namespace GB {
             if (cycle_count >= CYCLES_PER_FRAME) {
                 cycle_count -= CYCLES_PER_FRAME;
             }
+            */
         }
     }
 

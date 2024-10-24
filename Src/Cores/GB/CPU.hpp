@@ -80,11 +80,15 @@ namespace GB {
         std::function<void(uint16_t, uint8_t)> bus_write_fn;
         std::function<uint8_t(uint16_t)> bus_read_fn;
 
+        CPU(std::function<void(uint16_t, uint8_t)> bus_write_fn,
+             std::function<uint8_t(uint16_t)> bus_read_fn);
+
         auto force_next_opcode(uint8_t opcode) -> void;
         auto flags() const -> uint8_t;
         auto set_flags(uint8_t flags) -> void;
         auto double_speed() const -> bool;
         auto reset(uint16_t new_pc, bool with_dmg_values) -> void;
+        auto request_interrupt(uint8_t interrupt) -> void;
         auto clock() -> void;
 
     private:
