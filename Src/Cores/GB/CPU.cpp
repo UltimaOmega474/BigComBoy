@@ -38,12 +38,71 @@ namespace GB {
         alu_flags.z = (flags >> 7) & 0x1;
     }
 
+    auto CPU::double_speed() const -> bool { return double_speed_; }
+
+    auto CPU::reset(const uint16_t new_pc, const bool with_dmg_values) -> void {
+        dmg_mode = with_dmg_values;
+        master_interrupt_enable_ = false;
+        double_speed_ = false;
+        exec = ExecutionMode::NormalBank;
+        interrupt_enable = 0;
+        interrupt_flag = 0;
+
+        if (dmg_mode) {
+            alu_flags.n = false;
+            alu_flags.hc = true;
+            alu_flags.cy = true;
+            alu_flags.z = true;
+
+            a = 0x01;
+            b = 0x00;
+            c = 0x13;
+            d = 0x00;
+            e = 0xD8;
+            h = 0x01;
+            l = 0x4D;
+
+            program_counter = new_pc;
+            stack_pointer = 0xFFFE;
+        } else {
+            alu_flags.n = false;
+            alu_flags.hc = false;
+            alu_flags.cy = false;
+            alu_flags.z = true;
+
+            a = 0x11;
+            b = 0x00;
+            c = 0x00;
+            d = 0xFF;
+            e = 0x56;
+            h = 0x00;
+            l = 0x0D;
+
+            program_counter = new_pc;
+            stack_pointer = 0xFFFE;
+        }
+
+    }
+
     auto CPU::clock() -> void {
         // TODO: Probably need a state for HALT and STOP
         switch (exec) {
         case ExecutionMode::NormalBank: decode_execute(); return;
         case ExecutionMode::BitOpsBank: decode_execute_bitops(); return;
         case ExecutionMode::Interrupt: isr(); return;
+        case ExecutionMode::Halted: {
+            m_cycle = 1;
+
+            const uint8_t interrupt_pending = interrupt_flag & interrupt_enable;
+            if (interrupt_pending && master_interrupt_enable_) {
+                exec = ExecutionMode::Interrupt;
+                master_interrupt_enable_ = false;
+                ir = bus_read_fn(program_counter++);
+            }else {
+                ir = bus_read_fn(program_counter);
+            }
+            return;
+        }
         }
     }
 
@@ -204,11 +263,18 @@ namespace GB {
 
     auto CPU::stop() -> void {
         m_cycle++;
-        // TODO: implement this again
+        if (dmg_mode) {
+            return;
+        }
+
+        if (KEY1 & 0x1) {
+            double_speed_ = !double_speed_;
+            KEY1 = double_speed_ << 7;
+        }
     }
 
     auto CPU::halt() -> void {
-        m_cycle = 2;
+        exec = ExecutionMode::Halted;
     }
 
     auto CPU::illegal_instruction() -> void {

@@ -56,6 +56,7 @@ namespace GB {
         NormalBank,
         BitOpsBank,
         Interrupt,
+        Halted,
     };
 
     class CPU {
@@ -82,6 +83,8 @@ namespace GB {
         auto force_next_opcode(uint8_t opcode) -> void;
         auto flags() const -> uint8_t;
         auto set_flags(uint8_t flags) -> void;
+        auto double_speed() const -> bool;
+        auto reset(uint16_t new_pc, bool with_dmg_values) -> void;
         auto clock() -> void;
 
     private:
@@ -164,12 +167,14 @@ namespace GB {
             bool z = false;
         } alu_flags;
 
-        ExecutionMode exec = ExecutionMode::NormalBank;
+        bool double_speed_ = false;
+        bool dmg_mode = true;
         uint8_t ir = 0;
         uint8_t z = 0;
         uint8_t w = 0;
 
         uint8_t m_cycle = 1;
+        ExecutionMode exec = ExecutionMode::NormalBank;
     };
 
 }
