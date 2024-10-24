@@ -52,6 +52,12 @@ namespace GB {
         PC,
     };
 
+    enum class ExecutionMode {
+        NormalBank,
+        BitOpsBank,
+        Interrupt,
+    };
+
     class CPU {
     public:
         uint8_t b = 0;
@@ -85,12 +91,14 @@ namespace GB {
         auto set_rp(RegisterPair index, uint16_t value) -> void;
 
         auto fetch(uint16_t where) -> void;
+        auto isr() -> void;
         auto nop() -> void;
         auto stop() -> void;
         auto halt() -> void;
-        auto illegal() -> void;
+        auto illegal_instruction() -> void;
         auto ei() -> void;
         auto di() -> void;
+        auto bitops_bank_switch() -> void;
 
         template <COperand2 dst, COperand2 src> auto ld() -> void;
         auto op_ld_r_indirect(uint16_t address) -> void;
@@ -138,13 +146,16 @@ namespace GB {
         template <ConditionCode cc, bool is_set> auto ret_cc() -> void;
         auto rst() -> void;
 
-        template<RegisterPair rp> auto push() -> void;
-        template<RegisterPair rp> auto pop() -> void;
+        template <RegisterPair rp> auto push() -> void;
+        template <RegisterPair rp> auto pop() -> void;
 
         template <typename Fn> auto immediate_addr(Fn &&) -> void;
         template <MemRead address, typename Fn> auto mem_read_addr(Fn &&) -> void;
         template <typename Fn> auto mem_write_addr(Fn &&) -> void;
         template <typename Fn> auto read_modify_write(Fn &&) -> void;
+
+        auto decode_execute() -> void;
+        auto decode_execute_bitops() -> void;
 
         struct {
             bool cy = false;
@@ -153,6 +164,7 @@ namespace GB {
             bool z = false;
         } alu_flags;
 
+        ExecutionMode exec = ExecutionMode::NormalBank;
         uint8_t ir = 0;
         uint8_t z = 0;
         uint8_t w = 0;

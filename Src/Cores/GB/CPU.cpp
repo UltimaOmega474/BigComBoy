@@ -17,6 +17,7 @@
 */
 
 #include "CPU.hpp"
+#include "Constants.hpp"
 
 namespace GB {
     auto CPU::force_next_opcode(const uint8_t opcode) -> void { ir = opcode; }
@@ -38,279 +39,11 @@ namespace GB {
     }
 
     auto CPU::clock() -> void {
-        switch (ir) {
-        case 0x00: nop(); return;
-        case 0x01: ld_rp_immediate<RegisterPair::BC>(); return;
-        case 0x02: ld_indirect_accumulator<COperand3::BC>(); return;
-        case 0x03: adjust_rp<RegisterPair::BC, 1>(); return;
-        case 0x04: immediate_addr(&CPU::inc_r<COperand2::B>); return;
-        case 0x05: immediate_addr(&CPU::dec_r<COperand2::B>); return;
-        case 0x06: ld_immediate<COperand2::B>(); return;
-        case 0x07: rlca(); return;
-        case 0x08: ld_direct_sp(); return;
-        case 0x09: add_hl_rp<RegisterPair::BC>(); return;
-        case 0x0A: ld_accumulator_indirect<COperand3::BC>(); return;
-        case 0x0B: adjust_rp<RegisterPair::BC, -1>(); return;
-        case 0x0C: immediate_addr(&CPU::inc_r<COperand2::C>); return;
-        case 0x0D: immediate_addr(&CPU::dec_r<COperand2::C>); return;
-        case 0x0E: ld_immediate<COperand2::C>(); return;
-        case 0x0F: rrca(); return;
-
-        case 0x10: stop(); return;
-        case 0x11: ld_rp_immediate<RegisterPair::DE>(); return;
-        case 0x12: ld_indirect_accumulator<COperand3::DE>(); return;
-        case 0x13: adjust_rp<RegisterPair::DE, 1>(); return;
-        case 0x14: immediate_addr(&CPU::inc_r<COperand2::D>); return;
-        case 0x15: immediate_addr(&CPU::dec_r<COperand2::D>); return;
-        case 0x16: ld_immediate<COperand2::D>(); return;
-        case 0x17: rla(); return;
-        case 0x18: jr<ConditionCode::Always, false>(); return;
-        case 0x19: add_hl_rp<RegisterPair::DE>(); return;
-        case 0x1A: ld_accumulator_indirect<COperand3::DE>(); return;
-        case 0x1B: adjust_rp<RegisterPair::DE, -1>(); return;
-        case 0x1C: immediate_addr(&CPU::inc_r<COperand2::E>); return;
-        case 0x1D: immediate_addr(&CPU::dec_r<COperand2::E>); return;
-        case 0x1E: ld_immediate<COperand2::E>(); return;
-        case 0x1F: rra(); return;
-
-        case 0x20: jr<ConditionCode::IfZero, false>(); return;
-        case 0x21: ld_rp_immediate<RegisterPair::HL>(); return;
-        case 0x22: ld_indirect_accumulator<COperand3::HLIncrement>(); return;
-        case 0x23: adjust_rp<RegisterPair::HL, 1>(); return;
-        case 0x24: immediate_addr(&CPU::inc_r<COperand2::H>); return;
-        case 0x25: immediate_addr(&CPU::dec_r<COperand2::H>); return;
-        case 0x26: ld_immediate<COperand2::H>(); return;
-        case 0x27: daa(); return;
-        case 0x28: jr<ConditionCode::IfZero, true>(); return;
-        case 0x29: add_hl_rp<RegisterPair::HL>(); return;
-        case 0x2A: ld_accumulator_indirect<COperand3::HLIncrement>(); return;
-        case 0x2B: adjust_rp<RegisterPair::HL, -1>(); return;
-        case 0x2C: immediate_addr(&CPU::inc_r<COperand2::L>); return;
-        case 0x2D: immediate_addr(&CPU::dec_r<COperand2::L>); return;
-        case 0x2E: ld_immediate<COperand2::L>(); return;
-        case 0x2F: cpl(); return;
-
-        case 0x30: jr<ConditionCode::IfCarry, false>(); return;
-        case 0x31: ld_rp_immediate<RegisterPair::SP>(); return;
-        case 0x32: ld_indirect_accumulator<COperand3::HLDecrement>(); return;
-        case 0x33: adjust_rp<RegisterPair::SP, 1>(); return;
-        case 0x34: read_modify_write(&CPU::inc_r<COperand2::Memory>); return;
-        case 0x35: read_modify_write(&CPU::dec_r<COperand2::Memory>); return;
-        case 0x36: ld_immediate<COperand2::Memory>(); return;
-        case 0x37: scf(); return;
-        case 0x38: jr<ConditionCode::IfCarry, true>(); return;
-        case 0x39: add_hl_rp<RegisterPair::SP>(); return;
-        case 0x3A: ld_accumulator_indirect<COperand3::HLDecrement>(); return;
-        case 0x3B: adjust_rp<RegisterPair::SP, -1>(); return;
-        case 0x3C: immediate_addr(&CPU::inc_r<COperand2::A>); return;
-        case 0x3D: immediate_addr(&CPU::dec_r<COperand2::A>); return;
-        case 0x3E: ld_immediate<COperand2::A>(); return;
-        case 0x3F: ccf(); return;
-
-        case 0x40: ld<COperand2::B, COperand2::B>(); return;
-        case 0x41: ld<COperand2::B, COperand2::C>(); return;
-        case 0x42: ld<COperand2::B, COperand2::D>(); return;
-        case 0x43: ld<COperand2::B, COperand2::E>(); return;
-        case 0x44: ld<COperand2::B, COperand2::H>(); return;
-        case 0x45: ld<COperand2::B, COperand2::L>(); return;
-        case 0x46: ld<COperand2::B, COperand2::Memory>(); return;
-        case 0x47: ld<COperand2::B, COperand2::A>(); return;
-        case 0x48: ld<COperand2::C, COperand2::B>(); return;
-        case 0x49: ld<COperand2::C, COperand2::C>(); return;
-        case 0x4A: ld<COperand2::C, COperand2::D>(); return;
-        case 0x4B: ld<COperand2::C, COperand2::E>(); return;
-        case 0x4C: ld<COperand2::C, COperand2::H>(); return;
-        case 0x4D: ld<COperand2::C, COperand2::L>(); return;
-        case 0x4E: ld<COperand2::C, COperand2::Memory>(); return;
-        case 0x4F: ld<COperand2::C, COperand2::A>(); return;
-
-        case 0x50: ld<COperand2::D, COperand2::B>(); return;
-        case 0x51: ld<COperand2::D, COperand2::C>(); return;
-        case 0x52: ld<COperand2::D, COperand2::D>(); return;
-        case 0x53: ld<COperand2::D, COperand2::E>(); return;
-        case 0x54: ld<COperand2::D, COperand2::H>(); return;
-        case 0x55: ld<COperand2::D, COperand2::L>(); return;
-        case 0x56: ld<COperand2::D, COperand2::Memory>(); return;
-        case 0x57: ld<COperand2::D, COperand2::A>(); return;
-        case 0x58: ld<COperand2::E, COperand2::B>(); return;
-        case 0x59: ld<COperand2::E, COperand2::C>(); return;
-        case 0x5A: ld<COperand2::E, COperand2::D>(); return;
-        case 0x5B: ld<COperand2::E, COperand2::E>(); return;
-        case 0x5C: ld<COperand2::E, COperand2::H>(); return;
-        case 0x5D: ld<COperand2::E, COperand2::L>(); return;
-        case 0x5E: ld<COperand2::E, COperand2::Memory>(); return;
-        case 0x5F: ld<COperand2::E, COperand2::A>(); return;
-
-        case 0x60: ld<COperand2::H, COperand2::B>(); return;
-        case 0x61: ld<COperand2::H, COperand2::C>(); return;
-        case 0x62: ld<COperand2::H, COperand2::D>(); return;
-        case 0x63: ld<COperand2::H, COperand2::E>(); return;
-        case 0x64: ld<COperand2::H, COperand2::H>(); return;
-        case 0x65: ld<COperand2::H, COperand2::L>(); return;
-        case 0x66: ld<COperand2::H, COperand2::Memory>(); return;
-        case 0x67: ld<COperand2::H, COperand2::A>(); return;
-        case 0x68: ld<COperand2::L, COperand2::B>(); return;
-        case 0x69: ld<COperand2::L, COperand2::C>(); return;
-        case 0x6A: ld<COperand2::L, COperand2::D>(); return;
-        case 0x6B: ld<COperand2::L, COperand2::E>(); return;
-        case 0x6C: ld<COperand2::L, COperand2::H>(); return;
-        case 0x6D: ld<COperand2::L, COperand2::L>(); return;
-        case 0x6E: ld<COperand2::L, COperand2::Memory>(); return;
-        case 0x6F: ld<COperand2::L, COperand2::A>(); return;
-
-        case 0x70: ld<COperand2::Memory, COperand2::B>(); return;
-        case 0x71: ld<COperand2::Memory, COperand2::C>(); return;
-        case 0x72: ld<COperand2::Memory, COperand2::D>(); return;
-        case 0x73: ld<COperand2::Memory, COperand2::E>(); return;
-        case 0x74: ld<COperand2::Memory, COperand2::H>(); return;
-        case 0x75: ld<COperand2::Memory, COperand2::L>(); return;
-        case 0x76: halt(); return;
-        case 0x77: ld<COperand2::Memory, COperand2::A>(); return;
-        case 0x78: ld<COperand2::A, COperand2::B>(); return;
-        case 0x79: ld<COperand2::A, COperand2::C>(); return;
-        case 0x7A: ld<COperand2::A, COperand2::D>(); return;
-        case 0x7B: ld<COperand2::A, COperand2::E>(); return;
-        case 0x7C: ld<COperand2::A, COperand2::H>(); return;
-        case 0x7D: ld<COperand2::A, COperand2::L>(); return;
-        case 0x7E: ld<COperand2::A, COperand2::Memory>(); return;
-        case 0x7F: ld<COperand2::A, COperand2::A>(); return;
-
-        case 0x80: immediate_addr(&CPU::adc<COperand2::B, false>); return;
-        case 0x81: immediate_addr(&CPU::adc<COperand2::C, false>); return;
-        case 0x82: immediate_addr(&CPU::adc<COperand2::D, false>); return;
-        case 0x83: immediate_addr(&CPU::adc<COperand2::E, false>); return;
-        case 0x84: immediate_addr(&CPU::adc<COperand2::H, false>); return;
-        case 0x85: immediate_addr(&CPU::adc<COperand2::L, false>); return;
-        case 0x86: mem_read_addr<MemRead::HL>(&CPU::adc<COperand2::Memory, false>); return;
-        case 0x87: immediate_addr(&CPU::adc<COperand2::A, false>); return;
-        case 0x88: immediate_addr(&CPU::adc<COperand2::B, true>); return;
-        case 0x89: immediate_addr(&CPU::adc<COperand2::C, true>); return;
-        case 0x8A: immediate_addr(&CPU::adc<COperand2::D, true>); return;
-        case 0x8B: immediate_addr(&CPU::adc<COperand2::E, true>); return;
-        case 0x8C: immediate_addr(&CPU::adc<COperand2::H, true>); return;
-        case 0x8D: immediate_addr(&CPU::adc<COperand2::L, true>); return;
-        case 0x8E: mem_read_addr<MemRead::HL>(&CPU::adc<COperand2::Memory, true>); return;
-        case 0x8F: immediate_addr(&CPU::adc<COperand2::A, true>); return;
-
-        case 0x90: immediate_addr(&CPU::sbc<COperand2::B, false>); return;
-        case 0x91: immediate_addr(&CPU::sbc<COperand2::C, false>); return;
-        case 0x92: immediate_addr(&CPU::sbc<COperand2::D, false>); return;
-        case 0x93: immediate_addr(&CPU::sbc<COperand2::E, false>); return;
-        case 0x94: immediate_addr(&CPU::sbc<COperand2::H, false>); return;
-        case 0x95: immediate_addr(&CPU::sbc<COperand2::L, false>); return;
-        case 0x96: mem_read_addr<MemRead::HL>(&CPU::sbc<COperand2::Memory, false>); return;
-        case 0x97: immediate_addr(&CPU::sbc<COperand2::A, false>); return;
-        case 0x98: immediate_addr(&CPU::sbc<COperand2::B, true>); return;
-        case 0x99: immediate_addr(&CPU::sbc<COperand2::C, true>); return;
-        case 0x9A: immediate_addr(&CPU::sbc<COperand2::D, true>); return;
-        case 0x9B: immediate_addr(&CPU::sbc<COperand2::E, true>); return;
-        case 0x9C: immediate_addr(&CPU::sbc<COperand2::H, true>); return;
-        case 0x9D: immediate_addr(&CPU::sbc<COperand2::L, true>); return;
-        case 0x9E: mem_read_addr<MemRead::HL>(&CPU::sbc<COperand2::Memory, true>); return;
-        case 0x9F: immediate_addr(&CPU::sbc<COperand2::A, true>); return;
-
-        case 0xA0: immediate_addr(&CPU::and_op<COperand2::B>); return;
-        case 0xA1: immediate_addr(&CPU::and_op<COperand2::C>); return;
-        case 0xA2: immediate_addr(&CPU::and_op<COperand2::D>); return;
-        case 0xA3: immediate_addr(&CPU::and_op<COperand2::E>); return;
-        case 0xA4: immediate_addr(&CPU::and_op<COperand2::H>); return;
-        case 0xA5: immediate_addr(&CPU::and_op<COperand2::L>); return;
-        case 0xA6: mem_read_addr<MemRead::HL>(&CPU::and_op<COperand2::Memory>); return;
-        case 0xA7: immediate_addr(&CPU::and_op<COperand2::A>); return;
-        case 0xA8: immediate_addr(&CPU::xor_op<COperand2::B>); return;
-        case 0xA9: immediate_addr(&CPU::xor_op<COperand2::C>); return;
-        case 0xAA: immediate_addr(&CPU::xor_op<COperand2::D>); return;
-        case 0xAB: immediate_addr(&CPU::xor_op<COperand2::E>); return;
-        case 0xAC: immediate_addr(&CPU::xor_op<COperand2::H>); return;
-        case 0xAD: immediate_addr(&CPU::xor_op<COperand2::L>); return;
-        case 0xAE: mem_read_addr<MemRead::HL>(&CPU::xor_op<COperand2::Memory>); return;
-        case 0xAF: immediate_addr(&CPU::xor_op<COperand2::A>); return;
-
-        case 0xB0: immediate_addr(&CPU::or_op<COperand2::B>); return;
-        case 0xB1: immediate_addr(&CPU::or_op<COperand2::C>); return;
-        case 0xB2: immediate_addr(&CPU::or_op<COperand2::D>); return;
-        case 0xB3: immediate_addr(&CPU::or_op<COperand2::E>); return;
-        case 0xB4: immediate_addr(&CPU::or_op<COperand2::H>); return;
-        case 0xB5: immediate_addr(&CPU::or_op<COperand2::L>); return;
-        case 0xB6: mem_read_addr<MemRead::HL>(&CPU::or_op<COperand2::Memory>); return;
-        case 0xB7: immediate_addr(&CPU::or_op<COperand2::A>); return;
-        case 0xB8: immediate_addr(&CPU::cp<COperand2::B>); return;
-        case 0xB9: immediate_addr(&CPU::cp<COperand2::C>); return;
-        case 0xBA: immediate_addr(&CPU::cp<COperand2::D>); return;
-        case 0xBB: immediate_addr(&CPU::cp<COperand2::E>); return;
-        case 0xBC: immediate_addr(&CPU::cp<COperand2::H>); return;
-        case 0xBD: immediate_addr(&CPU::cp<COperand2::L>); return;
-        case 0xBE: mem_read_addr<MemRead::HL>(&CPU::cp<COperand2::Memory>); return;
-        case 0xBF: immediate_addr(&CPU::cp<COperand2::A>); return;
-
-        case 0xC0: ret_cc<ConditionCode::IfZero, false>(); return;
-        case 0xC1: pop<RegisterPair::BC>(); return;
-        case 0xC2: jp<ConditionCode::IfZero, false, false>(); return;
-        case 0xC3: jp<ConditionCode::Always, false, false>(); return;
-        case 0xC4: call<ConditionCode::IfZero, false>(); return;
-        case 0xC5: push<RegisterPair::BC>(); return;
-        case 0xC6: mem_read_addr<MemRead::PC>(&CPU::adc<COperand2::Memory, false>); return;
-        case 0xC7: rst(); return;
-        case 0xC8: ret_cc<ConditionCode::IfZero, true>(); return;
-        case 0xC9: ret<false>(); return;
-        case 0xCA: jp<ConditionCode::IfZero, true, false>(); return;
-        case 0xCC: call<ConditionCode::IfZero, true>(); return;
-        case 0xCD: call<ConditionCode::Always, false>(); return;
-        case 0xCE: mem_read_addr<MemRead::PC>(&CPU::adc<COperand2::Memory, true>); return;
-        case 0xCF: rst(); return;
-
-        case 0xD0: ret_cc<ConditionCode::IfCarry, false>(); return;
-        case 0xD1: pop<RegisterPair::DE>(); return;
-        case 0xD2: jp<ConditionCode::IfCarry, false, false>(); return;
-        case 0xD3: illegal(); return;
-        case 0xD4: call<ConditionCode::IfCarry, false>(); return;
-        case 0xD5: push<RegisterPair::DE>(); return;
-        case 0xD6: mem_read_addr<MemRead::PC>(&CPU::sbc<COperand2::Memory, false>); return;
-        case 0xD7: rst(); return;
-        case 0xD8: ret_cc<ConditionCode::IfCarry, true>(); return;
-        case 0xD9: ret<true>(); return;
-        case 0xDA: jp<ConditionCode::IfCarry, true, false>(); return;
-        case 0xDB: illegal(); return;
-        case 0xDC: call<ConditionCode::IfCarry, true>(); return;
-        case 0xDD: illegal(); return;
-        case 0xDE: mem_read_addr<MemRead::PC>(&CPU::sbc<COperand2::Memory, true>); return;
-        case 0xDF: rst(); return;
-
-        case 0xE0: ldh_offset_a(); return;
-        case 0xE1: pop<RegisterPair::HL>(); return;
-        case 0xE2: ldh_c_a(); return;
-        case 0xE3:
-        case 0xE4: illegal(); return;
-        case 0xE5: push<RegisterPair::HL>(); return;
-        case 0xE6: mem_read_addr<MemRead::PC>(&CPU::and_op<COperand2::Memory>); return;
-        case 0xE7: rst(); return;
-        case 0xE8: add_sp_i8(); return;
-        case 0xE9: jp<ConditionCode::Always, false, true>(); return;
-        case 0xEA: ld_direct_a(); return;
-        case 0xEB:
-        case 0xEC:
-        case 0xED: illegal(); return;
-        case 0xEE: mem_read_addr<MemRead::PC>(&CPU::xor_op<COperand2::Memory>); return;
-        case 0xEF: rst(); return;
-
-        case 0xF0: ldh_a_offset(); return;
-        case 0xF1: pop<RegisterPair::AF>(); return;
-        case 0xF2: ldh_a_c(); return;
-        case 0xF3: di(); return;
-        case 0xF4: illegal(); return;
-        case 0xF5: push<RegisterPair::AF>(); return;
-        case 0xF6: mem_read_addr<MemRead::PC>(&CPU::or_op<COperand2::Memory>); return;
-        case 0xF7: rst(); return;
-        case 0xF8: ld_hl_sp_i8(); return;
-        case 0xF9: ld_sp_hl(); return;
-        case 0xFA: ld_a_direct(); return;
-        case 0xFB: ei(); return;
-        case 0xFC:
-        case 0xFD: illegal(); return;
-        case 0xFE: mem_read_addr<MemRead::PC>(&CPU::cp<COperand2::Memory>); return;
-        case 0xFF: rst(); return;
-
-        default: throw "Unknown opcode";
+        // TODO: Probably need a state for HALT and STOP
+        switch (exec) {
+        case ExecutionMode::NormalBank: decode_execute(); return;
+        case ExecutionMode::BitOpsBank: decode_execute_bitops(); return;
+        case ExecutionMode::Interrupt: isr(); return;
         }
     }
 
@@ -406,35 +139,100 @@ namespace GB {
     }
 
     auto CPU::fetch(const uint16_t where) -> void {
+        exec = ExecutionMode::NormalBank;
         ir = bus_read_fn(where);
         program_counter = where + 1;
         m_cycle = 1;
-        // TODO: check interrupts here
+
+        const uint8_t interrupt_pending = interrupt_flag & interrupt_enable;
+        if (interrupt_pending && master_interrupt_enable_) {
+            exec = ExecutionMode::Interrupt;
+            master_interrupt_enable_ = false;
+        }
     }
+
+    auto CPU::isr() -> void {
+        m_cycle++;
+        switch (m_cycle) {
+        case 2: {
+            program_counter--;
+            break;
+        }
+        case 3: {
+            stack_pointer--;
+            break;
+        }
+        case 4: {
+            bus_write_fn(stack_pointer--, program_counter >> 8);
+            break;
+        }
+        case 5: {
+            bus_write_fn(stack_pointer, program_counter & 0xFF);
+
+            const uint8_t interrupt_pending = interrupt_flag & interrupt_enable;
+            if (interrupt_pending & INT_VBLANK_BIT) {
+                program_counter = 0x40;
+                interrupt_flag &= ~INT_VBLANK_BIT;
+            } else if (interrupt_pending & INT_LCD_STAT_BIT) {
+                program_counter = 0x48;
+                interrupt_flag &= ~INT_LCD_STAT_BIT;
+            } else if (interrupt_pending & INT_TIMER_BIT) {
+                program_counter = 0x50;
+                interrupt_flag &= ~INT_TIMER_BIT;
+            } else if (interrupt_pending & INT_SERIAL_PORT_BIT) {
+                program_counter = 0x58;
+                interrupt_flag &= ~INT_SERIAL_PORT_BIT;
+            } else if (interrupt_pending & INT_JOYPAD_BIT) {
+                program_counter = 0x60;
+                interrupt_flag &= ~INT_JOYPAD_BIT;
+            }
+
+            break;
+        }
+        case 6: {
+            fetch(program_counter);
+            break;
+        }
+        default:;
+        }
+    }
+
     auto CPU::nop() -> void {
         m_cycle++;
         fetch(program_counter);
     }
+
     auto CPU::stop() -> void {
         m_cycle++;
         // TODO: implement this again
     }
 
     auto CPU::halt() -> void {
-        m_cycle++;
-        // TODO: implement this again
+        m_cycle = 2;
     }
-    auto CPU::illegal() -> void {
+
+    auto CPU::illegal_instruction() -> void {
         m_cycle = 2;
         // never fetches
     }
 
     auto CPU::ei() -> void {
-        // TODO: implement this again
+        m_cycle++;
+        fetch(program_counter);
+        master_interrupt_enable_ = true;
     }
 
     auto CPU::di() -> void {
-        // TODO: implement this again
+        exec = ExecutionMode::NormalBank;
+        ir = bus_read_fn(program_counter++);
+        m_cycle = 1;
+        master_interrupt_enable_ = false;
+    }
+
+    auto CPU::bitops_bank_switch() -> void {
+        exec = ExecutionMode::BitOpsBank;
+        ir = bus_read_fn(program_counter++);
+        m_cycle = 1;
     }
 
     template <COperand2 dst, COperand2 src> auto CPU::ld() -> void {
@@ -1484,5 +1282,285 @@ namespace GB {
         default:;
         }
     }
+
+    auto CPU::decode_execute() -> void {
+        switch (ir) {
+        case 0x00: nop(); return;
+        case 0x01: ld_rp_immediate<RegisterPair::BC>(); return;
+        case 0x02: ld_indirect_accumulator<COperand3::BC>(); return;
+        case 0x03: adjust_rp<RegisterPair::BC, 1>(); return;
+        case 0x04: immediate_addr(&CPU::inc_r<COperand2::B>); return;
+        case 0x05: immediate_addr(&CPU::dec_r<COperand2::B>); return;
+        case 0x06: ld_immediate<COperand2::B>(); return;
+        case 0x07: rlca(); return;
+        case 0x08: ld_direct_sp(); return;
+        case 0x09: add_hl_rp<RegisterPair::BC>(); return;
+        case 0x0A: ld_accumulator_indirect<COperand3::BC>(); return;
+        case 0x0B: adjust_rp<RegisterPair::BC, -1>(); return;
+        case 0x0C: immediate_addr(&CPU::inc_r<COperand2::C>); return;
+        case 0x0D: immediate_addr(&CPU::dec_r<COperand2::C>); return;
+        case 0x0E: ld_immediate<COperand2::C>(); return;
+        case 0x0F: rrca(); return;
+
+        case 0x10: stop(); return;
+        case 0x11: ld_rp_immediate<RegisterPair::DE>(); return;
+        case 0x12: ld_indirect_accumulator<COperand3::DE>(); return;
+        case 0x13: adjust_rp<RegisterPair::DE, 1>(); return;
+        case 0x14: immediate_addr(&CPU::inc_r<COperand2::D>); return;
+        case 0x15: immediate_addr(&CPU::dec_r<COperand2::D>); return;
+        case 0x16: ld_immediate<COperand2::D>(); return;
+        case 0x17: rla(); return;
+        case 0x18: jr<ConditionCode::Always, false>(); return;
+        case 0x19: add_hl_rp<RegisterPair::DE>(); return;
+        case 0x1A: ld_accumulator_indirect<COperand3::DE>(); return;
+        case 0x1B: adjust_rp<RegisterPair::DE, -1>(); return;
+        case 0x1C: immediate_addr(&CPU::inc_r<COperand2::E>); return;
+        case 0x1D: immediate_addr(&CPU::dec_r<COperand2::E>); return;
+        case 0x1E: ld_immediate<COperand2::E>(); return;
+        case 0x1F: rra(); return;
+
+        case 0x20: jr<ConditionCode::IfZero, false>(); return;
+        case 0x21: ld_rp_immediate<RegisterPair::HL>(); return;
+        case 0x22: ld_indirect_accumulator<COperand3::HLIncrement>(); return;
+        case 0x23: adjust_rp<RegisterPair::HL, 1>(); return;
+        case 0x24: immediate_addr(&CPU::inc_r<COperand2::H>); return;
+        case 0x25: immediate_addr(&CPU::dec_r<COperand2::H>); return;
+        case 0x26: ld_immediate<COperand2::H>(); return;
+        case 0x27: daa(); return;
+        case 0x28: jr<ConditionCode::IfZero, true>(); return;
+        case 0x29: add_hl_rp<RegisterPair::HL>(); return;
+        case 0x2A: ld_accumulator_indirect<COperand3::HLIncrement>(); return;
+        case 0x2B: adjust_rp<RegisterPair::HL, -1>(); return;
+        case 0x2C: immediate_addr(&CPU::inc_r<COperand2::L>); return;
+        case 0x2D: immediate_addr(&CPU::dec_r<COperand2::L>); return;
+        case 0x2E: ld_immediate<COperand2::L>(); return;
+        case 0x2F: cpl(); return;
+
+        case 0x30: jr<ConditionCode::IfCarry, false>(); return;
+        case 0x31: ld_rp_immediate<RegisterPair::SP>(); return;
+        case 0x32: ld_indirect_accumulator<COperand3::HLDecrement>(); return;
+        case 0x33: adjust_rp<RegisterPair::SP, 1>(); return;
+        case 0x34: read_modify_write(&CPU::inc_r<COperand2::Memory>); return;
+        case 0x35: read_modify_write(&CPU::dec_r<COperand2::Memory>); return;
+        case 0x36: ld_immediate<COperand2::Memory>(); return;
+        case 0x37: scf(); return;
+        case 0x38: jr<ConditionCode::IfCarry, true>(); return;
+        case 0x39: add_hl_rp<RegisterPair::SP>(); return;
+        case 0x3A: ld_accumulator_indirect<COperand3::HLDecrement>(); return;
+        case 0x3B: adjust_rp<RegisterPair::SP, -1>(); return;
+        case 0x3C: immediate_addr(&CPU::inc_r<COperand2::A>); return;
+        case 0x3D: immediate_addr(&CPU::dec_r<COperand2::A>); return;
+        case 0x3E: ld_immediate<COperand2::A>(); return;
+        case 0x3F: ccf(); return;
+
+        case 0x40: ld<COperand2::B, COperand2::B>(); return;
+        case 0x41: ld<COperand2::B, COperand2::C>(); return;
+        case 0x42: ld<COperand2::B, COperand2::D>(); return;
+        case 0x43: ld<COperand2::B, COperand2::E>(); return;
+        case 0x44: ld<COperand2::B, COperand2::H>(); return;
+        case 0x45: ld<COperand2::B, COperand2::L>(); return;
+        case 0x46: ld<COperand2::B, COperand2::Memory>(); return;
+        case 0x47: ld<COperand2::B, COperand2::A>(); return;
+        case 0x48: ld<COperand2::C, COperand2::B>(); return;
+        case 0x49: ld<COperand2::C, COperand2::C>(); return;
+        case 0x4A: ld<COperand2::C, COperand2::D>(); return;
+        case 0x4B: ld<COperand2::C, COperand2::E>(); return;
+        case 0x4C: ld<COperand2::C, COperand2::H>(); return;
+        case 0x4D: ld<COperand2::C, COperand2::L>(); return;
+        case 0x4E: ld<COperand2::C, COperand2::Memory>(); return;
+        case 0x4F: ld<COperand2::C, COperand2::A>(); return;
+
+        case 0x50: ld<COperand2::D, COperand2::B>(); return;
+        case 0x51: ld<COperand2::D, COperand2::C>(); return;
+        case 0x52: ld<COperand2::D, COperand2::D>(); return;
+        case 0x53: ld<COperand2::D, COperand2::E>(); return;
+        case 0x54: ld<COperand2::D, COperand2::H>(); return;
+        case 0x55: ld<COperand2::D, COperand2::L>(); return;
+        case 0x56: ld<COperand2::D, COperand2::Memory>(); return;
+        case 0x57: ld<COperand2::D, COperand2::A>(); return;
+        case 0x58: ld<COperand2::E, COperand2::B>(); return;
+        case 0x59: ld<COperand2::E, COperand2::C>(); return;
+        case 0x5A: ld<COperand2::E, COperand2::D>(); return;
+        case 0x5B: ld<COperand2::E, COperand2::E>(); return;
+        case 0x5C: ld<COperand2::E, COperand2::H>(); return;
+        case 0x5D: ld<COperand2::E, COperand2::L>(); return;
+        case 0x5E: ld<COperand2::E, COperand2::Memory>(); return;
+        case 0x5F: ld<COperand2::E, COperand2::A>(); return;
+
+        case 0x60: ld<COperand2::H, COperand2::B>(); return;
+        case 0x61: ld<COperand2::H, COperand2::C>(); return;
+        case 0x62: ld<COperand2::H, COperand2::D>(); return;
+        case 0x63: ld<COperand2::H, COperand2::E>(); return;
+        case 0x64: ld<COperand2::H, COperand2::H>(); return;
+        case 0x65: ld<COperand2::H, COperand2::L>(); return;
+        case 0x66: ld<COperand2::H, COperand2::Memory>(); return;
+        case 0x67: ld<COperand2::H, COperand2::A>(); return;
+        case 0x68: ld<COperand2::L, COperand2::B>(); return;
+        case 0x69: ld<COperand2::L, COperand2::C>(); return;
+        case 0x6A: ld<COperand2::L, COperand2::D>(); return;
+        case 0x6B: ld<COperand2::L, COperand2::E>(); return;
+        case 0x6C: ld<COperand2::L, COperand2::H>(); return;
+        case 0x6D: ld<COperand2::L, COperand2::L>(); return;
+        case 0x6E: ld<COperand2::L, COperand2::Memory>(); return;
+        case 0x6F: ld<COperand2::L, COperand2::A>(); return;
+
+        case 0x70: ld<COperand2::Memory, COperand2::B>(); return;
+        case 0x71: ld<COperand2::Memory, COperand2::C>(); return;
+        case 0x72: ld<COperand2::Memory, COperand2::D>(); return;
+        case 0x73: ld<COperand2::Memory, COperand2::E>(); return;
+        case 0x74: ld<COperand2::Memory, COperand2::H>(); return;
+        case 0x75: ld<COperand2::Memory, COperand2::L>(); return;
+        case 0x76: halt(); return;
+        case 0x77: ld<COperand2::Memory, COperand2::A>(); return;
+        case 0x78: ld<COperand2::A, COperand2::B>(); return;
+        case 0x79: ld<COperand2::A, COperand2::C>(); return;
+        case 0x7A: ld<COperand2::A, COperand2::D>(); return;
+        case 0x7B: ld<COperand2::A, COperand2::E>(); return;
+        case 0x7C: ld<COperand2::A, COperand2::H>(); return;
+        case 0x7D: ld<COperand2::A, COperand2::L>(); return;
+        case 0x7E: ld<COperand2::A, COperand2::Memory>(); return;
+        case 0x7F: ld<COperand2::A, COperand2::A>(); return;
+
+        case 0x80: immediate_addr(&CPU::adc<COperand2::B, false>); return;
+        case 0x81: immediate_addr(&CPU::adc<COperand2::C, false>); return;
+        case 0x82: immediate_addr(&CPU::adc<COperand2::D, false>); return;
+        case 0x83: immediate_addr(&CPU::adc<COperand2::E, false>); return;
+        case 0x84: immediate_addr(&CPU::adc<COperand2::H, false>); return;
+        case 0x85: immediate_addr(&CPU::adc<COperand2::L, false>); return;
+        case 0x86: mem_read_addr<MemRead::HL>(&CPU::adc<COperand2::Memory, false>); return;
+        case 0x87: immediate_addr(&CPU::adc<COperand2::A, false>); return;
+        case 0x88: immediate_addr(&CPU::adc<COperand2::B, true>); return;
+        case 0x89: immediate_addr(&CPU::adc<COperand2::C, true>); return;
+        case 0x8A: immediate_addr(&CPU::adc<COperand2::D, true>); return;
+        case 0x8B: immediate_addr(&CPU::adc<COperand2::E, true>); return;
+        case 0x8C: immediate_addr(&CPU::adc<COperand2::H, true>); return;
+        case 0x8D: immediate_addr(&CPU::adc<COperand2::L, true>); return;
+        case 0x8E: mem_read_addr<MemRead::HL>(&CPU::adc<COperand2::Memory, true>); return;
+        case 0x8F: immediate_addr(&CPU::adc<COperand2::A, true>); return;
+
+        case 0x90: immediate_addr(&CPU::sbc<COperand2::B, false>); return;
+        case 0x91: immediate_addr(&CPU::sbc<COperand2::C, false>); return;
+        case 0x92: immediate_addr(&CPU::sbc<COperand2::D, false>); return;
+        case 0x93: immediate_addr(&CPU::sbc<COperand2::E, false>); return;
+        case 0x94: immediate_addr(&CPU::sbc<COperand2::H, false>); return;
+        case 0x95: immediate_addr(&CPU::sbc<COperand2::L, false>); return;
+        case 0x96: mem_read_addr<MemRead::HL>(&CPU::sbc<COperand2::Memory, false>); return;
+        case 0x97: immediate_addr(&CPU::sbc<COperand2::A, false>); return;
+        case 0x98: immediate_addr(&CPU::sbc<COperand2::B, true>); return;
+        case 0x99: immediate_addr(&CPU::sbc<COperand2::C, true>); return;
+        case 0x9A: immediate_addr(&CPU::sbc<COperand2::D, true>); return;
+        case 0x9B: immediate_addr(&CPU::sbc<COperand2::E, true>); return;
+        case 0x9C: immediate_addr(&CPU::sbc<COperand2::H, true>); return;
+        case 0x9D: immediate_addr(&CPU::sbc<COperand2::L, true>); return;
+        case 0x9E: mem_read_addr<MemRead::HL>(&CPU::sbc<COperand2::Memory, true>); return;
+        case 0x9F: immediate_addr(&CPU::sbc<COperand2::A, true>); return;
+
+        case 0xA0: immediate_addr(&CPU::and_op<COperand2::B>); return;
+        case 0xA1: immediate_addr(&CPU::and_op<COperand2::C>); return;
+        case 0xA2: immediate_addr(&CPU::and_op<COperand2::D>); return;
+        case 0xA3: immediate_addr(&CPU::and_op<COperand2::E>); return;
+        case 0xA4: immediate_addr(&CPU::and_op<COperand2::H>); return;
+        case 0xA5: immediate_addr(&CPU::and_op<COperand2::L>); return;
+        case 0xA6: mem_read_addr<MemRead::HL>(&CPU::and_op<COperand2::Memory>); return;
+        case 0xA7: immediate_addr(&CPU::and_op<COperand2::A>); return;
+        case 0xA8: immediate_addr(&CPU::xor_op<COperand2::B>); return;
+        case 0xA9: immediate_addr(&CPU::xor_op<COperand2::C>); return;
+        case 0xAA: immediate_addr(&CPU::xor_op<COperand2::D>); return;
+        case 0xAB: immediate_addr(&CPU::xor_op<COperand2::E>); return;
+        case 0xAC: immediate_addr(&CPU::xor_op<COperand2::H>); return;
+        case 0xAD: immediate_addr(&CPU::xor_op<COperand2::L>); return;
+        case 0xAE: mem_read_addr<MemRead::HL>(&CPU::xor_op<COperand2::Memory>); return;
+        case 0xAF: immediate_addr(&CPU::xor_op<COperand2::A>); return;
+
+        case 0xB0: immediate_addr(&CPU::or_op<COperand2::B>); return;
+        case 0xB1: immediate_addr(&CPU::or_op<COperand2::C>); return;
+        case 0xB2: immediate_addr(&CPU::or_op<COperand2::D>); return;
+        case 0xB3: immediate_addr(&CPU::or_op<COperand2::E>); return;
+        case 0xB4: immediate_addr(&CPU::or_op<COperand2::H>); return;
+        case 0xB5: immediate_addr(&CPU::or_op<COperand2::L>); return;
+        case 0xB6: mem_read_addr<MemRead::HL>(&CPU::or_op<COperand2::Memory>); return;
+        case 0xB7: immediate_addr(&CPU::or_op<COperand2::A>); return;
+        case 0xB8: immediate_addr(&CPU::cp<COperand2::B>); return;
+        case 0xB9: immediate_addr(&CPU::cp<COperand2::C>); return;
+        case 0xBA: immediate_addr(&CPU::cp<COperand2::D>); return;
+        case 0xBB: immediate_addr(&CPU::cp<COperand2::E>); return;
+        case 0xBC: immediate_addr(&CPU::cp<COperand2::H>); return;
+        case 0xBD: immediate_addr(&CPU::cp<COperand2::L>); return;
+        case 0xBE: mem_read_addr<MemRead::HL>(&CPU::cp<COperand2::Memory>); return;
+        case 0xBF: immediate_addr(&CPU::cp<COperand2::A>); return;
+
+        case 0xC0: ret_cc<ConditionCode::IfZero, false>(); return;
+        case 0xC1: pop<RegisterPair::BC>(); return;
+        case 0xC2: jp<ConditionCode::IfZero, false, false>(); return;
+        case 0xC3: jp<ConditionCode::Always, false, false>(); return;
+        case 0xC4: call<ConditionCode::IfZero, false>(); return;
+        case 0xC5: push<RegisterPair::BC>(); return;
+        case 0xC6: mem_read_addr<MemRead::PC>(&CPU::adc<COperand2::Memory, false>); return;
+        case 0xC7: rst(); return;
+        case 0xC8: ret_cc<ConditionCode::IfZero, true>(); return;
+        case 0xC9: ret<false>(); return;
+        case 0xCA: jp<ConditionCode::IfZero, true, false>(); return;
+        case 0xCB: bitops_bank_switch(); return;
+        case 0xCC: call<ConditionCode::IfZero, true>(); return;
+        case 0xCD: call<ConditionCode::Always, false>(); return;
+        case 0xCE: mem_read_addr<MemRead::PC>(&CPU::adc<COperand2::Memory, true>); return;
+        case 0xCF: rst(); return;
+
+        case 0xD0: ret_cc<ConditionCode::IfCarry, false>(); return;
+        case 0xD1: pop<RegisterPair::DE>(); return;
+        case 0xD2: jp<ConditionCode::IfCarry, false, false>(); return;
+        case 0xD3: illegal_instruction(); return;
+        case 0xD4: call<ConditionCode::IfCarry, false>(); return;
+        case 0xD5: push<RegisterPair::DE>(); return;
+        case 0xD6: mem_read_addr<MemRead::PC>(&CPU::sbc<COperand2::Memory, false>); return;
+        case 0xD7: rst(); return;
+        case 0xD8: ret_cc<ConditionCode::IfCarry, true>(); return;
+        case 0xD9: ret<true>(); return;
+        case 0xDA: jp<ConditionCode::IfCarry, true, false>(); return;
+        case 0xDB: illegal_instruction(); return;
+        case 0xDC: call<ConditionCode::IfCarry, true>(); return;
+        case 0xDD: illegal_instruction(); return;
+        case 0xDE: mem_read_addr<MemRead::PC>(&CPU::sbc<COperand2::Memory, true>); return;
+        case 0xDF: rst(); return;
+
+        case 0xE0: ldh_offset_a(); return;
+        case 0xE1: pop<RegisterPair::HL>(); return;
+        case 0xE2: ldh_c_a(); return;
+        case 0xE3:
+        case 0xE4: illegal_instruction(); return;
+        case 0xE5: push<RegisterPair::HL>(); return;
+        case 0xE6: mem_read_addr<MemRead::PC>(&CPU::and_op<COperand2::Memory>); return;
+        case 0xE7: rst(); return;
+        case 0xE8: add_sp_i8(); return;
+        case 0xE9: jp<ConditionCode::Always, false, true>(); return;
+        case 0xEA: ld_direct_a(); return;
+        case 0xEB:
+        case 0xEC:
+        case 0xED: illegal_instruction(); return;
+        case 0xEE: mem_read_addr<MemRead::PC>(&CPU::xor_op<COperand2::Memory>); return;
+        case 0xEF: rst(); return;
+
+        case 0xF0: ldh_a_offset(); return;
+        case 0xF1: pop<RegisterPair::AF>(); return;
+        case 0xF2: ldh_a_c(); return;
+        case 0xF3: di(); return;
+        case 0xF4: illegal_instruction(); return;
+        case 0xF5: push<RegisterPair::AF>(); return;
+        case 0xF6: mem_read_addr<MemRead::PC>(&CPU::or_op<COperand2::Memory>); return;
+        case 0xF7: rst(); return;
+        case 0xF8: ld_hl_sp_i8(); return;
+        case 0xF9: ld_sp_hl(); return;
+        case 0xFA: ld_a_direct(); return;
+        case 0xFB: ei(); return;
+        case 0xFC:
+        case 0xFD: illegal_instruction(); return;
+        case 0xFE: mem_read_addr<MemRead::PC>(&CPU::cp<COperand2::Memory>); return;
+        case 0xFF: rst(); return;
+
+        default: throw "Unknown opcode";
+        }
+    }
+
+    auto CPU::decode_execute_bitops() -> void {}
 
 } // GB
