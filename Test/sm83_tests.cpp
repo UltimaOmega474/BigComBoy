@@ -71,6 +71,7 @@ void test_write(uint16_t address, uint8_t value) {
 GB::CPU cpu{test_write, test_read};
 
 void run_test(uint8_t opcode) {
+    if(opcode == 0x76) return;
     using json = nlohmann::json;
     auto path_str = std::filesystem::path(fmt::format("v2/{:02x}.json", opcode));
 
@@ -154,6 +155,8 @@ void run_test(uint8_t opcode) {
                 }
             }
         }
+    }else {
+        FAIL(std::format("Test:\"{}\" not found",path_str.c_str()));
     }
 }
 

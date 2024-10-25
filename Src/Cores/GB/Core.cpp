@@ -113,15 +113,17 @@ namespace GB {
 
 
             }
+
+            if (cycle_count >= CYCLES_PER_FRAME) {
+                cycle_count -= CYCLES_PER_FRAME;
+            }
             /*
             while (cycle_count < CYCLES_PER_FRAME && !cpu.stopped()) {
                 dma.tick();
                 cpu.step();
             }
 
-            if (cycle_count >= CYCLES_PER_FRAME) {
-                cycle_count -= CYCLES_PER_FRAME;
-            }
+
             */
         }
     }
