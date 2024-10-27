@@ -96,48 +96,25 @@ namespace GB {
     void Core::run_for_frames(int32_t frames) {
         while (frames-- && ready_to_run) {
             while (cycle_count < CYCLES_PER_FRAME) {
-                timer.update(4);
-                ppu.step(4);
-                apu.step(4);
-                bus.cart->tick(4);
+               const int32_t adjusted_cycles = cpu.double_speed() ? 2 : 4;
 
-                dma.tick();
-                if (cpu.double_speed()) {
-                    cpu.clock();
-                    cpu.clock();
-                    cycle_count += 2;
+                ppu.step(adjusted_cycles);
+                apu.step(adjusted_cycles);
+                bus.cart->tick(adjusted_cycles);
+
+                timer.update(4);
+                if (dma.is_transfer_active()) {
+                    dma.clock();
                 } else {
                     cpu.clock();
-                    cycle_count += 4;
                 }
 
-
+                cycle_count += adjusted_cycles;
             }
 
             if (cycle_count >= CYCLES_PER_FRAME) {
                 cycle_count -= CYCLES_PER_FRAME;
             }
-            /*
-            while (cycle_count < CYCLES_PER_FRAME && !cpu.stopped()) {
-                dma.tick();
-                cpu.step();
-            }
-
-
-            */
-        }
-    }
-
-    void Core::tick_subcomponents(int32_t cycles) {
-        int32_t adjusted_cycles = cpu.double_speed() ? 2 : 4;
-
-        while (cycles > 0) {
-            timer.update(4);
-            ppu.step(adjusted_cycles);
-            apu.step(adjusted_cycles);
-            bus.cart->tick(adjusted_cycles);
-            cycle_count += adjusted_cycles;
-            cycles -= 4;
         }
     }
 

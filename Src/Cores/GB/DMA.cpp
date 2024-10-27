@@ -28,6 +28,26 @@ namespace GB {
         }
     }
 
+    auto DMAController::is_transfer_active() -> bool {
+        const bool mode0_now = (core->ppu.read_register(0x41) & 0x3) == HBLANK;
+        const bool previously_mode0 = is_mode0;
+        is_mode0 = mode0_now;
+
+        if (active) {
+            switch (type) {
+            case DMAType::GDMA: {
+                return true;
+            }
+            case DMAType::HDMA: {
+                return (!previously_mode0 && mode0_now) ||
+                       (block_progress > 0 && block_progress < 16);
+            }
+            }
+        }
+
+        return false;
+    }
+
     uint8_t DMAController::get_hdma1() const { return src_address >> 8; }
 
     uint8_t DMAController::get_hdma2() const { return src_address & 0xFF; }
@@ -42,13 +62,15 @@ namespace GB {
         src_address = 0;
         dst_address = 0;
         current_length = 0x7F;
+        block_progress = 16;
         type = DMAType::GDMA;
     }
 
     void DMAController::set_dma_control(uint8_t ctrl) {
         if (!active) {
             type = (ctrl & 0x80) ? DMAType::HDMA : DMAType::GDMA;
-            current_length = ctrl & 0x7F;
+            current_length = (ctrl & 0x7F);
+            block_progress = 16;
             active = true;
         } else {
             active = ctrl & 0x80;
@@ -76,63 +98,28 @@ namespace GB {
     }
 
     uint8_t DMAController::get_dma_status() const {
-        uint8_t stat = !static_cast<uint8_t>(active) << 7;
-
+        const uint8_t stat = !static_cast<uint8_t>(active) << 7;
         return stat | (current_length & 0x7F);
     }
 
-    void DMAController::tick() {
-        bool mode0_now = (core->ppu.read_register(0x41) & 0x3) == HBLANK;
-
-        if (active) {
-            switch (type) {
-            case DMAType::GDMA: {
-
-                for (int i = 0; i < (current_length + 1); ++i) {
-                    transfer_block();
-                }
-                current_length = 0x7F;
-                active = false;
-                break;
-            }
-            case DMAType::HDMA: {
-                if (!is_mode0 && mode0_now) {
-                    transfer_block();
-
-                    if (current_length) {
-                        current_length--;
-                    } else {
-                        current_length = 0x7F;
-                        active = false;
-                    }
-                }
-                break;
-            }
-            }
-        }
-
-        is_mode0 = mode0_now;
-    }
-
-    void DMAController::transfer_block() {
-        for (int i = 0; i < 16; ++i) {
-            bool can_tick = (i % 4) == 0;
-
-            if (can_tick) {
-                core->tick_subcomponents(4);
-            }
-
-            uint8_t data = core->bus.read(src_address);
-
-            if (can_tick) {
-                core->tick_subcomponents(4);
-            }
-
+    void DMAController::clock() {
+        for (int i = 0; i < 2; ++i) {
+            const uint8_t data = core->bus.read(src_address);
             core->ppu.write_vram(dst_address & 0x1FFF, data);
 
             src_address++;
             dst_address++;
+            block_progress--;
+        }
+
+        if (block_progress == 0) {
+            if (current_length) {
+                current_length--;
+                block_progress = 16;
+            } else {
+                current_length = 0x7F;
+                active = false;
+            }
         }
     }
-
 }

@@ -54,7 +54,6 @@ namespace GB {
         void initialize_with_bootstrap(Cartridge *cart, ConsoleType console,
                                        std::filesystem::path bootstrap_path);
         void run_for_frames(int32_t frames);
-        void tick_subcomponents(int32_t cycles);
         void load_bootstrap(std::filesystem::path path);
 
         uint8_t read_bootstrap(uint16_t address);

@@ -280,6 +280,7 @@ namespace GB {
             double_speed_ = !double_speed_;
             KEY1 = double_speed_ << 7;
         }
+        fetch(program_counter + 1);
     }
 
     auto CPU::halt() -> void { exec = ExecutionMode::Halted; }

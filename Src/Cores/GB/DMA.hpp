@@ -26,8 +26,9 @@ namespace GB {
 
     class DMAController {
     public:
-        DMAController(Core *core);
+        explicit DMAController(Core *core);
 
+        auto is_transfer_active() -> bool;
         uint8_t get_dma_status() const;
         uint8_t get_hdma1() const;
         uint8_t get_hdma2() const;
@@ -41,14 +42,16 @@ namespace GB {
         void set_hdma3(uint8_t high);
         void set_hdma4(uint8_t low);
 
-        void tick();
+        void clock();
 
     private:
-        void transfer_block();
 
-        bool active = false, is_mode0 = false;
+        bool active = false;
+        bool is_mode0 = false;
         uint8_t current_length = 0x7F;
-        uint16_t src_address = 0, dst_address = 0;
+        uint16_t src_address = 0;
+        uint16_t dst_address = 0;
+        int32_t block_progress = 16;
         DMAType type = DMAType::GDMA;
 
         Core *core;
