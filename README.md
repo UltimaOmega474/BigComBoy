@@ -20,7 +20,7 @@ Cross-platform Game Boy & Game Boy Color emulator written in C++.
 
 ## Building
 
-1. Make sure your C++ compiler supports C++20.
+1. Make sure your C++ compiler supports C++23.
 2. Use git to clone the project with submodules.
 3. Install the following dependencies: CMake, Qt Framework 6, {fmt}, SDL2.
 4. Use CMake to build the BigComBoy target. 
