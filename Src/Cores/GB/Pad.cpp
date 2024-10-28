@@ -20,11 +20,11 @@
 
 namespace GB {
     auto Gamepad::reset() -> void {
-        dpad = action = 0xFF;
-        mode = 0;
+        dpad = action = 0x0F;
+        mode = 0x30;
     }
 
-    auto Gamepad::clear_buttons() -> void { dpad = action = 0xFF; }
+    auto Gamepad::clear_buttons() -> void { dpad = action = 0x0F; }
 
     auto Gamepad::set_pad_state(const PadButton btn, const bool pressed) -> void {
         if (pressed) {
@@ -105,10 +105,15 @@ namespace GB {
     auto Gamepad::select_button_mode(const uint8_t value) -> void { mode = value; }
 
     uint8_t Gamepad::get_pad_state() const {
+
         if (mode & 0x10) {
             return action;
-        } else {
+        }
+
+        if(mode & 0x20) {
             return dpad;
         }
+
+        return 0x0F;
     }
 }
