@@ -60,8 +60,8 @@ namespace GB {
         }
     }
 
-    void Core::initialize_with_bootstrap(Cartridge *cart, ConsoleType console,
-                                         std::filesystem::path bootstrap_path) {
+    void Core::initialize_with_bootstrap(Cartridge *cart, const ConsoleType console,
+                                         const std::filesystem::path& bootstrap_path) {
         ready_to_run = cart ? true : false;
 
         if (!cart) {
@@ -106,7 +106,7 @@ namespace GB {
                 if (dma.is_transfer_active()) {
                     dma.clock();
                 } else {
-                    cpu.clock();
+                    cpu.clock(pad.get_pad_state());
                 }
 
                 cycle_count += adjusted_cycles;
@@ -118,7 +118,7 @@ namespace GB {
         }
     }
 
-    void Core::load_bootstrap(std::filesystem::path path) {
+    void Core::load_bootstrap(const std::filesystem::path& path) {
         std::ifstream rom(path, std::ios::binary | std::ios::ate);
 
         if (rom) {

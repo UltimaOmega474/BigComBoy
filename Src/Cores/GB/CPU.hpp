@@ -96,7 +96,7 @@ namespace GB {
 
         auto reset(uint16_t new_pc, bool with_dmg_values) -> void;
         auto request_interrupt(uint8_t interrupt) -> void;
-        auto clock() -> void;
+        auto clock(uint8_t pad_state) -> void;
 
     private:
         auto get_register(Operand reg) const -> uint8_t;
@@ -190,7 +190,7 @@ namespace GB {
         bool ime = false;
         bool double_speed_ = false;
         bool dmg_mode = true;
-
+        bool awake = false;
         uint8_t ir = 0;
         uint8_t z = 0;
         uint8_t w = 0;

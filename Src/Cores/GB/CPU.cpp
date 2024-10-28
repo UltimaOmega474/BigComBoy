@@ -90,6 +90,7 @@ namespace GB {
         dmg_mode = with_dmg_values;
         ime = false;
         double_speed_ = false;
+        awake = false;
         exec = ExecutionMode::NormalBank;
         ie = 0;
         if_ = 0;
@@ -131,7 +132,9 @@ namespace GB {
 
     auto CPU::request_interrupt(const uint8_t interrupt) -> void { if_ |= interrupt; }
 
-    auto CPU::clock() -> void {
+    auto CPU::clock(const uint8_t pad_state) -> void {
+        awake = pad_state != 0x0F;
+
         switch (exec) {
         case ExecutionMode::NormalBank: decode_execute(); return;
         case ExecutionMode::BitOpsBank: decode_execute_bitops(); return;
@@ -154,7 +157,9 @@ namespace GB {
             return;
         }
         case ExecutionMode::Stopped: {
-            // TODO: I'll come back to this another time.
+            if (awake) {
+                exec = ExecutionMode::NormalBank;
+            }
             return;
         }
         }
@@ -255,9 +260,10 @@ namespace GB {
 
     auto CPU::stop() -> void {
         m_cycle++;
+
         if (dmg_mode) {
-            exec = ExecutionMode::Stopped;
             fetch(pc);
+            exec = ExecutionMode::Stopped;
             return;
         }
 
@@ -265,6 +271,7 @@ namespace GB {
             double_speed_ = !double_speed_;
             KEY1 = double_speed_ << 7;
         }
+
         fetch(pc + 1);
     }
 
