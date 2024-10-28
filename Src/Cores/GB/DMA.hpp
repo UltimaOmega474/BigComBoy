@@ -22,30 +22,32 @@
 namespace GB {
     class Core;
 
-    enum class DMAType { GDMA, HDMA };
+    enum class DMAType {
+        GDMA,
+        HDMA,
+    };
 
     class DMAController {
     public:
         explicit DMAController(Core *core);
 
         auto is_transfer_active() -> bool;
-        uint8_t get_dma_status() const;
-        uint8_t get_hdma1() const;
-        uint8_t get_hdma2() const;
-        uint8_t get_hdma3() const;
-        uint8_t get_hdma4() const;
+        auto get_dma_status() const -> uint8_t;
+        auto get_hdma1() const -> uint8_t;
+        auto get_hdma2() const -> uint8_t;
+        auto get_hdma3() const -> uint8_t;
+        auto get_hdma4() const -> uint8_t;
 
-        void reset();
-        void set_dma_control(uint8_t ctrl);
-        void set_hdma1(uint8_t high);
-        void set_hdma2(uint8_t low);
-        void set_hdma3(uint8_t high);
-        void set_hdma4(uint8_t low);
+        auto reset() -> void;
+        auto set_dma_control(uint8_t ctrl) -> void;
+        auto set_hdma1(uint8_t high) -> void;
+        auto set_hdma2(uint8_t low) -> void;
+        auto set_hdma3(uint8_t high) -> void;
+        auto set_hdma4(uint8_t low) -> void;
 
-        void clock();
+        auto clock() -> void;
 
     private:
-
         bool active = false;
         bool is_mode0 = false;
         uint8_t current_length = 0x7F;
