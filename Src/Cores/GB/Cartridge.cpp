@@ -25,11 +25,11 @@ namespace GB {
 
     const CartHeader &Cartridge::header() const { return header_; }
 
-    std::unique_ptr<Cartridge> Cartridge::from_file(std::filesystem::path rom_path) {
+    auto Cartridge::from_file(std::filesystem::path rom_path) -> std::unique_ptr<Cartridge> {
         return std::unique_ptr<Cartridge>(from_file_raw_ptr(std::move(rom_path)));
     }
 
-    Cartridge *Cartridge::from_file_raw_ptr(std::filesystem::path rom_path) {
+    auto Cartridge::from_file_raw_ptr(std::filesystem::path rom_path) -> Cartridge * {
         if (!std::filesystem::exists(rom_path)) {
             return nullptr;
         }
@@ -39,7 +39,7 @@ namespace GB {
         std::ifstream rom(header.file_path, std::ios::binary | std::ios::ate);
         if (rom) {
 
-            size_t rom_len = rom.tellg();
+            const size_t rom_len = rom.tellg();
 
             if (rom_len < 0x14F) {
                 return nullptr;
@@ -106,6 +106,7 @@ namespace GB {
                 mbc = new MBC5(std::move(header));
                 break;
             }
+            default:;
             }
 
             if (mbc) {
@@ -114,16 +115,17 @@ namespace GB {
                 rom.close();
                 return mbc;
             }
+
         }
 
         return nullptr;
     }
 
-    ROM::ROM(CartHeader &&header) : Cartridge(std::move(header)), rom() {}
+    ROM::ROM(CartHeader &&header) : Cartridge(std::move(header)) {}
 
-    void ROM::reset() {}
+    auto ROM::reset() -> void {}
 
-    void ROM::init_banks(std::ifstream &rom_stream) {
+    auto ROM::init_banks(std::ifstream &rom_stream) -> void {
         rom_stream.seekg(0, std::ios::end);
 
         rom.resize(rom_stream.tellg());
@@ -133,35 +135,35 @@ namespace GB {
                         static_cast<std::streamsize>(rom.size()));
     }
 
-    uint8_t ROM::read(uint16_t address) { return rom[address]; }
+    auto ROM::read(const uint16_t address) -> uint8_t { return rom[address]; }
 
-    void ROM::write(uint16_t address, uint8_t value) {}
+    auto ROM::write(uint16_t, uint8_t) -> void {}
 
-    uint8_t ROM::read_ram(uint16_t address) { return 0xFF; }
+    auto ROM::read_ram(uint16_t) -> uint8_t { return 0xFF; }
 
-    void ROM::write_ram(uint16_t address, uint8_t value) {}
+    auto ROM::write_ram(uint16_t, uint8_t) -> void {}
 
-    void ROM::save_sram_to_file() {}
+    auto ROM::save_sram_to_file() -> void {}
 
-    void ROM::load_sram_from_file() {}
+    auto ROM::load_sram_from_file() -> void {}
 
-    void ROM::tick(int32_t cycles) {}
+    auto ROM::clock(const int32_t cycles) -> void {}
 
-    MBC1::MBC1(CartHeader &&header) : Cartridge(std::move(header)), eram() { eram.fill(0); }
+    MBC1::MBC1(CartHeader &&header) : Cartridge(std::move(header)) { eram.fill(0); }
 
-    bool MBC1::has_battery() const { return header_.mbc_type == 3; }
+    auto MBC1::has_battery() const -> bool { return header_.mbc_type == 3; }
 
-    void MBC1::reset() {
-        mode = 0;
+    auto MBC1::reset() -> void {
+        mode = false;
         rom_bank_num = 1;
         bank_upper_bits = 0;
         ram_enabled = false;
         eram.fill(0);
     }
 
-    void MBC1::init_banks(std::ifstream &rom_stream) {
+    auto MBC1::init_banks(std::ifstream &rom_stream) -> void {
         rom_stream.seekg(0, std::ios::end);
-        auto rom_len = rom_stream.tellg();
+        const auto rom_len = rom_stream.tellg();
         rom_stream.seekg(0);
 
         rom.resize(rom_len);
@@ -169,7 +171,7 @@ namespace GB {
         rom_stream.read(reinterpret_cast<char *>(rom.data()), rom_len);
     }
 
-    uint8_t MBC1::read(uint16_t address) {
+    auto MBC1::read(const uint16_t address) -> uint8_t {
         int32_t bank_num = (bank_upper_bits << 5);
 
         if (address < 0x4000) {
@@ -183,7 +185,7 @@ namespace GB {
         return rom[(bank_num * 0x4000) + (address & 0x3FFF)];
     }
 
-    void MBC1::write(uint16_t address, uint8_t value) {
+    auto MBC1::write(const uint16_t address, const uint8_t value) -> void {
         switch (address >> 12) {
         case 0x0:
         case 0x1: {
@@ -218,10 +220,11 @@ namespace GB {
             mode = value & 0x1;
             break;
         }
+        default:;
         }
     }
 
-    uint8_t MBC1::read_ram(uint16_t address) {
+    auto MBC1::read_ram(const uint16_t address) -> uint8_t {
         if (ram_enabled) {
             return eram[(mode ? (bank_upper_bits * 0x2000) : 0) + address];
         }
@@ -229,13 +232,13 @@ namespace GB {
         return 0xFF;
     }
 
-    void MBC1::write_ram(uint16_t address, uint8_t value) {
+    auto MBC1::write_ram(const uint16_t address, const uint8_t value) -> void {
         if (ram_enabled) {
             eram[(mode ? (bank_upper_bits * 0x2000) : 0) + address] = value;
         }
     }
 
-    void MBC1::save_sram_to_file() {
+    auto MBC1::save_sram_to_file() -> void {
         if (!has_battery()) {
             return;
         }
@@ -251,7 +254,7 @@ namespace GB {
         }
     }
 
-    void MBC1::load_sram_from_file() {
+    auto MBC1::load_sram_from_file() -> void {
         if (!has_battery()) {
             return;
         }
@@ -261,7 +264,7 @@ namespace GB {
 
         std::ifstream sram(path, std::ios::binary | std::ios::ate);
         if (sram) {
-            auto len = sram.tellg();
+            const auto len = sram.tellg();
 
             sram.seekg(0);
 
@@ -270,21 +273,21 @@ namespace GB {
         }
     }
 
-    void MBC1::tick(int32_t cycles) {}
+    auto MBC1::clock(int32_t) -> void {}
 
     MBC2::MBC2(CartHeader &&header) : Cartridge(std::move(header)) {}
 
-    bool MBC2::has_battery() const { return header_.mbc_type == 6; }
+    auto MBC2::has_battery() const -> bool { return header_.mbc_type == 6; }
 
-    void MBC2::reset() {
+    auto MBC2::reset() -> void {
         rom_bank_num = 1;
         ram_enabled = false;
         ram.fill(0);
     }
 
-    void MBC2::init_banks(std::ifstream &rom_stream) {
+    auto MBC2::init_banks(std::ifstream &rom_stream) -> void {
         rom_stream.seekg(0, std::ios::end);
-        auto rom_len = rom_stream.tellg();
+        const auto rom_len = rom_stream.tellg();
         rom_stream.seekg(0);
 
         rom.resize(rom_len);
@@ -292,7 +295,7 @@ namespace GB {
         rom_stream.read(reinterpret_cast<char *>(rom.data()), rom_len);
     }
 
-    uint8_t MBC2::read(uint16_t address) {
+    auto MBC2::read(const uint16_t address) -> uint8_t {
         if (address < 0x4000) {
             return rom[address];
         }
@@ -302,7 +305,7 @@ namespace GB {
         return rom[(bank * 0x4000) + (address & 0x3FFF)];
     }
 
-    void MBC2::write(uint16_t address, uint8_t value) {
+    auto MBC2::write(const uint16_t address, const uint8_t value) -> void {
         if (address < 0x4000) {
             if (address & 0x100) {
 
@@ -318,7 +321,7 @@ namespace GB {
         }
     }
 
-    uint8_t MBC2::read_ram(uint16_t address) {
+    auto MBC2::read_ram(const uint16_t address) -> uint8_t {
         if (ram_enabled) {
             return (ram[address & 0x01FF] & 0xF) | 0xF0;
         }
@@ -326,13 +329,13 @@ namespace GB {
         return 0xFF;
     }
 
-    void MBC2::write_ram(uint16_t address, uint8_t value) {
+    auto MBC2::write_ram(const uint16_t address, const uint8_t value) -> void {
         if (ram_enabled) {
             ram[address & 0x01FF] = value & 0xF;
         }
     }
 
-    void MBC2::save_sram_to_file() {
+    auto MBC2::save_sram_to_file() -> void {
         if (!has_battery()) {
             return;
         }
@@ -348,7 +351,7 @@ namespace GB {
         }
     }
 
-    void MBC2::load_sram_from_file() {
+    auto MBC2::load_sram_from_file() -> void {
         if (!has_battery()) {
             return;
         }
@@ -358,7 +361,7 @@ namespace GB {
 
         std::ifstream sram(path, std::ios::binary | std::ios::ate);
         if (sram) {
-            auto len = sram.tellg();
+            const auto len = sram.tellg();
 
             sram.seekg(0);
 
@@ -367,47 +370,49 @@ namespace GB {
         }
     }
 
-    void MBC2::tick(int32_t cycles) {}
+    auto MBC2::clock(int32_t) -> void {}
 
-    RTCCounter::RTCCounter(uint8_t bit_mask) : mask(bit_mask) {}
+    RTCCounter::RTCCounter(const uint8_t bit_mask) : mask(bit_mask) {}
 
-    uint8_t RTCCounter::get() const { return counter; }
+    auto RTCCounter::get() const -> uint8_t { return counter; }
 
-    void RTCCounter::set(uint8_t value) {
+    auto RTCCounter::set(const uint8_t value) -> void {
         counter = value;
         counter &= mask;
     }
 
-    void RTCCounter::increment() {
+    auto RTCCounter::increment() -> void {
         counter++;
         counter &= mask;
     }
 
     MBC3::MBC3(CartHeader &&header) : Cartridge(std::move(header)) {}
 
-    bool MBC3::has_rtc() const {
+    auto MBC3::has_rtc() const -> bool {
         switch (header_.mbc_type) {
         case 0x0F:   // MBC3+TIMER+BATTERY
         case 0x10: { // MBC3+TIMER+RAM+BATTERY
             return true;
         }
+        default:;
         }
 
         return false;
     }
 
-    bool MBC3::has_battery() const {
+    auto MBC3::has_battery() const -> bool {
         switch (header_.mbc_type) {
         case 0x0F:   // MBC3+TIMER+BATTERY
         case 0x10:   // MBC3+TIMER+RAM+BATTERY
         case 0x13: { // MBC3+RAM+BATTERY
             return true;
         }
+        default:;
         }
         return false;
     }
 
-    void MBC3::reset() {
+    auto MBC3::reset() -> void {
         rom_bank_num = 1;
         ram_rtc_select = 0;
         ram_rtc_enabled = false;
@@ -419,9 +424,9 @@ namespace GB {
         rtc_ctrl = 0;
     }
 
-    void MBC3::init_banks(std::ifstream &rom_stream) {
+    auto MBC3::init_banks(std::ifstream &rom_stream) -> void {
         rom_stream.seekg(0, std::ios::end);
-        auto rom_len = rom_stream.tellg();
+        const auto rom_len = rom_stream.tellg();
         rom_stream.seekg(0);
 
         rom.resize(rom_len);
@@ -429,7 +434,7 @@ namespace GB {
         rom_stream.read(reinterpret_cast<char *>(rom.data()), rom_len);
     }
 
-    uint8_t MBC3::read(uint16_t address) {
+    auto MBC3::read(const uint16_t address) -> uint8_t {
         if (address < 0x4000) {
             return rom[address];
         }
@@ -437,7 +442,7 @@ namespace GB {
         return rom[(rom_bank_num * 0x4000) + (address & 0x3FFF)];
     }
 
-    void MBC3::write(uint16_t address, uint8_t value) {
+    auto MBC3::write(uint16_t address, uint8_t value) -> void {
         switch (address >> 12) {
         case 0x0:
         case 0x1: {
@@ -468,11 +473,11 @@ namespace GB {
             latch_byte = value;
             break;
         }
+        default:;
         }
     }
 
-    uint8_t MBC3::read_ram(uint16_t address) {
-
+    auto MBC3::read_ram(const uint16_t address) -> uint8_t {
         switch (ram_rtc_select) {
         case 0x0:
         case 0x1:
@@ -486,7 +491,7 @@ namespace GB {
                 return eram[(ram_rtc_select * 0x2000) + address];
             }
 
-            break;
+            return 0xFF;
         }
         case 0x8: {
             return shadow_rtc.seconds.get();
@@ -501,15 +506,13 @@ namespace GB {
             return static_cast<uint8_t>(shadow_rtc.days & 0xFF);
         }
         case 0xC: {
-            int32_t a = rtc_ctrl | ((shadow_rtc.days & 0x100) ? 1 : 0);
-
-            return a;
+            return rtc_ctrl | ((shadow_rtc.days & 0x100) ? 1 : 0);
         }
+        default: return 0xFF;
         }
-        return 0xFF;
     }
 
-    void MBC3::write_ram(uint16_t address, uint8_t value) {
+    auto MBC3::write_ram(const uint16_t address, const uint8_t value) -> void {
         switch (ram_rtc_select) {
         case 0x0:
         case 0x1:
@@ -549,10 +552,11 @@ namespace GB {
             rtc.days |= (value & 0x1) ? 0x100 : 0;
             break;
         }
+        default:;
         }
     }
 
-    void MBC3::save_sram_to_file() {
+    auto MBC3::save_sram_to_file() -> void {
         if (!has_battery()) {
             return;
         }
@@ -568,7 +572,7 @@ namespace GB {
         }
     }
 
-    void MBC3::load_sram_from_file() {
+    auto MBC3::load_sram_from_file() -> void {
         if (!has_battery()) {
             return;
         }
@@ -587,7 +591,7 @@ namespace GB {
         }
     }
 
-    void MBC3::tick(int32_t cycles) {
+    auto MBC3::clock(const int32_t cycles) -> void {
         if (has_rtc() && !(rtc_ctrl & 64)) {
             rtc_cycles += cycles;
 
@@ -620,18 +624,19 @@ namespace GB {
 
     MBC5::MBC5(CartHeader &&header) : Cartridge(std::move(header)) {}
 
-    bool MBC5::has_battery() const {
+    auto MBC5::has_battery() const -> bool {
         switch (header_.mbc_type) {
         case 0x1B:   // MBC5+RAM+BATTERY
         case 0x1E: { // MBC5+RUMBLE+RAM+BATTERY
             return true;
         }
+        default:;
         }
 
         return false;
     }
 
-    void MBC5::reset() {
+    auto MBC5::reset() -> void {
         rom_bank_num = 1;
         bank_upper_bits = 0;
         ram_bank_num = 0;
@@ -639,9 +644,9 @@ namespace GB {
         eram.fill(0);
     }
 
-    void MBC5::init_banks(std::ifstream &rom_stream) {
+    auto MBC5::init_banks(std::ifstream &rom_stream) -> void {
         rom_stream.seekg(0, std::ios::end);
-        auto rom_len = rom_stream.tellg();
+        const auto rom_len = rom_stream.tellg();
         rom_stream.seekg(0);
 
         rom.resize(rom_len);
@@ -649,7 +654,7 @@ namespace GB {
         rom_stream.read(reinterpret_cast<char *>(rom.data()), rom_len);
     }
 
-    uint8_t MBC5::read(uint16_t address) {
+    auto MBC5::read(const uint16_t address) -> uint8_t {
         int32_t bank_num = rom_bank_num | bank_upper_bits;
 
         if (address < 0x4000) {
@@ -661,7 +666,7 @@ namespace GB {
         return rom[(bank_num * 0x4000) + (address & 0x3FFF)];
     }
 
-    void MBC5::write(uint16_t address, uint8_t value) {
+    auto MBC5::write(const uint16_t address, const uint8_t value) -> void {
         switch (address >> 12) {
         case 0x0:
         case 0x1: {
@@ -682,6 +687,7 @@ namespace GB {
             ram_bank_num = value & 0xF;
             break;
         }
+        default:;
         }
     }
 
@@ -693,13 +699,13 @@ namespace GB {
         return 0xFF;
     }
 
-    void MBC5::write_ram(uint16_t address, uint8_t value) {
+    auto MBC5::write_ram(const uint16_t address,const uint8_t value) -> void {
         if (ram_enabled) {
             eram[(ram_bank_num * 0x2000) + address] = value;
         }
     }
 
-    void MBC5::save_sram_to_file() {
+    auto MBC5::save_sram_to_file() -> void {
         if (!has_battery()) {
             return;
         }
@@ -715,7 +721,7 @@ namespace GB {
         }
     }
 
-    void MBC5::load_sram_from_file() {
+    auto MBC5::load_sram_from_file() -> void {
         if (!has_battery()) {
             return;
         }
@@ -725,7 +731,7 @@ namespace GB {
 
         std::ifstream sram(path, std::ios::binary | std::ios::ate);
         if (sram) {
-            auto len = sram.tellg();
+            const auto len = sram.tellg();
 
             sram.seekg(0);
 
@@ -734,5 +740,5 @@ namespace GB {
         }
     }
 
-    void MBC5::tick(int32_t cycles) {}
+    auto MBC5::clock(int32_t) -> void {}
 }

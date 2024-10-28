@@ -26,15 +26,15 @@ namespace GB {
 
     class MainBus {
     public:
-        MainBus(Core *core);
+        explicit MainBus(Core *core);
 
-        bool bootstrap_mapped() const;
-        bool is_compatibility_mode() const;
+        auto bootstrap_mapped() const -> bool;
+        auto is_compatibility_mode() const -> bool;
 
-        void reset(Cartridge *new_cart);
+        auto reset(Cartridge *new_cart) -> void;
 
-        uint8_t read(uint16_t address);
-        void write(uint16_t address, uint8_t value);
+        auto read(uint16_t address) const -> uint8_t;
+        auto write(uint16_t address, uint8_t value) -> void;
 
     private:
         bool bootstrap_mapped_ = true;

@@ -18,20 +18,15 @@
 
 #include "Bus.hpp"
 #include "Core.hpp"
-#include <stdexcept>
 
 namespace GB {
-    MainBus::MainBus(Core *core) : core(core) {
-        if (!core) {
-            throw std::invalid_argument("Core cannot be null.");
-        }
-    }
+    MainBus::MainBus(Core *core) : core(core) {}
 
-    bool MainBus::bootstrap_mapped() const { return bootstrap_mapped_; }
+    auto MainBus::bootstrap_mapped() const -> bool { return bootstrap_mapped_; }
 
-    bool MainBus::is_compatibility_mode() const { return (KEY0 & DISABLE_CGB_FUNCTIONS); }
+    auto MainBus::is_compatibility_mode() const -> bool { return (KEY0 & DISABLE_CGB_FUNCTIONS); }
 
-    void MainBus::reset(Cartridge *new_cart) {
+    auto MainBus::reset(Cartridge *new_cart) -> void {
         KEY0 = 0;
         bootstrap_mapped_ = true;
         wram.fill(0);
@@ -39,10 +34,8 @@ namespace GB {
         cart = new_cart;
     }
 
-    uint8_t MainBus::read(uint16_t address) {
-        auto page = address >> 12;
-
-        switch (page) {
+    auto MainBus::read(const uint16_t address) const -> uint8_t {
+        switch (address >> 12) {
         case 0x0:
         case 0x1:
         case 0x2:
@@ -86,9 +79,7 @@ namespace GB {
             return wram[address & (address & 0xFFF)];
         }
         case 0xF: {
-            auto hram_page = address >> 8;
-
-            switch (hram_page) {
+            switch (address >> 8) {
             case 0xFD: {
                 return wram[address & 0x1FFF];
             }
@@ -96,7 +87,7 @@ namespace GB {
                 return core->ppu.read_oam(address & 0xFF);
             }
             case 0xFF: {
-                auto io_address = address & 0xFF;
+                const auto io_address = address & 0xFF;
 
                 switch (io_address) {
                 // Input
@@ -207,29 +198,32 @@ namespace GB {
                 case 0x70: {
                     return wram_bank_num;
                 }
+                default:;
                 }
 
                 if ((address >= 0xFF80) && (address <= 0xFFFE)) {
                     return hram[address - 0xFF80]; // High Ram
-                } else if (address == 0xFFFF) {
+                }
+
+                if (address == 0xFFFF) {
                     return core->cpu.ie;
                 }
 
                 return 0xFF; // IO Registers
             }
+            default:;
             }
 
             return 0;
         }
+        default:;
         }
 
         return 0;
     }
 
-    void MainBus::write(uint16_t address, uint8_t value) {
-        auto page = address >> 12;
-
-        switch (page) {
+    auto MainBus::write(const uint16_t address, uint8_t value) -> void {
+        switch (address >> 12) {
         case 0x0:
         case 0x1:
         case 0x2:
@@ -281,9 +275,7 @@ namespace GB {
         }
 
         case 0xF: {
-            auto hram_page = address >> 8;
-
-            switch (hram_page) {
+            switch (address >> 8) {
             case 0xFD: {
                 wram[address & 0x1FFF] = value;
                 return;
@@ -293,7 +285,7 @@ namespace GB {
                 return;
             }
             case 0xFF: {
-                auto io_address = address & 0xFF;
+                const auto io_address = address & 0xFF;
 
                 switch (io_address) {
                 // Input
@@ -431,20 +423,23 @@ namespace GB {
                     wram_bank_num = value ? value : 1;
                     return;
                 }
+                default:;
                 }
 
                 if ((address >= 0xFF80) && (address <= 0xFFFE)) {
                     hram[address - 0xFF80] = value; // High Ram
                     return;
-                } else if (address == 0xFFFF) {
+                }
+
+                if (address == 0xFFFF) {
                     core->cpu.ie = value;
                     return;
                 }
-
-                return;
             }
+            default:;
             }
         }
+        default:;
         }
     }
 }
