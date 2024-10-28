@@ -85,10 +85,10 @@ namespace GB {
         uint8_t pixel_attribute() const;
         uint8_t pixels_left() const;
 
-        void clear();
-        void load(uint8_t low, uint8_t high, uint8_t attribute);
-        void force_shift(uint8_t amount);
-        uint8_t clock();
+        auto clear() -> void;
+        auto load(uint8_t low, uint8_t high, uint8_t attribute) -> void;
+        auto force_shift(uint8_t amount) -> void;
+        auto clock() -> uint8_t;
 
     private:
         uint8_t shift_count = 0;
@@ -99,65 +99,70 @@ namespace GB {
 
     class BackgroundFetcher {
     public:
-        FetchState get_state() const;
-        FetchMode get_mode() const;
+        auto get_state() const -> FetchState;
+        auto get_mode() const -> FetchMode;
 
-        void reset();
-        void clear_with_mode(FetchMode new_mode);
-        void clock(PPU &ppu);
+        auto reset() -> void;
+        auto clear_with_mode(FetchMode new_mode) -> void;
+        auto clock(PPU &ppu) -> void;
 
     private:
-        void get_tile_id(PPU &ppu);
-        void get_tile_data(PPU &ppu, uint8_t bit_plane);
-        void push_pixels(PPU &ppu);
+        auto get_tile_id(const PPU &ppu) -> void;
+        auto get_tile_data(const PPU &ppu, uint8_t bit_plane) -> void;
+        auto push_pixels(PPU &ppu) -> void;
 
         bool first_fetch = true;
-        uint8_t substep = 0, tile_id = 0, attribute_id = 0;
-        uint8_t queued_pixels_low = 0, queued_pixels_high = 0;
-        uint16_t x_pos = 0, address = 0;
+        uint8_t substep = 0;
+        uint8_t tile_id = 0;
+        uint8_t attribute_id = 0;
+        uint8_t queued_pixels_low = 0;
+        uint8_t queued_pixels_high = 0;
+        uint16_t x_pos = 0;
+        uint16_t address = 0;
         FetchState state = FetchState::GetTileID;
         FetchMode mode = FetchMode::Background;
     };
 
     class PPU {
     public:
-        PPU(Core *core);
+        explicit PPU(Core *core);
 
-        std::span<uint8_t, LCD_WIDTH * LCD_HEIGHT * 4> framebuffer();
+        auto framebuffer() -> std::span<uint8_t, LCD_WIDTH * LCD_HEIGHT * 4>;
 
-        void reset();
-        void set_post_boot_state();
-        void set_compatibility_palette(PaletteID palette_type,
-                                       const std::span<const uint16_t> colors);
+        auto reset() -> void;
+        auto set_post_boot_state() -> void;
+        auto set_compatibility_palette(PaletteID palette_type, std::span<const uint16_t> colors)
+            -> void;
 
-        void step(int32_t accumulated_cycles);
+        auto clock(int32_t accumulated_cycles) -> void;
 
-        void write_register(uint8_t reg, uint8_t value);
-        uint8_t read_register(uint8_t reg) const;
+        auto write_register(uint8_t reg, uint8_t value) -> void;
+        auto read_register(uint8_t reg) const -> uint8_t;
 
-        void write_vram(uint16_t address, uint8_t value);
-        uint8_t read_vram(uint16_t address) const;
-        void write_oam(uint16_t address, uint8_t value);
-        uint8_t read_oam(uint16_t address) const;
+        auto write_vram(uint16_t address, uint8_t value) -> void;
+        auto read_vram(uint16_t address) const -> uint8_t;
+        auto write_oam(uint16_t address, uint8_t value) -> void;
+        auto read_oam(uint16_t address) const -> uint8_t;
 
     private:
-        void write_bg_palette(uint8_t value);
-        uint8_t read_bg_palette() const;
-        void write_obj_palette(uint8_t value);
-        uint8_t read_obj_palette() const;
+        auto write_bg_palette(uint8_t value) -> void;
+        auto read_bg_palette() const -> uint8_t;
+        auto write_obj_palette(uint8_t value) -> void;
+        auto read_obj_palette() const -> uint8_t;
 
-        void instant_dma(uint8_t address);
+        auto instant_dma(uint8_t address) -> void;
 
-        void set_stat(uint8_t flags, bool value);
-        bool stat_any() const;
+        auto set_stat(uint8_t flags, bool value) -> void;
+        auto stat_any() const -> bool;
 
-        void render_scanline();
-        void render_objects();
-        void plot_cgb_pixel(uint8_t x_pos, uint8_t final_pixel, uint8_t palette, bool is_obj);
+        auto render_scanline() -> void;
+        auto render_objects() -> void;
+        auto plot_cgb_pixel(uint8_t x_pos, uint8_t final_pixel, uint8_t palette, bool is_obj)
+            -> void;
 
-        void scan_oam();
-        void set_mode(uint8_t mode);
-        void check_ly_lyc(bool allow_interrupts);
+        auto scan_oam() -> void;
+        auto set_mode(uint8_t mode) -> void;
+        auto check_ly_lyc(bool allow_interrupts) -> void;
 
         BackgroundFetcher fetcher;
         BackgroundFIFO bg_fifo;

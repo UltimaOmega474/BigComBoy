@@ -20,22 +20,20 @@
 #include "Constants.hpp"
 #include "Core.hpp"
 #include <algorithm>
-#include <span>
-#include <stdexcept>
 
 namespace GB {
-    uint8_t BackgroundFIFO::pixel_attribute() const { return attribute; }
+    auto BackgroundFIFO::pixel_attribute() const -> uint8_t { return attribute; }
 
-    uint8_t BackgroundFIFO::pixels_left() const { return shift_count; }
+    auto BackgroundFIFO::pixels_left() const -> uint8_t { return shift_count; }
 
-    void BackgroundFIFO::clear() {
+    auto BackgroundFIFO::clear() -> void {
         shift_count = 0;
         pixels_low = 0;
         pixels_high = 0;
         attribute = 0;
     }
 
-    void BackgroundFIFO::load(uint8_t low, uint8_t high, uint8_t attribute) {
+    auto BackgroundFIFO::load(uint8_t low, uint8_t high, uint8_t attribute) -> void {
         pixels_low = low;
         pixels_high = high;
         shift_count = 8;
@@ -54,13 +52,13 @@ namespace GB {
         }
     }
 
-    void BackgroundFIFO::force_shift(uint8_t amount) {
+    auto BackgroundFIFO::force_shift(uint8_t amount) -> void {
         pixels_low <<= amount;
         pixels_high <<= amount;
         shift_count -= amount;
     }
 
-    uint8_t BackgroundFIFO::clock() {
+    auto BackgroundFIFO::clock() -> uint8_t {
         uint8_t low_bit = (pixels_low >> 7) & 0x1;
         uint8_t high_bit = (pixels_high >> 7) & 0x1;
         uint8_t pixel = (high_bit << 1) | (low_bit);
@@ -72,16 +70,16 @@ namespace GB {
         return pixel;
     }
 
-    FetchState BackgroundFetcher::get_state() const { return state; }
+    auto BackgroundFetcher::get_state() const -> FetchState { return state; }
 
-    FetchMode BackgroundFetcher::get_mode() const { return mode; }
+    auto BackgroundFetcher::get_mode() const -> FetchMode { return mode; }
 
-    void BackgroundFetcher::reset() {
+    auto BackgroundFetcher::reset() -> void {
         first_fetch = true;
         clear_with_mode(FetchMode::Background);
     }
 
-    void BackgroundFetcher::clear_with_mode(FetchMode new_mode) {
+    auto BackgroundFetcher::clear_with_mode(const FetchMode new_mode) -> void {
         substep = 0;
         tile_id = 0;
         attribute_id = 0;
@@ -93,7 +91,7 @@ namespace GB {
         mode = new_mode;
     }
 
-    void BackgroundFetcher::clock(PPU &ppu) {
+    auto BackgroundFetcher::clock(PPU &ppu) -> void {
         switch (state) {
         case FetchState::GetTileID: {
             get_tile_id(ppu);
@@ -114,7 +112,7 @@ namespace GB {
         }
     }
 
-    void BackgroundFetcher::get_tile_id(PPU &ppu) {
+    auto BackgroundFetcher::get_tile_id(const PPU &ppu) -> void {
         switch (substep) {
         case 0: {
             uint16_t computed_address = 0b10011 << 11;
@@ -161,17 +159,18 @@ namespace GB {
             substep = 0;
             break;
         }
+        default:;
         }
     }
 
-    void BackgroundFetcher::get_tile_data(PPU &ppu, uint8_t bit_plane) {
+    auto BackgroundFetcher::get_tile_data(const PPU &ppu, const uint8_t bit_plane) -> void {
         switch (substep) {
         case 0: {
             uint16_t computed_address = (0b1 << 15) + bit_plane;
 
             switch (mode) {
             case FetchMode::Background: {
-                uint16_t bit12 = !((ppu.lcd_control & TILE_DATA_LOC_BIT) || (tile_id & 0x80));
+                const uint16_t bit12 = !((ppu.lcd_control & TILE_DATA_LOC_BIT) || (tile_id & 0x80));
                 uint16_t yoffset = (ppu.line_y + ppu.screen_scroll_y) & 7;
 
                 if (attribute_id & TILE_FLIP_Y_BIT) {
@@ -185,7 +184,7 @@ namespace GB {
                 break;
             }
             case FetchMode::Window: {
-                uint16_t bit12 = !((ppu.lcd_control & TILE_DATA_LOC_BIT) || (tile_id & 0x80));
+                const uint16_t bit12 = !((ppu.lcd_control & TILE_DATA_LOC_BIT) || (tile_id & 0x80));
                 uint16_t yoffset = ppu.window_line_y & 7;
 
                 if (attribute_id & TILE_FLIP_Y_BIT) {
@@ -212,7 +211,7 @@ namespace GB {
             if (bit_plane == 1) {
                 state = FetchState::Push;
 
-                auto bank = (attribute_id & 0x8) >> 3;
+                const auto bank = (attribute_id & 0x8) >> 3;
                 queued_pixels_high = ppu.vram[(0x2000 * bank) + address];
 
                 if (first_fetch) {
@@ -221,16 +220,17 @@ namespace GB {
                 }
             } else {
                 state = FetchState::TileHigh;
-                auto bank = (attribute_id & 0x8) >> 3;
+                const auto bank = (attribute_id & 0x8) >> 3;
                 queued_pixels_low = ppu.vram[(0x2000 * bank) + address];
             }
 
             break;
         }
+        default:;
         }
     }
 
-    void BackgroundFetcher::push_pixels(PPU &ppu) {
+    auto BackgroundFetcher::push_pixels(PPU &ppu) -> void {
         if (ppu.bg_fifo.pixels_left())
             return;
 
@@ -239,7 +239,7 @@ namespace GB {
 
         if (mode == FetchMode::Background) {
             if (ppu.line_x == 0) {
-                auto scx = ppu.screen_scroll_x & 7;
+                const uint8_t scx = ppu.screen_scroll_x & 7;
 
                 ppu.bg_fifo.force_shift(scx);
                 ppu.extra_cycles += scx;
@@ -250,17 +250,13 @@ namespace GB {
         state = FetchState::GetTileID;
     }
 
-    PPU::PPU(Core *core) : core(core) {
-        if (!core) {
-            throw std::invalid_argument("Core cannot be null.");
-        }
-    }
+    PPU::PPU(Core *core) : core(core) {}
 
-    std::span<uint8_t, LCD_WIDTH * LCD_HEIGHT * 4> PPU::framebuffer() {
+    auto PPU::framebuffer() -> std::span<uint8_t, LCD_WIDTH * LCD_HEIGHT * 4> {
         return framebuffer_complete;
     }
 
-    void PPU::reset() {
+    auto PPU::reset() -> void {
         fetcher.reset();
         bg_fifo.clear();
 
@@ -304,7 +300,7 @@ namespace GB {
         framebuffer_complete.fill(0);
     }
 
-    void PPU::set_post_boot_state() {
+    auto PPU::set_post_boot_state() -> void {
         previously_disabled = false;
         status = 0x85;
         lcd_control = 0x91;
@@ -314,29 +310,29 @@ namespace GB {
         background_palette = 0xFC;
     }
 
-    void PPU::set_compatibility_palette(PaletteID palette_type,
-                                        const std::span<const uint16_t> colors) {
+    auto PPU::set_compatibility_palette(const PaletteID palette_type,
+                                        std::span<const uint16_t> colors) -> void {
         switch (palette_type) {
         case PaletteID::BG: {
             auto palette = std::span(reinterpret_cast<uint16_t *>(bg_cram.data()), 4);
-            std::copy(colors.begin(), colors.end(), palette.begin());
+            std::ranges::copy(colors, palette.begin());
 
             break;
         }
         case PaletteID::OBJ1: {
             auto palette = std::span(reinterpret_cast<uint16_t *>(obj_cram.data()), 4);
-            std::copy(colors.begin(), colors.end(), palette.begin());
+            std::ranges::copy(colors, palette.begin());
             break;
         }
         case PaletteID::OBJ2: {
             auto palette = std::span(reinterpret_cast<uint16_t *>(obj_cram.data() + 8), 4);
-            std::copy(colors.begin(), colors.end(), palette.begin());
+            std::ranges::copy(colors, palette.begin());
             break;
         }
         }
     }
 
-    void PPU::step(int32_t accumulated_cycles) {
+    auto PPU::clock(int32_t accumulated_cycles) -> void {
         if (!(lcd_control & LCD_ENABLED_BIT)) {
             set_mode(HBLANK);
             previously_disabled = true;
@@ -358,7 +354,7 @@ namespace GB {
         }
 
         while (accumulated_cycles) {
-            bool allow_interrupt = !stat_any();
+            const bool allow_interrupt = !stat_any();
 
             if (window_y == line_y) {
                 window_draw_flag = true;
@@ -453,6 +449,7 @@ namespace GB {
                 }
                 break;
             }
+            default:;
             }
 
             accumulated_cycles--;
@@ -462,7 +459,7 @@ namespace GB {
         }
     }
 
-    void PPU::write_register(uint8_t reg, uint8_t value) {
+    auto PPU::write_register(const uint8_t reg, const uint8_t value) -> void {
         switch (reg) {
         case 0x40: {
             lcd_control = value;
@@ -536,10 +533,11 @@ namespace GB {
             }
             break;
         }
+        default:;
         }
     }
 
-    uint8_t PPU::read_register(uint8_t reg) const {
+    auto PPU::read_register(const uint8_t reg) const -> uint8_t {
         switch (reg) {
         case 0x40: {
             return lcd_control;
@@ -595,23 +593,26 @@ namespace GB {
         case 0x6C: {
             return object_priority_mode;
         }
+        default:;
         }
         return 0;
     }
 
-    void PPU::write_vram(uint16_t address, uint8_t value) {
+    auto PPU::write_vram(const uint16_t address, const uint8_t value) -> void {
         vram[(vram_bank_select * 0x2000) + address] = value;
     }
 
-    uint8_t PPU::read_vram(uint16_t address) const {
+    auto PPU::read_vram(const uint16_t address) const -> uint8_t {
         return vram[(vram_bank_select * 0x2000) + address];
     }
 
-    void PPU::write_oam(uint16_t address, uint8_t value) { oam[address] = value; }
+    auto PPU::write_oam(const uint16_t address, const uint8_t value) -> void {
+        oam[address] = value;
+    }
 
-    uint8_t PPU::read_oam(uint16_t address) const { return oam[address]; }
+    auto PPU::read_oam(const uint16_t address) const -> uint8_t { return oam[address]; }
 
-    void PPU::write_bg_palette(uint8_t value) {
+    auto PPU::write_bg_palette(const uint8_t value) -> void {
         bg_cram[bg_palette_select & 0x3F] = value;
 
         if (bg_palette_select & 0x80) {
@@ -619,9 +620,9 @@ namespace GB {
         }
     }
 
-    uint8_t PPU::read_bg_palette() const { return bg_cram[bg_palette_select & 0x3F]; }
+    auto PPU::read_bg_palette() const -> uint8_t { return bg_cram[bg_palette_select & 0x3F]; }
 
-    void PPU::write_obj_palette(uint8_t value) {
+    auto PPU::write_obj_palette(const uint8_t value) -> void {
         obj_cram[obj_palette_select & 0x3F] = value;
 
         if (obj_palette_select & 0x80) {
@@ -629,16 +630,16 @@ namespace GB {
         }
     }
 
-    uint8_t PPU::read_obj_palette() const { return obj_cram[obj_palette_select & 0x3F]; }
+    auto PPU::read_obj_palette() const -> uint8_t { return obj_cram[obj_palette_select & 0x3F]; }
 
-    void PPU::instant_dma(uint8_t address) {
-        uint16_t addr = address << 8;
+    auto PPU::instant_dma(const uint8_t address) -> void {
+        const int32_t shifted_address = address << 8;
         for (int i = 0; i < 160; ++i) {
-            oam[i] = core->bus.read(addr + i);
+            oam[i] = core->bus.read(shifted_address + i);
         }
     }
 
-    void PPU::set_stat(uint8_t flags, bool value) {
+    auto PPU::set_stat(const uint8_t flags, const bool value) -> void {
         if (value) {
             status |= flags;
         } else {
@@ -646,8 +647,8 @@ namespace GB {
         }
     }
 
-    bool PPU::stat_any() const {
-        uint8_t mode = status & 0x3;
+    auto PPU::stat_any() const -> bool {
+        const uint8_t mode = status & 0x3;
 
         if (status & LYC_LY_STAT_INT_BIT) {
             if (status & LYC_LY_COMPARE_MODE_BIT) {
@@ -676,7 +677,7 @@ namespace GB {
         return false;
     }
 
-    void PPU::render_scanline() {
+    auto PPU::render_scanline() -> void {
         fetcher.clock(*this);
 
         if ((line_x < 160) && bg_fifo.pixels_left()) {
@@ -718,82 +719,81 @@ namespace GB {
         }
     }
 
-    void PPU::render_objects() {
+    auto PPU::render_objects() -> void {
         if (!(lcd_control & OBJECTS_ENABLED_BIT)) {
             return;
         }
 
-        uint8_t height = (lcd_control & OBJECT_SIZE_BIT) ? 16 : 8;
+        const uint8_t height = (lcd_control & OBJECT_SIZE_BIT) ? 16 : 8;
 
         for (int i = 0; i < num_obj_on_scanline; ++i) {
-            auto &object = objects_on_scanline[(num_obj_on_scanline - 1) - i];
+            auto &[y, x, tile, attributes] = objects_on_scanline[(num_obj_on_scanline - 1) - i];
 
             uint8_t cgb_palette_idx = 0;
             uint8_t palette = object_palette_0;
 
-            if (object.attributes & OBJ_PALETTE_SELECT_BIT) {
+            if (attributes & OBJ_PALETTE_SELECT_BIT) {
                 cgb_palette_idx = 1;
                 palette = object_palette_1;
             }
 
-            uint8_t cgb_palette = (object.attributes & CGB_PALETTE_NUM_MASK);
-            uint16_t bank = 0x2000 * ((object.attributes & VRAM_BANK_SELECT_BIT) >> 3);
+            const uint8_t cgb_palette = (attributes & CGB_PALETTE_NUM_MASK);
+            const uint16_t bank = 0x2000 * ((attributes & VRAM_BANK_SELECT_BIT) >> 3);
 
             uint16_t tile_index = 0;
 
             if (height == 16) {
-                object.tile &= ~1;
+                tile &= ~1;
             }
 
-            int32_t obj_y = static_cast<int32_t>(object.y) - 16;
+            const int32_t obj_y = static_cast<int32_t>(y) - 16;
 
-            if (object.attributes & TILE_FLIP_Y_BIT) {
+            if (attributes & TILE_FLIP_Y_BIT) {
                 tile_index =
-                    (0x8000 & 0x1FFF) + (object.tile * 16) + ((height - (line_y - obj_y) - 1) * 2);
+                    (0x8000 & 0x1FFF) + (tile * 16) + ((height - (line_y - obj_y) - 1) * 2);
             } else {
-                tile_index =
-                    (0x8000 & 0x1FFF) + (object.tile * 16) + ((line_y - obj_y) % height * 2);
+                tile_index = (0x8000 & 0x1FFF) + (tile * 16) + ((line_y - obj_y) % height * 2);
             }
 
-            int32_t adjusted_x = static_cast<int32_t>(object.x) - 8;
-            size_t framebuffer_line_y = line_y * LCD_WIDTH;
+            const auto adjusted_x = static_cast<int32_t>(x) - 8;
+            const size_t framebuffer_line_y = line_y * LCD_WIDTH;
 
-            for (int x = 0; x < 8; ++x) {
-                size_t framebuffer_line_x = adjusted_x + x;
+            for (int px = 0; px < 8; ++px) {
+                const int32_t framebuffer_line_x = adjusted_x + px;
 
                 if (framebuffer_line_x >= 0 && framebuffer_line_x < 160) {
-                    uint8_t low_byte = vram[bank + tile_index];
-                    uint8_t high_byte = vram[bank + (tile_index + 1)];
-                    uint8_t bit = 7 - (x & 7);
+                    const uint8_t low_byte = vram[bank + tile_index];
+                    const uint8_t high_byte = vram[bank + (tile_index + 1)];
+                    uint8_t bit = 7 - (px & 7);
 
-                    if (object.attributes & TILE_FLIP_X_BIT) {
-                        bit = x & 7;
+                    if (attributes & TILE_FLIP_X_BIT) {
+                        bit = px & 7;
                     }
 
-                    uint8_t low_bit = (low_byte >> bit) & 0x01;
-                    uint8_t high_bit = (high_byte >> bit) & 0x01;
-                    uint8_t pixel = (high_bit << 1) | low_bit;
+                    const uint8_t low_bit = (low_byte >> bit) & 0x01;
+                    const uint8_t high_bit = (high_byte >> bit) & 0x01;
+                    const uint8_t pixel = (high_bit << 1) | low_bit;
 
                     if (pixel == 0) {
                         continue;
                     }
 
-                    uint16_t bg_pixel =
+                    const uint16_t bg_pixel =
                         bg_color_table[framebuffer_line_y + framebuffer_line_x] & 0xFF;
-                    uint16_t bg_attribute =
+                    const uint16_t bg_attribute =
                         bg_color_table[framebuffer_line_y + framebuffer_line_x] >> 8;
 
-                    bool bg_priority = bg_attribute & PRIORITY_BIT;
-                    bool oam_priority = object.attributes & PRIORITY_BIT;
-                    bool master_priority = lcd_control & MASTER_PRIORITY_BIT;
+                    const bool bg_priority = bg_attribute & PRIORITY_BIT;
+                    const bool oam_priority = attributes & PRIORITY_BIT;
+                    const bool master_priority = lcd_control & MASTER_PRIORITY_BIT;
 
                     bool bg_has_priority = false;
 
                     if (core->bus.is_compatibility_mode()) {
-                        bg_has_priority = bg_pixel && (object.attributes & PRIORITY_BIT);
+                        bg_has_priority = bg_pixel && (attributes & PRIORITY_BIT);
 
                         if (!bg_has_priority) {
-                            uint8_t cgb_pixel = (palette >> (int)(2 * pixel)) & 3;
+                            const uint8_t cgb_pixel = (palette >> (int)(2 * pixel)) & 3;
                             plot_cgb_pixel(framebuffer_line_x, cgb_pixel, cgb_palette_idx, true);
                         }
                     } else {
@@ -810,9 +810,10 @@ namespace GB {
         }
     }
 
-    void PPU::plot_cgb_pixel(uint8_t x_pos, uint8_t final_pixel, uint8_t palette, bool is_obj) {
-        size_t framebuffer_line_y = line_y * LCD_WIDTH;
-        size_t select_color = (palette * 8) + (final_pixel * 2);
+    auto PPU::plot_cgb_pixel(const uint8_t x_pos, const uint8_t final_pixel, const uint8_t palette,
+                             const bool is_obj) -> void {
+        const size_t framebuffer_line_y = line_y * LCD_WIDTH;
+        const size_t select_color = (palette * 8) + (final_pixel * 2);
 
         uint16_t color = 0;
 
@@ -827,9 +828,9 @@ namespace GB {
         auto fb_pixel = std::span<uint8_t>{
             &internal_framebuffer[(framebuffer_line_y + x_pos) * FRAMEBUFFER_COLOR_CHANNELS], 4};
 
-        auto r = color & 0x1F;
-        auto g = (color >> 5) & 0x1F;
-        auto b = (color >> 10) & 0x1F;
+        const auto r = color & 0x1F;
+        const auto g = (color >> 5) & 0x1F;
+        const auto b = (color >> 10) & 0x1F;
 
         fb_pixel[0] = (r * 255) / 31;
         fb_pixel[1] = (g * 255) / 31;
@@ -837,8 +838,8 @@ namespace GB {
         fb_pixel[3] = 255;
     }
 
-    void PPU::scan_oam() {
-        uint8_t height = (lcd_control & OBJECT_SIZE_BIT) ? 16 : 8;
+    auto PPU::scan_oam() -> void {
+        const uint8_t height = (lcd_control & OBJECT_SIZE_BIT) ? 16 : 8;
 
         num_obj_on_scanline = 0;
         objects_on_scanline.fill({});
@@ -847,8 +848,8 @@ namespace GB {
                 break;
             }
 
-            const Object *sprite = reinterpret_cast<const Object *>((&oam[i * 4]));
-            int32_t corrected_y_position = static_cast<int32_t>(sprite->y) - 16;
+            const auto *sprite = reinterpret_cast<const Object *>((&oam[i * 4]));
+            const auto corrected_y_position = static_cast<int32_t>(sprite->y) - 16;
 
             if (corrected_y_position <= line_y && (corrected_y_position + height) > line_y) {
                 objects_on_scanline[total] = *sprite;
@@ -864,13 +865,13 @@ namespace GB {
         }
     }
 
-    void PPU::set_mode(uint8_t mode) {
+    auto PPU::set_mode(uint8_t mode) -> void {
         mode &= 0x3;
         status &= ~0x3;
         status |= mode;
     }
 
-    void PPU::check_ly_lyc(bool allow_interrupts) {
+    auto PPU::check_ly_lyc(const bool allow_interrupts) -> void {
         set_stat(LYC_LY_COMPARE_MODE_BIT, false);
 
         if (line_y == line_y_compare) {

@@ -98,7 +98,7 @@ namespace GB {
             while (cycle_count < CYCLES_PER_FRAME) {
                const int32_t adjusted_cycles = cpu.double_speed() ? 2 : 4;
 
-                ppu.step(adjusted_cycles);
+                ppu.clock(adjusted_cycles);
                 apu.step(adjusted_cycles);
                 bus.cart->tick(adjusted_cycles);
 
