@@ -34,6 +34,7 @@ namespace GB {
         BitOpsBank,
         Interrupt,
         Halted,
+        Stopped,
     };
 
     class CPU {
@@ -89,6 +90,7 @@ namespace GB {
         auto flag_state() const -> uint8_t;
         auto set_flags(uint8_t in_flags) -> void;
         auto double_speed() const -> bool;
+        auto current_state() const -> ExecutionMode;
         auto get_rp(RegisterPair index) const -> uint16_t;
         auto set_rp(RegisterPair index, uint16_t value) -> void;
 

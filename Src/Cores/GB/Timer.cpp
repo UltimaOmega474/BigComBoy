@@ -19,22 +19,16 @@
 #include "Timer.hpp"
 #include "Core.hpp"
 #include <array>
-#include <stdexcept>
 
 namespace GB {
-    constexpr bool EdgeFell(uint16_t previous, uint16_t next, uint16_t mask) {
+    constexpr auto EdgeFell(const uint16_t previous, const uint16_t next, const uint16_t mask)
+        -> bool {
         return (previous & mask) && (!(next & mask));
     }
 
-    Timer::Timer(Core *core) : core(core) {
-        if (!core) {
-            throw std::invalid_argument("Core cannot be null.");
-        }
+    Timer::Timer(Core *core) : core(core) { reset(); }
 
-        reset();
-    }
-
-    void Timer::write_register(uint8_t reg, uint8_t value) {
+    auto Timer::write_register(const uint8_t reg, const uint8_t value) -> void {
         switch (reg) {
         case 0x04: {
             reset_div();
@@ -52,53 +46,53 @@ namespace GB {
             set_tac(value);
             return;
         }
+        default:;
         }
     }
 
-    uint8_t Timer::read_register(uint8_t reg) {
+    auto Timer::read_register(const uint8_t reg) const -> uint8_t {
         switch (reg) {
-        case 0x04:
-            return read_div();
-        case 0x05:
-            return tima;
-        case 0x06:
-            return tma;
-        case 0x07:
-            return tac;
+        case 0x04: return read_div();
+        case 0x05: return tima;
+        case 0x06: return tma;
+        case 0x07: return tac;
+        default:;
         }
         return 0xFF;
     }
 
-    void Timer::reset() {
+    auto Timer::reset() -> void {
         div_cycles = 0xAB00;
         tima = 0;
         tma = 0;
         set_tac(0xF8);
     }
 
-    void Timer::set_tac(uint8_t rate) {
-        static constexpr std::array<uint16_t, 4> tac_table = {512, 8, 32, 128};
+    auto Timer::set_tac(const uint8_t rate) -> void {
+        static constexpr std::array<uint16_t, 4> tac_table{
+            512,
+            8,
+            32,
+            128,
+        };
 
         tac_rate = tac_table[rate & 0x3];
         tac = rate;
     }
 
-    void Timer::reset_div() { change_div(0); }
+    auto Timer::reset_div() -> void { change_div(0); }
 
-    uint8_t Timer::read_div() { return div_cycles >> 8; }
+    uint8_t Timer::read_div() const { return div_cycles >> 8; }
 
-    void Timer::update(int32_t cycles) {
-        // core->cpu.stopped()
-        if (false) {
-            change_div(0);
-        } else {
-            change_div(div_cycles + cycles);
-        }
+    auto Timer::clock(const int32_t cycles) -> void {
+        const uint16_t new_div =
+            (core->cpu.current_state() == ExecutionMode::Stopped) ? 0 : (div_cycles + cycles);
+        change_div(new_div);
     }
 
-    bool Timer::timer_enabled() const { return tac & 0b100; }
+    auto Timer::timer_enabled() const -> bool { return tac & 0b100; }
 
-    void Timer::change_div(uint16_t new_div) {
+    auto Timer::change_div(const uint16_t new_div) -> void {
         if (EdgeFell(div_cycles >> 8, new_div >> 8,
                      core->cpu.double_speed() ? 0b100000 : 0b10000)) {
             core->apu.step_frame_sequencer();

@@ -102,7 +102,7 @@ namespace GB {
                 apu.step(adjusted_cycles);
                 bus.cart->tick(adjusted_cycles);
 
-                timer.update(4);
+                timer.clock(4);
                 if (dma.is_transfer_active()) {
                     dma.clock();
                 } else {

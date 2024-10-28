@@ -20,15 +20,24 @@
 #include <cinttypes>
 
 namespace GB {
-    enum class PadButton { Left, Right, Up, Down, A, B, Select, Start };
+    enum class PadButton {
+        Left,
+        Right,
+        Up,
+        Down,
+        A,
+        B,
+        Select,
+        Start,
+    };
 
     class Gamepad {
     public:
-        void reset();
-        void clear_buttons();
-        void set_pad_state(PadButton btn, bool pressed);
-        void select_button_mode(uint8_t value);
-        uint8_t get_pad_state();
+        auto reset() -> void;
+        auto clear_buttons() -> void;
+        auto set_pad_state(PadButton btn, bool pressed) -> void;
+        auto select_button_mode(uint8_t value) -> void;
+        auto get_pad_state() const -> uint8_t;
 
     private:
         uint8_t dpad = 0xFF, action = 0xFF, mode = 0;

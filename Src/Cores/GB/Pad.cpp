@@ -19,14 +19,14 @@
 #include "Pad.hpp"
 
 namespace GB {
-    void Gamepad::reset() {
+    auto Gamepad::reset() -> void {
         dpad = action = 0xFF;
         mode = 0;
     }
 
-    void Gamepad::clear_buttons() { dpad = action = 0xFF; }
+    auto Gamepad::clear_buttons() -> void { dpad = action = 0xFF; }
 
-    void Gamepad::set_pad_state(PadButton btn, bool pressed) {
+    auto Gamepad::set_pad_state(const PadButton btn, const bool pressed) -> void {
         if (pressed) {
             switch (btn) {
             case PadButton::Right: {
@@ -102,9 +102,9 @@ namespace GB {
         }
     }
 
-    void Gamepad::select_button_mode(uint8_t value) { mode = value; }
+    auto Gamepad::select_button_mode(const uint8_t value) -> void { mode = value; }
 
-    uint8_t Gamepad::get_pad_state() {
+    uint8_t Gamepad::get_pad_state() const {
         if (mode & 0x10) {
             return action;
         } else {

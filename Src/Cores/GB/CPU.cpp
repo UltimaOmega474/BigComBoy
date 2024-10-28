@@ -44,6 +44,8 @@ namespace GB {
 
     auto CPU::double_speed() const -> bool { return double_speed_; }
 
+    auto CPU::current_state() const -> ExecutionMode { return exec; }
+
     auto CPU::get_rp(const RegisterPair index) const -> uint16_t {
         switch (index) {
         case RegisterPair::BC: return (b << 8) | c;
@@ -130,7 +132,6 @@ namespace GB {
     auto CPU::request_interrupt(const uint8_t interrupt) -> void { if_ |= interrupt; }
 
     auto CPU::clock() -> void {
-        // TODO: Probably need a state for HALT and STOP
         switch (exec) {
         case ExecutionMode::NormalBank: decode_execute(); return;
         case ExecutionMode::BitOpsBank: decode_execute_bitops(); return;
@@ -150,6 +151,10 @@ namespace GB {
             } else {
                 ir = read(pc);
             }
+            return;
+        }
+        case ExecutionMode::Stopped: {
+            // TODO: I'll come back to this another time.
             return;
         }
         }
@@ -251,6 +256,8 @@ namespace GB {
     auto CPU::stop() -> void {
         m_cycle++;
         if (dmg_mode) {
+            exec = ExecutionMode::Stopped;
+            fetch(pc);
             return;
         }
 

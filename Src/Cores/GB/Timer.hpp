@@ -24,25 +24,26 @@ namespace GB {
 
     class Timer {
     public:
-        Timer(Core *core);
+        explicit Timer(Core *core);
 
-        bool timer_enabled() const;
-        void write_register(uint8_t reg, uint8_t value);
-        uint8_t read_register(uint8_t reg);
-        void reset();
-        void update(int32_t cycles);
+        auto timer_enabled() const -> bool;
+        auto write_register(uint8_t reg, uint8_t value) -> void;
+        auto read_register(uint8_t reg) const -> uint8_t;
+        auto reset() -> void;
+        auto clock(int32_t cycles) -> void;
 
     private:
-        void set_tac(uint8_t rate);
-        void reset_div();
-        uint8_t read_div();
-        void change_div(uint16_t new_div);
+        auto set_tac(uint8_t rate) -> void;
+        auto reset_div() -> void;
+        auto read_div() const -> uint8_t;
+        auto change_div(uint16_t new_div) -> void;
 
-        Core *core;
         uint8_t tima = 0;
         uint8_t tma = 0;
         uint8_t tac = 0;
         uint16_t tac_rate = 0;
         uint16_t div_cycles = 0;
+
+        Core *core;
     };
 }
