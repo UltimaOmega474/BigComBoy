@@ -78,9 +78,6 @@ void run_test(uint8_t opcode) {
     if (std::ifstream file(path_str); file) {
         std::vector<TestCase> test_data = json::parse(file);
 
-        cpu.bus_read_fn = test_read;
-        cpu.bus_write_fn = test_write;
-
         for (auto &test : test_data) {
             INFO("TEST: " + test.name);
             const auto &init = test.initial;
@@ -97,8 +94,8 @@ void run_test(uint8_t opcode) {
             cpu.e = init.e;
             cpu.h = init.h;
             cpu.l = init.l;
-            cpu.program_counter = init.pc;
-            cpu.stack_pointer = init.sp;
+            cpu.pc = init.pc;
+            cpu.sp = init.sp;
 
             for (const auto &[address, value] : test.initial.ram) {
                 memory[address] = value;
@@ -114,11 +111,11 @@ void run_test(uint8_t opcode) {
             FAIL_IF_DIFFERENT(cpu.c, test.final.c, "c")
             FAIL_IF_DIFFERENT(cpu.d, test.final.d, "d")
             FAIL_IF_DIFFERENT(cpu.e, test.final.e, "e")
-            FAIL_IF_DIFFERENT(cpu.flags(), test.final.f, "f")
+            FAIL_IF_DIFFERENT(cpu.flag_state(), test.final.f, "f")
             FAIL_IF_DIFFERENT(cpu.h, test.final.h, "h")
             FAIL_IF_DIFFERENT(cpu.l, test.final.l, "l")
-            FAIL_IF_DIFFERENT(cpu.program_counter, test.final.pc, "pc")
-            FAIL_IF_DIFFERENT(cpu.stack_pointer, test.final.sp, "sp")
+            FAIL_IF_DIFFERENT(cpu.pc, test.final.pc, "pc")
+            FAIL_IF_DIFFERENT(cpu.sp, test.final.sp, "sp")
 
             for (const auto &[address, value] : test.final.ram) {
 
@@ -156,7 +153,7 @@ void run_test(uint8_t opcode) {
             }
         }
     }else {
-        FAIL(std::format("Test:\"{}\" not found",path_str.c_str()));
+        FAIL(fmt::format("Test:\"{}\" not found",path_str.string()));
     }
 }
 

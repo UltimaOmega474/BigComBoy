@@ -17,39 +17,16 @@
 */
 
 #pragma once
-#include "SM83.hpp"
 #include <cinttypes>
-#include <filesystem>
+#include <functional>
 
 namespace GB {
-
-    enum class COperand2 {
-        B,
-        C,
-        D,
-        E,
-        H,
-        L,
-        Memory,
-        A,
-    };
-
-    enum class COperand3 {
+    enum class RegisterPair {
         BC,
         DE,
-        HLIncrement,
-        HLDecrement,
-    };
-
-    enum class ConditionCode {
-        Always,
-        IfZero,
-        IfCarry,
-    };
-
-    enum class MemRead {
         HL,
-        PC,
+        SP,
+        AF,
     };
 
     enum class ExecutionMode {
@@ -60,6 +37,35 @@ namespace GB {
     };
 
     class CPU {
+        enum class Operand {
+            B,
+            C,
+            D,
+            E,
+            H,
+            L,
+            Memory,
+            A,
+        };
+
+        enum class Operand2 {
+            BC,
+            DE,
+            HLIncrement,
+            HLDecrement,
+        };
+
+        enum class ConditionCode {
+            Always,
+            IfZero,
+            IfCarry,
+        };
+
+        enum class MemRead {
+            HL,
+            PC,
+        };
+
     public:
         uint8_t b = 0;
         uint8_t c = 0;
@@ -69,33 +75,30 @@ namespace GB {
         uint8_t l = 0;
         uint8_t a = 0;
 
-        bool master_interrupt_enable_ = true;
-        uint8_t interrupt_flag = 0;
-        uint8_t interrupt_enable = 0;
+        uint8_t if_ = 0;
+        uint8_t ie = 0;
         uint8_t KEY1 = 0;
 
-        uint16_t program_counter = 0;
-        uint16_t stack_pointer = 0xFFFF;
+        uint16_t pc = 0;
+        uint16_t sp = 0xFFFF;
 
-        std::function<void(uint16_t, uint8_t)> bus_write_fn;
-        std::function<uint8_t(uint16_t)> bus_read_fn;
-
-        CPU(std::function<void(uint16_t, uint8_t)> bus_write_fn,
-             std::function<uint8_t(uint16_t)> bus_read_fn);
+        CPU(std::function<void(uint16_t, uint8_t)> write_fn,
+            std::function<uint8_t(uint16_t)> read_fn);
 
         auto force_next_opcode(uint8_t opcode) -> void;
-        auto flags() const -> uint8_t;
-        auto set_flags(uint8_t flags) -> void;
+        auto flag_state() const -> uint8_t;
+        auto set_flags(uint8_t in_flags) -> void;
         auto double_speed() const -> bool;
+        auto get_rp(RegisterPair index) const -> uint16_t;
+        auto set_rp(RegisterPair index, uint16_t value) -> void;
+
         auto reset(uint16_t new_pc, bool with_dmg_values) -> void;
         auto request_interrupt(uint8_t interrupt) -> void;
         auto clock() -> void;
 
     private:
-        auto get_register(COperand2 reg) const -> uint8_t;
-        auto set_register(COperand2 reg, uint8_t value) -> void;
-        auto get_rp(RegisterPair index) const -> uint16_t;
-        auto set_rp(RegisterPair index, uint16_t value) -> void;
+        auto get_register(Operand reg) const -> uint8_t;
+        auto set_register(Operand reg, uint8_t value) -> void;
 
         auto fetch(uint16_t where) -> void;
         auto isr() -> void;
@@ -107,12 +110,12 @@ namespace GB {
         auto di() -> void;
         auto bitops_bank_switch() -> void;
 
-        template <COperand2 dst, COperand2 src> auto ld() -> void;
+        template <Operand dst, Operand src> auto ld() -> void;
         auto op_ld_r_indirect(uint16_t address) -> void;
-        template <COperand2 reg> auto ld_immediate() -> void;
+        template <Operand reg> auto ld_immediate() -> void;
         auto op_ld_indirect_r(uint16_t address) -> void;
-        template <COperand3 rp> auto ld_indirect_accumulator() -> void;
-        template <COperand3 rp> auto ld_accumulator_indirect() -> void;
+        template <Operand2 rp> auto ld_indirect_accumulator() -> void;
+        template <Operand2 rp> auto ld_accumulator_indirect() -> void;
         auto ld_direct_a() -> void;
         auto ld_a_direct() -> void;
         auto op_ld_indirect_immediate(uint16_t address) -> void;
@@ -127,14 +130,14 @@ namespace GB {
 
         template <RegisterPair src> auto add_hl_rp() -> void;
         auto add_sp_i8() -> void;
-        template <COperand2 operand, bool with_carry> auto adc() -> void;
-        template <COperand2 operand, bool with_carry> auto sbc() -> void;
-        template <COperand2 operand> auto and_op() -> void;
-        template <COperand2 operand> auto xor_op() -> void;
-        template <COperand2 operand> auto or_op() -> void;
-        template <COperand2 operand> auto cp() -> void;
-        template <COperand2 operand> auto inc_r() -> void;
-        template <COperand2 operand> auto dec_r() -> void;
+        template <Operand operand, bool with_carry> auto adc() -> void;
+        template <Operand operand, bool with_carry> auto sbc() -> void;
+        template <Operand operand> auto and_op() -> void;
+        template <Operand operand> auto xor_op() -> void;
+        template <Operand operand> auto or_op() -> void;
+        template <Operand operand> auto cp() -> void;
+        template <Operand operand> auto inc_r() -> void;
+        template <Operand operand> auto dec_r() -> void;
         template <RegisterPair rp, int32_t adjustment> auto adjust_rp() -> void;
 
         auto rlca() -> void;
@@ -146,17 +149,17 @@ namespace GB {
         auto scf() -> void;
         auto ccf() -> void;
 
-        template<COperand2 operand> auto rlc() -> void;
-        template<COperand2 operand> auto rrc() -> void;
-        template<COperand2 operand> auto rl() -> void;
-        template<COperand2 operand> auto rr() -> void;
-        template<COperand2 operand> auto sla() -> void;
-        template<COperand2 operand> auto sra() -> void;
-        template<COperand2 operand> auto swap() -> void;
-        template<COperand2 operand> auto srl() -> void;
-        template<COperand2 operand, uint8_t bit_num> auto bit() -> void;
-        template<COperand2 operand, uint8_t bit_num> auto res() -> void;
-        template<COperand2 operand, uint8_t bit_num> auto set() -> void;
+        template <Operand operand> auto rlc() -> void;
+        template <Operand operand> auto rrc() -> void;
+        template <Operand operand> auto rl() -> void;
+        template <Operand operand> auto rr() -> void;
+        template <Operand operand> auto sla() -> void;
+        template <Operand operand> auto sra() -> void;
+        template <Operand operand> auto swap() -> void;
+        template <Operand operand> auto srl() -> void;
+        template <Operand operand, uint8_t bit_num> auto bit() -> void;
+        template <Operand operand, uint8_t bit_num> auto res() -> void;
+        template <Operand operand, uint8_t bit_num> auto set() -> void;
 
         template <ConditionCode cc, bool is_set> auto jr() -> void;
         template <ConditionCode cc, bool is_set, bool from_hl> auto jp() -> void;
@@ -166,7 +169,6 @@ namespace GB {
         auto rst() -> void;
         template <RegisterPair rp> auto push() -> void;
         template <RegisterPair rp> auto pop() -> void;
-
 
         template <typename Fn> auto immediate_addr(Fn &&) -> void;
         template <MemRead address, typename Fn> auto mem_read_addr(Fn &&) -> void;
@@ -181,16 +183,21 @@ namespace GB {
             bool hc = false;
             bool n = false;
             bool z = false;
-        } alu_flags;
+        } flags;
 
+        bool ime = false;
         bool double_speed_ = false;
         bool dmg_mode = true;
+
         uint8_t ir = 0;
         uint8_t z = 0;
         uint8_t w = 0;
-
         uint8_t m_cycle = 1;
+
         ExecutionMode exec = ExecutionMode::NormalBank;
+
+        std::function<void(uint16_t, uint8_t)> write;
+        std::function<uint8_t(uint16_t)> read;
     };
 
 }

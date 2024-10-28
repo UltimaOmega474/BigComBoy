@@ -119,7 +119,7 @@ namespace GB {
                 }
 
                 case 0x0F: {
-                    return core->cpu.interrupt_flag;
+                    return core->cpu.if_;
                 }
 
                 // APU
@@ -212,7 +212,7 @@ namespace GB {
                 if ((address >= 0xFF80) && (address <= 0xFFFE)) {
                     return hram[address - 0xFF80]; // High Ram
                 } else if (address == 0xFFFF) {
-                    return core->cpu.interrupt_enable;
+                    return core->cpu.ie;
                 }
 
                 return 0xFF; // IO Registers
@@ -312,7 +312,7 @@ namespace GB {
                 }
 
                 case 0x0F: {
-                    core->cpu.interrupt_flag = value;
+                    core->cpu.if_ = value;
                     return;
                 }
 
@@ -437,7 +437,7 @@ namespace GB {
                     hram[address - 0xFF80] = value; // High Ram
                     return;
                 } else if (address == 0xFFFF) {
-                    core->cpu.interrupt_enable = value;
+                    core->cpu.ie = value;
                     return;
                 }
 
