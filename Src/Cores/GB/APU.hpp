@@ -24,7 +24,7 @@
 namespace GB {
     class LengthCounter {
     public:
-        void step_length(bool &channel_on);
+        auto clock_length(bool &channel_on) -> void;
 
     private:
         uint8_t sound_length_enable = 0; // (Read/Write) (1=Stop output when length in NR11 expires)
@@ -38,7 +38,7 @@ namespace GB {
 
     class EnvelopeCounter {
     public:
-        void step_envelope_sweep(uint8_t &volume_output);
+        auto clock_envelope_sweep(uint8_t &volume_output) -> void;
 
     private:
         bool envelope_enabled = false;
@@ -53,27 +53,27 @@ namespace GB {
 
     class PulseChannel {
     public:
-        PulseChannel(bool has_sweep) : has_sweep(has_sweep) {}
+        explicit PulseChannel(const bool has_sweep) : has_sweep(has_sweep) {}
 
-        void step_frequency_sweep();
-        void step_frequency();
-        uint8_t sample(uint8_t side);
-        void trigger(uint8_t frame_sequencer_counter);
+        auto clock_frequency_sweep() -> void;
+        auto clock_frequency() -> void;
+        auto sample(uint8_t side) const -> uint8_t;
+        auto trigger(uint8_t frame_sequencer_counter) -> void;
 
-        void write_nr10(uint8_t nr10);
-        void write_nrX1(bool apu_on, uint8_t nr11);
-        void write_nrX2(uint8_t nr12);
-        void write_nrX3(uint8_t nr13);
-        void write_nrX4(uint8_t nr14, uint8_t frame_sequencer_counter);
+        auto write_nr10(uint8_t nr10) -> void;
+        auto write_nrX1(bool apu_on, uint8_t nr11) -> void;
+        auto write_nrX2(uint8_t nr12) -> void;
+        auto write_nrX3(uint8_t nr13) -> void;
+        auto write_nrX4(uint8_t nr14, uint8_t frame_sequencer_counter) -> void;
 
-        uint8_t read_nr10() const;
-        uint8_t read_nrX1() const;
-        uint8_t read_nrX2() const;
-        uint8_t read_nrX4() const;
+        auto read_nr10() const -> uint8_t;
+        auto read_nrX1() const -> uint8_t;
+        auto read_nrX2() const -> uint8_t;
+        auto read_nrX4() const -> uint8_t;
 
-        uint16_t get_combined_period() const;
-        void update_split_period(uint16_t value);
-        uint16_t calculate_period();
+        auto get_combined_period() const -> uint16_t;
+        auto update_split_period(uint16_t value) -> void;
+        auto calculate_period() -> uint16_t;
 
     private:
         bool frequency_too_high = false;
@@ -82,8 +82,8 @@ namespace GB {
         bool left_out_enabled = false;
         bool right_out_enabled = false;
         uint8_t sweep_shift = 0; // (Read/Write)
-        uint8_t sweep_direction =
-            0; // 0: Addition (period increases) 1: Subtraction (period decreases)
+        // 0: Addition (period increases) 1: Subtraction (period decreases)
+        uint8_t sweep_direction = 0;
         uint8_t sweep_pace = 0;
         uint8_t wave_duty = 0; // (Read/Write)
         uint8_t duty_position = 0;
@@ -96,27 +96,27 @@ namespace GB {
         uint16_t period_shadow = 0;
         uint16_t period_counter = 0;
 
-        LengthCounter length;
-        EnvelopeCounter envelope;
+        LengthCounter length{};
+        EnvelopeCounter envelope{};
 
         friend class APU;
     };
 
     class WaveChannel {
     public:
-        void step(const std::array<uint8_t, 16> &wave_table);
-        uint8_t sample(uint8_t side);
-        void trigger(uint8_t frame_sequencer_counter);
-        void write_nr30(uint8_t nr30);
-        void write_nr31(uint8_t nr31);
-        void write_nr32(uint8_t nr32);
-        void write_nr33(uint8_t nr33);
-        void write_nr34(uint8_t nr34, uint8_t frame_sequencer_counter);
+        auto clock(const std::array<uint8_t, 16> &wave_table) -> void;
+        auto sample(uint8_t side) const -> uint8_t;
+        auto trigger(uint8_t frame_sequencer_counter) -> void;
+        auto write_nr30(uint8_t nr30) -> void;
+        auto write_nr31(uint8_t nr31) -> void;
+        auto write_nr32(uint8_t nr32) -> void;
+        auto write_nr33(uint8_t nr33) -> void;
+        auto write_nr34(uint8_t nr34, uint8_t frame_sequencer_counter) -> void;
 
-        uint8_t read_nr30() const;
-        uint8_t read_nr32() const;
-        uint8_t read_nr34() const;
-        uint16_t get_combined_period() const;
+        auto read_nr30() const -> uint8_t;
+        auto read_nr32() const -> uint8_t;
+        auto read_nr34() const -> uint8_t;
+        auto get_combined_period() const -> uint16_t;
 
     private:
         bool frequency_too_high = false;
@@ -140,17 +140,17 @@ namespace GB {
 
     class NoiseChannel {
     public:
-        void step();
-        uint8_t sample(uint8_t side);
-        void trigger(uint8_t frame_sequencer_counter);
-        void write_nr41(uint8_t nr41);
-        void write_nr42(uint8_t nr42);
-        void write_nr43(uint8_t nr43);
-        void write_nr44(uint8_t nr44, uint8_t frame_sequencer_counter);
+        auto clock() -> void;
+        auto sample(uint8_t side) const -> uint8_t;
+        auto trigger(uint8_t frame_sequencer_counter) -> void;
+        auto write_nr41(uint8_t nr41) -> void;
+        auto write_nr42(uint8_t nr42) -> void;
+        auto write_nr43(uint8_t nr43) -> void;
+        auto write_nr44(uint8_t nr44, uint8_t frame_sequencer_counter) -> void;
 
-        uint8_t read_nr42() const;
-        uint8_t read_nr43() const;
-        uint8_t read_nr44() const;
+        auto read_nr42() const -> uint8_t;
+        auto read_nr43() const -> uint8_t;
+        auto read_nr44() const -> uint8_t;
 
     private:
         bool channel_on = false;
@@ -186,26 +186,27 @@ namespace GB {
 
     class APU {
     public:
-        void reset();
-        void set_samples_callback(int32_t rate, std::function<void(SampleResult result)> cb);
+        auto reset() -> void;
+        auto set_samples_callback(int32_t rate, std::function<void(SampleResult result)> cb)
+            -> void;
 
-        uint8_t read_register(uint8_t address);
-        void write_register(uint8_t address, uint8_t value);
+        auto read_register(uint8_t address) const -> uint8_t;
+        auto write_register(uint8_t address, uint8_t value) -> void;
 
-        uint8_t read_wave_ram(uint8_t address);
-        void write_wave_ram(uint8_t address, uint8_t value);
+        auto read_wave_ram(uint8_t address) const -> uint8_t;
+        auto write_wave_ram(uint8_t address, uint8_t value) -> void;
 
-        void write_nr52(uint8_t value);
-        uint8_t read_nr52() const;
+        auto write_nr52(uint8_t value) -> void;
+        auto read_nr52() const -> uint8_t;
 
-        void write_nr50(uint8_t value);
-        void write_nr51(uint8_t value);
+        auto write_nr50(uint8_t value) -> void;
+        auto write_nr51(uint8_t value) -> void;
 
-        uint8_t read_nr50() const;
-        uint8_t read_nr51() const;
+        auto read_nr50() const -> uint8_t;
+        auto read_nr51() const -> uint8_t;
 
-        void step(int32_t cycles);
-        void step_frame_sequencer();
+        auto clock(int32_t cycles) -> void;
+        auto clock_frame_sequencer() -> void;
 
     private:
         bool mix_vin_left = false;

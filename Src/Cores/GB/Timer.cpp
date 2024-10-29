@@ -95,7 +95,7 @@ namespace GB {
     auto Timer::change_div(const uint16_t new_div) -> void {
         if (EdgeFell(div_cycles >> 8, new_div >> 8,
                      core->cpu.double_speed() ? 0b100000 : 0b10000)) {
-            core->apu.step_frame_sequencer();
+            core->apu.clock_frame_sequencer();
         }
 
         if (timer_enabled() && EdgeFell(div_cycles, new_div, tac_rate)) {

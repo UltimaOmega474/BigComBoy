@@ -50,13 +50,13 @@ namespace GB {
         DMAController dma;
         Core();
 
-        void initialize(Cartridge *cart);
-        void initialize_with_bootstrap(Cartridge *cart, ConsoleType console,
-                                       const std::filesystem::path& bootstrap_path);
-        void run_for_frames(int32_t frames);
-        void load_bootstrap(const std::filesystem::path& path);
+        auto initialize(Cartridge *cart) -> void;
+        auto initialize_with_bootstrap(Cartridge *cart, ConsoleType console,
+                                       const std::filesystem::path &bootstrap_path) -> void;
+        auto run_for_frames(int32_t frames) -> void;
+        auto load_bootstrap(const std::filesystem::path &path) -> void;
 
-        uint8_t read_bootstrap(uint16_t address);
+        auto read_bootstrap(uint16_t address) const -> uint8_t;
 
     private:
         bool ready_to_run = false;

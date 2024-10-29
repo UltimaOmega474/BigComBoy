@@ -24,22 +24,18 @@
 namespace GB {
     Core::Core() : bus(this), ppu(this), timer(this), cpu(bus_write_fn, bus_read_fn), dma(this) {}
 
-    void Core::initialize(Cartridge *cart) {
+    auto Core::initialize(Cartridge *cart) -> void {
         ready_to_run = cart ? true : false;
-        if (!cart) {
-            return;
-        }
-
-        cart->reset();
-        bootstrap.clear();
-        apu.reset();
-        ppu.reset();
-        timer.reset();
-        pad.reset();
-        bus.reset(cart);
-        dma.reset();
 
         if (ready_to_run) {
+            cart->reset();
+            bootstrap.clear();
+            apu.reset();
+            ppu.reset();
+            timer.reset();
+            pad.reset();
+            bus.reset(cart);
+            dma.reset();
 
             if (cart->header().cgb_support == 0x80 || cart->header().cgb_support == 0xC0) {
                 bus.KEY0 = cart->header().cgb_support;
@@ -60,24 +56,20 @@ namespace GB {
         }
     }
 
-    void Core::initialize_with_bootstrap(Cartridge *cart, const ConsoleType console,
-                                         const std::filesystem::path& bootstrap_path) {
+    auto Core::initialize_with_bootstrap(Cartridge *cart, const ConsoleType console,
+                                         const std::filesystem::path &bootstrap_path) -> void {
         ready_to_run = cart ? true : false;
 
-        if (!cart) {
-            return;
-        }
-
-        cart->reset();
-        bootstrap.clear();
-        apu.reset();
-        ppu.reset();
-        timer.reset();
-        pad.reset();
-        bus.reset(cart);
-        dma.reset();
-
         if (ready_to_run) {
+            cart->reset();
+            bootstrap.clear();
+            apu.reset();
+            ppu.reset();
+            timer.reset();
+            pad.reset();
+            bus.reset(cart);
+            dma.reset();
+
             load_bootstrap(bootstrap_path);
 
             if (console == ConsoleType::DMG) {
@@ -93,13 +85,13 @@ namespace GB {
         }
     }
 
-    void Core::run_for_frames(int32_t frames) {
+    auto Core::run_for_frames(int32_t frames) -> void {
         while (frames-- && ready_to_run) {
             while (cycle_count < CYCLES_PER_FRAME) {
-               const int32_t adjusted_cycles = cpu.double_speed() ? 2 : 4;
+                const int32_t adjusted_cycles = cpu.double_speed() ? 2 : 4;
 
                 ppu.clock(adjusted_cycles);
-                apu.step(adjusted_cycles);
+                apu.clock(adjusted_cycles);
                 bus.cart->clock(adjusted_cycles);
 
                 timer.clock(4);
@@ -118,11 +110,11 @@ namespace GB {
         }
     }
 
-    void Core::load_bootstrap(const std::filesystem::path& path) {
+    auto Core::load_bootstrap(const std::filesystem::path &path) -> void {
         std::ifstream rom(path, std::ios::binary | std::ios::ate);
 
         if (rom) {
-            auto len = rom.tellg();
+            const auto len = rom.tellg();
 
             if (len == 0) {
                 return;
@@ -137,5 +129,7 @@ namespace GB {
         }
     }
 
-    uint8_t Core::read_bootstrap(uint16_t address) { return bootstrap[address]; }
+    auto Core::read_bootstrap(const uint16_t address) const -> uint8_t {
+        return bootstrap[address];
+    }
 }

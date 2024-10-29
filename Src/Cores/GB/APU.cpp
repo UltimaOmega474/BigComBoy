@@ -18,6 +18,7 @@
 
 #include "APU.hpp"
 #include <array>
+#include <utility>
 
 namespace GB {
     // Fixes Final Fantasy Adventure because it mutes channels by setting the frequency to max
@@ -41,7 +42,7 @@ namespace GB {
         std::array<uint8_t, 8>{0, 1, 1, 1, 1, 1, 1, 0},
     };
 
-    void LengthCounter::step_length(bool &channel_on) {
+    auto LengthCounter::clock_length(bool &channel_on) -> void {
         if (sound_length_enable && length_counter > 0) {
             length_counter--;
 
@@ -51,7 +52,7 @@ namespace GB {
         }
     }
 
-    void EnvelopeCounter::step_envelope_sweep(uint8_t &volume_output) {
+    auto EnvelopeCounter::clock_envelope_sweep(uint8_t &volume_output) -> void {
         if (envelope_sweep_pace && envelope_enabled) {
             if (envelope_counter) {
                 envelope_counter--;
@@ -60,9 +61,9 @@ namespace GB {
             if (envelope_counter == 0) {
                 envelope_counter = envelope_sweep_pace;
 
-                uint8_t new_volume = volume_output + (envelope_direction ? 1 : -1);
+                const uint8_t new_volume = volume_output + (envelope_direction ? 1 : -1);
 
-                if ((new_volume >= 0) && (new_volume <= 15)) {
+                if (new_volume <= 15) {
                     volume_output = new_volume;
                 } else {
                     envelope_enabled = false;
@@ -71,7 +72,7 @@ namespace GB {
         }
     }
 
-    void PulseChannel::step_frequency_sweep() {
+    auto PulseChannel::clock_frequency_sweep() -> void {
         if (!channel_on || !sweep_enabled) {
             return;
         }
@@ -84,18 +85,18 @@ namespace GB {
             sweep_pace_counter = sweep_pace ? sweep_pace : 8;
 
             if (sweep_pace > 0) {
-                uint16_t nf = calculate_period();
+                const uint16_t new_period = calculate_period();
 
-                if (nf <= 2047 && sweep_shift > 0) {
-                    update_split_period(nf);
-                    period_shadow = nf;
+                if (new_period <= 2047 && sweep_shift > 0) {
+                    update_split_period(new_period);
+                    period_shadow = new_period;
                     calculate_period();
                 }
             }
         }
     }
 
-    void PulseChannel::step_frequency() {
+    auto PulseChannel::clock_frequency() -> void {
         if (!channel_on) {
             return;
         }
@@ -108,7 +109,7 @@ namespace GB {
         }
     }
 
-    uint8_t PulseChannel::sample(uint8_t side) {
+    auto PulseChannel::sample(const uint8_t side) const -> uint8_t {
         uint8_t volume = (DUTY_TABLE[wave_duty][duty_position] * volume_output);
 
         if (frequency_too_high) {
@@ -121,21 +122,23 @@ namespace GB {
 
         if (side == 0 && left_out_enabled) {
             return volume;
-        } else if (side == 1 && right_out_enabled) {
+        }
+
+        if (side == 1 && right_out_enabled) {
             return volume;
         }
 
         return 0;
     }
 
-    void PulseChannel::trigger(uint8_t frame_sequencer_counter) {
+    auto PulseChannel::trigger(const uint8_t frame_sequencer_counter) -> void {
         channel_on = true;
 
         if (length.length_counter == 0) {
             length.length_counter = 64;
 
             if (frame_sequencer_counter & 1) {
-                length.step_length(channel_on);
+                length.clock_length(channel_on);
             }
         }
 
@@ -150,7 +153,7 @@ namespace GB {
             }
         }
 
-        uint16_t old_period = get_combined_period();
+        const uint16_t old_period = get_combined_period();
 
         period_counter = (0x800 - old_period) * 4;
 
@@ -163,7 +166,7 @@ namespace GB {
         }
     }
 
-    void PulseChannel::write_nr10(uint8_t nr10) {
+    auto PulseChannel::write_nr10(const uint8_t nr10) -> void {
         if (!has_sweep) {
             return;
         }
@@ -173,7 +176,7 @@ namespace GB {
         sweep_pace = (nr10 & 0b01110000) >> 4;
     }
 
-    void PulseChannel::write_nrX1(bool apu_on, uint8_t nr11) {
+    auto PulseChannel::write_nrX1(const bool apu_on, const uint8_t nr11) -> void {
         length.initial_length_time = 64 - (nr11 & 0x3F);
         if (apu_on) {
             wave_duty = (nr11 & 0b11000000) >> 6;
@@ -182,9 +185,9 @@ namespace GB {
         length.length_counter = length.initial_length_time;
     }
 
-    void PulseChannel::write_nrX2(uint8_t nr12) {
-        uint8_t old_pace = envelope.envelope_sweep_pace;
-        uint8_t old_direction = envelope.envelope_direction;
+    auto PulseChannel::write_nrX2(const uint8_t nr12) -> void {
+        const uint8_t old_pace = envelope.envelope_sweep_pace;
+        const uint8_t old_direction = envelope.envelope_direction;
 
         envelope.envelope_sweep_pace = nr12 & 0b00000111;
         envelope.envelope_direction = (nr12 & 0b00001000) >> 3;
@@ -212,19 +215,20 @@ namespace GB {
         }
     }
 
-    void PulseChannel::write_nrX3(uint8_t nr13) {
+    auto PulseChannel::write_nrX3(const uint8_t nr13) -> void {
         period_low = nr13;
         frequency_too_high = get_combined_period() >= HIGH_FREQUENCY_CUTOFF;
     }
 
-    void PulseChannel::write_nrX4(uint8_t nr14, uint8_t frame_sequencer_counter) {
+    auto PulseChannel::write_nrX4(const uint8_t nr14, const uint8_t frame_sequencer_counter)
+        -> void {
         period_high = nr14 & 0b00000111;
 
-        bool old_length = length.sound_length_enable;
+        const bool old_length = length.sound_length_enable;
         length.sound_length_enable = (nr14 & 0b01000000) >> 6;
 
         if ((!old_length && length.sound_length_enable) && (frame_sequencer_counter & 1)) {
-            length.step_length(channel_on);
+            length.clock_length(channel_on);
         }
 
         trigger_channel = (nr14 & 0b10000000) >> 7;
@@ -236,7 +240,7 @@ namespace GB {
         }
     }
 
-    uint8_t PulseChannel::read_nr10() const {
+    auto PulseChannel::read_nr10() const -> uint8_t {
         if (!has_sweep) {
             return 0xFF;
         }
@@ -249,13 +253,13 @@ namespace GB {
         return nr10;
     }
 
-    uint8_t PulseChannel::read_nrX1() const {
-        uint8_t nr11 = wave_duty << 6;
+    auto PulseChannel::read_nrX1() const -> uint8_t {
+        const uint8_t nr11 = wave_duty << 6;
 
         return nr11;
     }
 
-    uint8_t PulseChannel::read_nrX2() const {
+    auto PulseChannel::read_nrX2() const -> uint8_t {
         uint8_t nr12 = 0;
         nr12 |= envelope.envelope_sweep_pace;
         nr12 |= envelope.envelope_direction << 3;
@@ -263,21 +267,23 @@ namespace GB {
         return nr12;
     }
 
-    uint8_t PulseChannel::read_nrX4() const {
-        uint8_t nr14 = length.sound_length_enable << 6;
+    auto PulseChannel::read_nrX4() const -> uint8_t {
+        const uint8_t nr14 = length.sound_length_enable << 6;
         return nr14;
     }
 
-    uint16_t PulseChannel::get_combined_period() const { return (period_high << 8) | period_low; }
+    auto PulseChannel::get_combined_period() const -> uint16_t {
+        return (period_high << 8) | period_low;
+    }
 
-    void PulseChannel::update_split_period(uint16_t value) {
+    auto PulseChannel::update_split_period(const uint16_t value) -> void {
         period_low = value & 0xFF;
         period_high = (value & 0b11100000000) >> 8;
 
         frequency_too_high = get_combined_period() >= HIGH_FREQUENCY_CUTOFF;
     }
 
-    uint16_t PulseChannel::calculate_period() {
+    auto PulseChannel::calculate_period() -> uint16_t {
         uint16_t new_period = period_shadow >> sweep_shift;
 
         if (sweep_direction) {
@@ -293,7 +299,7 @@ namespace GB {
         return new_period;
     }
 
-    void WaveChannel::step(const std::array<uint8_t, 16> &wave_table) {
+    auto WaveChannel::clock(const std::array<uint8_t, 16> &wave_table) -> void {
         if (channel_on && dac_enabled) {
             if (period_counter <= 0) {
                 period_counter = (0x800 - get_combined_period()) * 2;
@@ -310,7 +316,7 @@ namespace GB {
         }
     }
 
-    uint8_t WaveChannel::sample(uint8_t side) {
+    auto WaveChannel::sample(const uint8_t side) const -> uint8_t {
         if (!channel_on || !dac_enabled) {
             return 0;
         }
@@ -323,14 +329,16 @@ namespace GB {
 
         if (side == 0 && left_out_enabled) {
             return volume;
-        } else if (side == 1 && right_out_enabled) {
+        }
+
+        if (side == 1 && right_out_enabled) {
             return volume;
         }
 
         return 0;
     }
 
-    void WaveChannel::trigger(uint8_t frame_sequencer_counter) {
+    auto WaveChannel::trigger(const uint8_t frame_sequencer_counter) -> void {
         if (dac_enabled) {
             channel_on = true;
         }
@@ -339,7 +347,7 @@ namespace GB {
             length.length_counter = 256;
 
             if (frame_sequencer_counter & 1) {
-                length.step_length(channel_on);
+                length.clock_length(channel_on);
             }
         }
 
@@ -348,7 +356,7 @@ namespace GB {
         period_counter = (0x800 - get_combined_period()) * 2;
     }
 
-    void WaveChannel::write_nr30(uint8_t nr30) {
+    auto WaveChannel::write_nr30(const uint8_t nr30) -> void {
         dac_enabled = (nr30 & 0b10000000) >> 7;
 
         if (!dac_enabled) {
@@ -356,26 +364,29 @@ namespace GB {
         }
     }
 
-    void WaveChannel::write_nr31(uint8_t nr31) {
-        length.initial_length_time = 256 - (int)nr31;
+    auto WaveChannel::write_nr31(const uint8_t nr31) -> void {
+        length.initial_length_time = 256 - static_cast<int>(nr31);
         length.length_counter = length.initial_length_time;
     }
 
-    void WaveChannel::write_nr32(uint8_t nr32) { output_level = (nr32 & 0b01100000) >> 5; }
+    auto WaveChannel::write_nr32(const uint8_t nr32) -> void {
+        output_level = (nr32 & 0b01100000) >> 5;
+    }
 
-    void WaveChannel::write_nr33(uint8_t nr33) {
+    auto WaveChannel::write_nr33(const uint8_t nr33) -> void {
         period_low = nr33;
         frequency_too_high = get_combined_period() >= HIGH_FREQUENCY_CUTOFF;
     }
 
-    void WaveChannel::write_nr34(uint8_t nr34, uint8_t frame_sequencer_counter) {
+    auto WaveChannel::write_nr34(const uint8_t nr34, const uint8_t frame_sequencer_counter)
+        -> void {
         period_high = nr34 & 0b00000111;
 
-        bool old_length = length.sound_length_enable;
+        const bool old_length = length.sound_length_enable;
         length.sound_length_enable = (nr34 & 0b01000000) >> 6;
 
         if ((!old_length && length.sound_length_enable) && (frame_sequencer_counter & 1)) {
-            length.step_length(channel_on);
+            length.clock_length(channel_on);
         }
 
         trigger_channel = (nr34 & 0b10000000) >> 7;
@@ -386,18 +397,17 @@ namespace GB {
         }
     }
 
-    uint8_t WaveChannel::read_nr30() const { return dac_enabled << 7; }
+    auto WaveChannel::read_nr30() const -> uint8_t { return dac_enabled << 7; }
 
-    uint8_t WaveChannel::read_nr32() const { return output_level << 5; }
+    auto WaveChannel::read_nr32() const -> uint8_t { return output_level << 5; }
 
-    uint8_t WaveChannel::read_nr34() const {
-        uint8_t nr34 = length.sound_length_enable << 6;
-        return nr34;
+    auto WaveChannel::read_nr34() const -> uint8_t { return length.sound_length_enable << 6; }
+
+    auto WaveChannel::get_combined_period() const -> uint16_t {
+        return (period_high << 8) | period_low;
     }
 
-    uint16_t WaveChannel::get_combined_period() const { return (period_high << 8) | period_low; }
-
-    void NoiseChannel::step() {
+    auto NoiseChannel::clock() -> void {
         if (!channel_on) {
             return;
         }
@@ -405,7 +415,7 @@ namespace GB {
         if (period_counter == 0) {
             period_counter = (NOISE_DIV[clock_divider] << clock_shift) * 4;
 
-            uint16_t _xor = ((LFSR & 1) ^ ((LFSR & 2) >> 1));
+            const uint16_t _xor = ((LFSR & 1) ^ ((LFSR & 2) >> 1));
             LFSR |= _xor << 15;
 
             if (LFSR_width == 1) {
@@ -418,30 +428,32 @@ namespace GB {
         }
     }
 
-    uint8_t NoiseChannel::sample(uint8_t side) {
+    auto NoiseChannel::sample(const uint8_t side) const -> uint8_t {
         if (!channel_on) {
             return 0;
         }
 
-        uint8_t volume = (LFSR & 1) * volume_output;
+        const uint8_t volume = (LFSR & 1) * volume_output;
 
         if (side == 0 && left_out_enabled) {
             return volume;
-        } else if (side == 1 && right_out_enabled) {
+        }
+
+        if (side == 1 && right_out_enabled) {
             return volume;
         }
 
         return 0;
     }
 
-    void NoiseChannel::trigger(uint8_t frame_sequencer_counter) {
+    auto NoiseChannel::trigger(const uint8_t frame_sequencer_counter) -> void {
         channel_on = true;
 
         if (length.length_counter == 0) {
             length.length_counter = 64;
 
             if (frame_sequencer_counter & 1) {
-                length.step_length(channel_on);
+                length.clock_length(channel_on);
             }
         }
 
@@ -457,13 +469,13 @@ namespace GB {
         }
     }
 
-    void NoiseChannel::write_nr41(uint8_t nr41) {
+    auto NoiseChannel::write_nr41(const uint8_t nr41) -> void {
         length.length_counter = length.initial_length_time = 64 - (nr41 & 0b00111111);
     }
 
-    void NoiseChannel::write_nr42(uint8_t nr42) {
-        uint8_t old_pace = envelope.envelope_sweep_pace;
-        uint8_t old_direction = envelope.envelope_direction;
+    auto NoiseChannel::write_nr42(const uint8_t nr42) -> void {
+        const uint8_t old_pace = envelope.envelope_sweep_pace;
+        const uint8_t old_direction = envelope.envelope_direction;
 
         envelope.envelope_sweep_pace = nr42 & 0b00000111;
         envelope.envelope_direction = (nr42 & 0b00001000) >> 3;
@@ -486,7 +498,7 @@ namespace GB {
         }
     }
 
-    uint8_t NoiseChannel::read_nr42() const {
+    auto NoiseChannel::read_nr42() const -> uint8_t {
         uint8_t nr42 = 0;
         nr42 |= envelope.envelope_sweep_pace;
         nr42 |= envelope.envelope_direction << 3;
@@ -494,18 +506,19 @@ namespace GB {
         return nr42;
     }
 
-    void NoiseChannel::write_nr43(uint8_t nr43) {
+    auto NoiseChannel::write_nr43(const uint8_t nr43) -> void {
         clock_divider = nr43 & 0b00000111;
         LFSR_width = (nr43 & 0b00001000) >> 3;
         clock_shift = (nr43 & 0b11110000) >> 4;
     }
 
-    void NoiseChannel::write_nr44(uint8_t nr44, uint8_t frame_sequencer_counter) {
-        bool old_length = length.sound_length_enable;
+    auto NoiseChannel::write_nr44(const uint8_t nr44, const uint8_t frame_sequencer_counter)
+        -> void {
+        const bool old_length = length.sound_length_enable;
         length.sound_length_enable = (nr44 & 0b01000000) >> 6;
 
         if ((!old_length && length.sound_length_enable) && (frame_sequencer_counter & 1)) {
-            length.step_length(channel_on);
+            length.clock_length(channel_on);
         }
 
         trigger_channel = (nr44 & 0b10000000) >> 7;
@@ -515,7 +528,7 @@ namespace GB {
         }
     }
 
-    uint8_t NoiseChannel::read_nr43() const {
+    auto NoiseChannel::read_nr43() const -> uint8_t {
         uint8_t nr43 = 0;
         nr43 |= clock_divider;
         nr43 |= LFSR_width << 3;
@@ -523,9 +536,9 @@ namespace GB {
         return nr43;
     }
 
-    uint8_t NoiseChannel::read_nr44() const { return length.sound_length_enable << 6; }
+    auto NoiseChannel::read_nr44() const -> uint8_t { return length.sound_length_enable << 6; }
 
-    void APU::reset() {
+    auto APU::reset() -> void {
         stereo_left_volume = 7;
         stereo_right_volume = 7;
         mix_vin_left = false;
@@ -541,13 +554,14 @@ namespace GB {
         wave_table.fill(0);
     }
 
-    void APU::set_samples_callback(int32_t rate, std::function<void(SampleResult result)> cb) {
-        samples_ready_func = cb;
+    auto APU::set_samples_callback(const int32_t rate, std::function<void(SampleResult result)> cb)
+        -> void {
+        samples_ready_func = std::move(cb);
         sample_rate = rate;
         sample_counter = 0;
     }
 
-    uint8_t APU::read_register(uint8_t address) {
+    auto APU::read_register(const uint8_t address) const -> uint8_t {
         switch (address) {
         // Pulse 1
         case 0x10: {
@@ -601,9 +615,7 @@ namespace GB {
         }
 
         // Noise
-        case 0x1F: {
-            return 0xFF;
-        }
+        case 0x1F:
         case 0x20: {
             return 0xFF;
         }
@@ -630,11 +642,12 @@ namespace GB {
         case 0x27: {
             return 0xFF;
         }
+        default:;
         }
         return 0;
     }
 
-    void APU::write_register(uint8_t address, uint8_t value) {
+    auto APU::write_register(const uint8_t address, const uint8_t value) -> void {
         if (power) {
             switch (address) {
             case 0x10: {
@@ -735,6 +748,7 @@ namespace GB {
             case 0x27: {
                 return;
             }
+            default:;
             }
         } else {
             // Length counters are always writable on DMG units
@@ -759,15 +773,16 @@ namespace GB {
                 write_nr52(value);
                 return;
             }
+            default:;
             }
         }
     }
 
-    uint8_t APU::read_wave_ram(uint8_t address) { return wave_table[address]; }
+    auto APU::read_wave_ram(const uint8_t address) const -> uint8_t { return wave_table[address]; }
 
-    void APU::write_wave_ram(uint8_t address, uint8_t value) { wave_table[address] = value; }
+    auto APU::write_wave_ram(const uint8_t address, const uint8_t value) -> void { wave_table[address] = value; }
 
-    void APU::write_nr52(uint8_t value) {
+    auto APU::write_nr52(const uint8_t value) -> void {
         power = (value & 0b10000000) > 0;
         if (power == 0) {
             pulse_1 = PulseChannel(true);
@@ -781,7 +796,7 @@ namespace GB {
         }
     }
 
-    uint8_t APU::read_nr52() const {
+    auto APU::read_nr52() const -> uint8_t {
         uint8_t nr52 = 0x70;
         nr52 |= power ? 0b10000000 : 0;
         nr52 |= pulse_1.channel_on ? 0b00000001 : 0;
@@ -792,7 +807,7 @@ namespace GB {
         return nr52;
     }
 
-    void APU::write_nr50(uint8_t value) {
+    auto APU::write_nr50(const uint8_t value) -> void {
         stereo_right_volume = value & 0b00000111;
         stereo_left_volume = (value & 0b01110000) >> 4;
 
@@ -800,7 +815,7 @@ namespace GB {
         mix_vin_right = (value & 0b00001000) > 0;
     }
 
-    void APU::write_nr51(uint8_t value) {
+    auto APU::write_nr51(const uint8_t value) -> void {
         pulse_1.left_out_enabled = (value & 0b00010000) > 0;
         pulse_1.right_out_enabled = value & 0b00000001;
 
@@ -814,7 +829,7 @@ namespace GB {
         noise.right_out_enabled = value & 0b00001000;
     }
 
-    uint8_t APU::read_nr50() const {
+    auto APU::read_nr50() const -> uint8_t {
         uint8_t nr50 = 0;
         nr50 |= stereo_right_volume & 0b00000111;
         nr50 |= (stereo_left_volume & 0b00000111) << 4;
@@ -823,7 +838,7 @@ namespace GB {
         return nr50;
     }
 
-    uint8_t APU::read_nr51() const {
+    auto APU::read_nr51() const -> uint8_t {
         uint8_t nr51 = 0;
         nr51 |= static_cast<uint8_t>(pulse_1.left_out_enabled) << 4;
         nr51 |= static_cast<uint8_t>(pulse_1.right_out_enabled);
@@ -839,12 +854,12 @@ namespace GB {
         return nr51;
     }
 
-    void APU::step(int32_t cycles) {
+    auto APU::clock(const int32_t cycles) -> void {
         for (int i = 0; i < cycles; ++i) {
-            pulse_1.step_frequency();
-            pulse_2.step_frequency();
-            wave.step(wave_table);
-            noise.step();
+            pulse_1.clock_frequency();
+            pulse_2.clock_frequency();
+            wave.clock(wave_table);
+            noise.clock();
             sample_counter++;
 
             if (sample_counter % sample_rate == 0) {
@@ -866,43 +881,44 @@ namespace GB {
             }
         }
     }
-    void APU::step_frame_sequencer() {
+    auto APU::clock_frame_sequencer() -> void {
         switch (frame_sequencer_counter) {
         case 0:
         case 4: {
-            pulse_1.length.step_length(pulse_1.channel_on);
-            pulse_2.length.step_length(pulse_2.channel_on);
+            pulse_1.length.clock_length(pulse_1.channel_on);
+            pulse_2.length.clock_length(pulse_2.channel_on);
             if (wave.dac_enabled) {
-                wave.length.step_length(wave.channel_on);
+                wave.length.clock_length(wave.channel_on);
             }
-            noise.length.step_length(noise.channel_on);
+            noise.length.clock_length(noise.channel_on);
             break;
         }
 
         case 2:
         case 6: {
-            pulse_1.step_frequency_sweep();
-            pulse_1.length.step_length(pulse_1.channel_on);
-            pulse_2.length.step_length(pulse_2.channel_on);
+            pulse_1.clock_frequency_sweep();
+            pulse_1.length.clock_length(pulse_1.channel_on);
+            pulse_2.length.clock_length(pulse_2.channel_on);
             if (wave.dac_enabled) {
-                wave.length.step_length(wave.channel_on);
+                wave.length.clock_length(wave.channel_on);
             }
-            noise.length.step_length(noise.channel_on);
+            noise.length.clock_length(noise.channel_on);
             break;
         }
 
         case 7: {
             if (pulse_1.channel_on) {
-                pulse_1.envelope.step_envelope_sweep(pulse_1.volume_output);
+                pulse_1.envelope.clock_envelope_sweep(pulse_1.volume_output);
             }
             if (pulse_2.channel_on) {
-                pulse_2.envelope.step_envelope_sweep(pulse_2.volume_output);
+                pulse_2.envelope.clock_envelope_sweep(pulse_2.volume_output);
             }
             if (noise.channel_on) {
-                noise.envelope.step_envelope_sweep(noise.volume_output);
+                noise.envelope.clock_envelope_sweep(noise.volume_output);
             }
             break;
         }
+        default:;
         }
 
         frame_sequencer_counter = ++frame_sequencer_counter & 7;
