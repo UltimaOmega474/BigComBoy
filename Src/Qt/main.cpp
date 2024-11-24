@@ -42,6 +42,7 @@ int main(int argc, char *argv[]) {
     QSurfaceFormat::setDefaultFormat(format);
 
     QApplication a(argc, argv);
+    SDL_SetHint(SDL_HINT_JOYSTICK_THREAD, "1");
     SDL_Init(SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO);
     Common::Config::current().read_from_file(QtFrontend::Paths::ConfigLocation());
 

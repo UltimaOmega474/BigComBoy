@@ -22,7 +22,7 @@
 
 namespace QtFrontend {
     GBEmulatorController::GBEmulatorController() : QObject(nullptr), sram_timer(new QTimer(this)) {
-        connect(sram_timer, &QTimer::timeout, this, &GBEmulatorController::save_sram);
+       // connect(sram_timer, &QTimer::timeout, this, &GBEmulatorController::save_sram);
     }
 
     GBEmulatorController::~GBEmulatorController() { sram_timer->stop(); }
@@ -31,25 +31,22 @@ namespace QtFrontend {
 
     GB::Core &GBEmulatorController::get_core() { return core; }
 
-    bool GBEmulatorController::try_run_frame() {
+    auto GBEmulatorController::run() -> void {
         using namespace std::chrono_literals;
 
         if (state == EmulationState::Running && audio_system.should_continue()) {
             core.run_for_frames(1);
-            return true;
         }
-
-        return false;
     }
 
-    void GBEmulatorController::process_input(std::array<bool, 8> &buttons) {
+    auto GBEmulatorController::process_input(std::array<bool, 8> &buttons) -> void {
         const auto &mappings = Common::Config::current().gameboy.input_mappings;
 
         for (const auto &mapping : mappings) {
             auto device_option = Input::try_find_by_name(mapping.device_name);
 
             if (device_option) {
-                auto device = device_option.value();
+                const auto device = device_option.value();
 
                 for (int i = 0; i < mapping.buttons.size(); ++i) {
                     if (device->is_key_down(mapping.buttons[i])) {
@@ -57,86 +54,6 @@ namespace QtFrontend {
                     }
                 }
             }
-        }
-    }
-
-    void GBEmulatorController::start_rom(std::filesystem::path path) {
-        auto new_cart = GB::Cartridge::from_file(path);
-
-        if (cart) {
-            cart->save_sram_to_file();
-            cart.reset();
-        }
-
-        if (new_cart) {
-            const auto &emulation = Common::Config::current().gameboy.emulation;
-
-            cart = std::move(new_cart);
-
-            init_by_console_type();
-
-            audio_system.prep_for_playback(core.apu);
-
-            state = EmulationState::Running;
-
-            int32_t interval_seconds = emulation.sram_save_interval * 1000;
-
-            sram_timer->stop();
-            sram_timer->start(interval_seconds);
-
-            emit on_load_success(QString::fromStdString(path.string()));
-            emit on_show();
-        } else {
-            emit on_load_fail(QString::fromStdString(path.string()));
-        }
-    }
-
-    void GBEmulatorController::copy_input(std::array<bool, 8> buttons) {
-        using namespace GB;
-        core.pad.clear_buttons();
-
-        for (int i = 0; i < buttons.size(); ++i) {
-            core.pad.set_pad_state(static_cast<PadButton>(i), buttons[i]);
-        }
-    }
-
-    void GBEmulatorController::set_pause(bool checked) {
-        switch (state) {
-        case EmulationState::Paused: {
-            state = EmulationState::Running;
-            break;
-        }
-        case EmulationState::Running: {
-            state = EmulationState::Paused;
-            break;
-        }
-        default: {
-            break;
-        }
-        }
-    }
-
-    void GBEmulatorController::stop_emulation() {
-        sram_timer->stop();
-        core.initialize(nullptr);
-        cart->save_sram_to_file();
-        cart.reset();
-        state = EmulationState::Stopped;
-        emit on_hide();
-    }
-
-    void GBEmulatorController::reset_emulation() {
-        init_by_console_type();
-        audio_system.prep_for_playback(core.apu);
-    }
-
-    void GBEmulatorController::save_sram() {
-        int32_t interval_seconds =
-            Common::Config::current().gameboy.emulation.sram_save_interval * 1000;
-        cart->save_sram_to_file();
-
-        if (sram_timer->interval() != interval_seconds) {
-            sram_timer->setInterval(interval_seconds);
         }
     }
 

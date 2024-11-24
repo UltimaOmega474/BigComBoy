@@ -31,4 +31,6 @@ namespace Input {
 
     void register_device(InputDevice *device);
     void remove_device(InputDevice *device);
+
+    auto update_state() -> void;
 }

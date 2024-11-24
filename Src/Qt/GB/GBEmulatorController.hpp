@@ -20,6 +20,7 @@
 #include "AudioSystem.hpp"
 #include "Common/Math.hpp"
 #include "Cores/GB/Core.hpp"
+#include "../EmulatorContext.hpp"
 #include <QObject>
 #include <QTimer>
 #include <array>
@@ -35,12 +36,12 @@ namespace QtFrontend {
 
     enum class EmulationState { Stopped, BreakMode, Paused, Running };
 
-    class GBEmulatorController : public QObject {
+    class GBEmulatorController : public QObject, public EmulatorContext {
         Q_OBJECT
 
     public:
         GBEmulatorController();
-        ~GBEmulatorController();
+        ~GBEmulatorController() override;
         GBEmulatorController(const GBEmulatorController &) = delete;
         GBEmulatorController(GBEmulatorController &&) = delete;
         GBEmulatorController &operator=(const GBEmulatorController &) = delete;
@@ -49,21 +50,8 @@ namespace QtFrontend {
         EmulationState get_state() const;
         GB::Core &get_core();
 
-        bool try_run_frame();
-        void process_input(std::array<bool, 8> &buttons);
-
-        Q_SLOT void start_rom(std::filesystem::path path);
-        Q_SLOT void copy_input(std::array<bool, 8> input);
-        Q_SLOT void set_pause(bool checked);
-        Q_SLOT void stop_emulation();
-        Q_SLOT void reset_emulation();
-        Q_SLOT void save_sram();
-
-        Q_SIGNAL void on_load_success(const QString &message, int timeout = 0);
-        Q_SIGNAL void on_load_fail(const QString &message, int timeout = 0);
-        Q_SIGNAL void on_show();
-        Q_SIGNAL void on_hide();
-
+        auto process_input(std::array<bool, 8> &buttons) -> void override;
+        auto run() -> void override;
     private:
         void init_by_console_type();
 

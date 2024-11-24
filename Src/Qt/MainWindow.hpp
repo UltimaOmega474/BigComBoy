@@ -17,6 +17,7 @@
 */
 
 #pragma once
+#include "InputManager.hpp"
 #include <QMainWindow>
 #include <QTimer>
 #include <filesystem>
@@ -34,6 +35,7 @@ namespace Input {
 }
 
 namespace QtFrontend {
+
     class EmulatorView;
     class SettingsWindow;
     class AboutWindow;
@@ -43,49 +45,48 @@ namespace QtFrontend {
 
     public:
         explicit MainWindow(QWidget *parent = nullptr);
-        ~MainWindow();
+        ~MainWindow() override;
         MainWindow(const MainWindow &) = delete;
         MainWindow(MainWindow &&) = delete;
         MainWindow &operator=(const MainWindow &) = delete;
         MainWindow &operator=(MainWindow &&) = delete;
 
-        void showEvent(QShowEvent *) override;
-        void closeEvent(QCloseEvent *event) override;
-        void keyPressEvent(QKeyEvent *event) override;
-        void keyReleaseEvent(QKeyEvent *event) override;
+        auto showEvent(QShowEvent *) -> void override;
+        auto closeEvent(QCloseEvent *event) -> void override;
+        auto keyPressEvent(QKeyEvent *event) -> void override;
+        auto keyReleaseEvent(QKeyEvent *event) -> void override;
 
-        QAction *get_reset_action();
-        QAction *get_pause_action();
-        QAction *get_stop_action();
-        QLabel *get_fps_counter();
+        auto reset_action() const -> QAction *;
+        auto pause_action() const -> QAction *;
+        auto stop_action() const -> QAction *;
+        auto fps_counter_label() const -> QLabel *;
+    public slots:
+        auto open_rom_file_browser() -> void;
+        auto open_rom_from_recents(const QAction *action) -> void;
+        auto open_gb_settings() -> void;
+        auto open_about() -> void;
+        auto clear_settings_ptr() -> void;
+        auto clear_about_ptr() -> void;
+        auto rom_load_success(const QString &message, int timeout = 0) -> void;
+        auto rom_load_fail(const QString &message, int timeout = 0) const -> void;
 
-        Q_SLOT void open_rom_file_browser();
-        Q_SLOT void open_rom_from_recents(QAction *action);
-        Q_SLOT void open_gb_settings();
-        Q_SLOT void open_about();
-        Q_SLOT void clear_settings_ptr();
-        Q_SLOT void clear_about_ptr();
-        Q_SLOT void rom_load_success(const QString &message, int timeout = 0);
-        Q_SLOT void rom_load_fail(const QString &message, int timeout = 0);
-
-        Q_SIGNAL void rom_loaded(std::filesystem::path);
-        Q_SIGNAL void reload_device_list();
+    signals:
+        auto rom_loaded(std::filesystem::path) -> void;
+        auto reload_device_list() -> void;
 
     private:
-        void connect_slots();
-        void reload_recent_roms();
-        void update_controllers();
-        void reload_controllers();
+        auto connect_slots() -> void;
+        auto reload_recent_roms() const -> void;
+        auto update_controllers() -> void;
+        auto reload_controllers() -> void;
 
         QTimer input_timer;
-        std::vector<std::unique_ptr<Input::InputDevice>> controllers;
-        std::unique_ptr<Input::InputDevice> keyboard;
+        Input input_m;
 
         Ui::MainWindow *ui;
         SettingsWindow *settings = nullptr;
         AboutWindow *about = nullptr;
-
         QLabel *fps_counter = nullptr;
-        EmulatorView *emulator_widget;
+        EmulatorView *emulator_widget = nullptr;
     };
 }

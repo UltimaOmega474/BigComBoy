@@ -3,13 +3,15 @@ set(QT_SOURCES
 	Paths.cpp
 	MainWindow.cpp
 	MainWindow.ui
-	KeyboardDevice.cpp
-	DiscordRPC.cpp
+        DiscordRPC.cpp
 	DiscordRPC.hpp
 	EmulatorView.cpp
 	Style.cpp
 	AboutWindow.cpp
 	AboutWindow.ui
+	EmulatorContext.cpp
+	InputManager.cpp
+		InputManager.hpp
 	../../Icons/icon.qrc
 
 	OGL/GLFunctions.cpp

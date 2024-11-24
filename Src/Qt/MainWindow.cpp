@@ -24,7 +24,6 @@
 #include "GB/SubWindows/SettingsWindow.hpp"
 #include "Input/DeviceRegistry.hpp"
 #include "Input/SDLControllerDevice.hpp"
-#include "KeyboardDevice.hpp"
 #include "ui_MainWindow.h"
 #include <QFileDialog>
 #include <QKeyEvent>
@@ -36,7 +35,7 @@
 
 namespace QtFrontend {
     MainWindow::MainWindow(QWidget *parent)
-        : QMainWindow(parent), input_timer(), keyboard(std::make_unique<KeyboardDevice>()),
+        : QMainWindow(parent), input_timer(),
           ui(new Ui::MainWindow), fps_counter(new QLabel(tr("--"))) {
         ui->setupUi(this);
         ui->menuLoad_Recent->setEnabled(false);
@@ -47,7 +46,7 @@ namespace QtFrontend {
         setStatusBar(new QStatusBar(this));
         statusBar()->addPermanentWidget(fps_counter, 0);
 
-        Input::register_device(keyboard.get());
+
         reload_controllers();
         reload_recent_roms();
 
@@ -70,9 +69,9 @@ namespace QtFrontend {
         ui = nullptr;
     }
 
-    void MainWindow::showEvent(QShowEvent *event) { input_timer.start(1); }
+    auto MainWindow::showEvent(QShowEvent *event) -> void { input_timer.start(1); }
 
-    void MainWindow::closeEvent(QCloseEvent *event) {
+    auto MainWindow::closeEvent(QCloseEvent *event) -> void {
         auto &config = Common::Config::current();
         config.wsize_x = width();
         config.wsize_y = height();
@@ -80,25 +79,27 @@ namespace QtFrontend {
         DiscordRPC::close();
     }
 
-    void MainWindow::keyPressEvent(QKeyEvent *event) {
-        keyboard->key_down(event->key());
+    auto MainWindow::keyPressEvent(QKeyEvent *event) -> void {
+      //  keyboard->key_down(event->key());
+        input_m.key_pressed(event->key());
         event->accept();
     }
 
-    void MainWindow::keyReleaseEvent(QKeyEvent *event) {
-        keyboard->key_up(event->key());
+    auto MainWindow::keyReleaseEvent(QKeyEvent *event) -> void {
+       // keyboard->key_up(event->key());
+        input_m.key_released(event->key());
         event->accept();
     }
 
-    QAction *MainWindow::get_reset_action() { return ui->actionReset; }
+    auto MainWindow::reset_action() const -> QAction * { return ui->actionReset; }
 
-    QAction *MainWindow::get_pause_action() { return ui->actionPause; }
+    auto MainWindow::pause_action() const -> QAction * { return ui->actionPause; }
 
-    QAction *MainWindow::get_stop_action() { return ui->actionStop; }
+    auto MainWindow::stop_action() const -> QAction * { return ui->actionStop; }
 
-    QLabel *MainWindow::get_fps_counter() { return fps_counter; }
+    auto MainWindow::fps_counter_label() const -> QLabel * { return fps_counter; }
 
-    void MainWindow::open_rom_file_browser() {
+    auto MainWindow::open_rom_file_browser() -> void {
         QFileDialog dialog;
         dialog.setFileMode(QFileDialog::FileMode::ExistingFile);
         dialog.setViewMode(QFileDialog::Detail);
@@ -109,13 +110,13 @@ namespace QtFrontend {
         }
     }
 
-    void MainWindow::open_rom_from_recents(QAction *action) {
-        auto filePath = action->text().toStdString();
+    auto MainWindow::open_rom_from_recents(const QAction *action) -> void {
+        const auto filePath = action->text().toStdString();
 
         emit rom_loaded(filePath);
     }
 
-    void MainWindow::open_gb_settings() {
+    auto MainWindow::open_gb_settings() -> void {
         if (!settings) {
             int32_t menu = 0;
 
@@ -135,21 +136,22 @@ namespace QtFrontend {
         }
     }
 
-    void MainWindow::open_about() {
+    auto MainWindow::open_about() -> void {
         if (!about) {
             about = new AboutWindow(this);
-            about->show();
-            about->raise();
-            about->activateWindow();
             connect(about, &QDialog::finished, this, &MainWindow::clear_about_ptr);
         }
+
+        about->show();
+        about->raise();
+        about->activateWindow();
     }
 
-    void MainWindow::clear_settings_ptr() { settings = nullptr; }
+    auto MainWindow::clear_settings_ptr() -> void { settings = nullptr; }
 
-    void MainWindow::clear_about_ptr() { about = nullptr; }
+    auto MainWindow::clear_about_ptr() -> void { about = nullptr; }
 
-    void MainWindow::rom_load_success(const QString &message, int timeout) {
+    auto MainWindow::rom_load_success(const QString &message, int timeout) -> void {
         Common::Config::current().add_rom_to_history(message.toStdString());
         statusBar()->showMessage(
             QString::fromStdString(fmt::format("'{}' Loaded successfully.", message.toStdString())),
@@ -160,13 +162,13 @@ namespace QtFrontend {
         DiscordRPC::new_activity(info.fileName().toStdString());
     }
 
-    void MainWindow::rom_load_fail(const QString &message, int timeout) {
+    auto MainWindow::rom_load_fail(const QString &message, int timeout) const -> void {
         statusBar()->showMessage(
             QString::fromStdString(fmt::format("Unable to load '{}'", message.toStdString())),
             5000);
     }
 
-    void MainWindow::connect_slots() {
+    auto MainWindow::connect_slots() -> void {
         connect(ui->menuLoad_Recent, &QMenu::triggered, this, &MainWindow::open_rom_from_recents);
         connect(&input_timer, &QTimer::timeout, this, &MainWindow::update_controllers);
         connect(ui->actionLoad, &QAction::triggered, this, &MainWindow::open_rom_file_browser);
@@ -178,52 +180,25 @@ namespace QtFrontend {
         connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::open_about);
     }
 
-    void MainWindow::reload_recent_roms() {
+    auto MainWindow::reload_recent_roms() const -> void {
         for (QAction *act : ui->menuLoad_Recent->actions()) {
             delete act;
         }
         ui->menuLoad_Recent->actions().clear();
 
         for (const auto &path : Common::Config::current().recent_roms) {
-            QAction *act = new QAction(QString::fromStdString(path), ui->menuLoad_Recent);
+            auto *act = new QAction(QString::fromStdString(path), ui->menuLoad_Recent);
             ui->menuLoad_Recent->addAction(act);
         }
-        ui->menuLoad_Recent->setEnabled(ui->menuLoad_Recent->actions().size() > 0 ? true : false);
+        ui->menuLoad_Recent->setEnabled(!ui->menuLoad_Recent->actions().empty());
     }
 
-    void MainWindow::update_controllers() {
+    auto MainWindow::update_controllers() -> void {
         SDL_Event event;
 
-        if (SDL_PollEvent(&event)) {
-            switch (event.type) {
-            case SDL_EventType::SDL_CONTROLLERDEVICEADDED:
-            case SDL_EventType::SDL_CONTROLLERDEVICEREMOVED: {
-                reload_controllers();
-                emit reload_device_list();
-                break;
-            }
-            }
-        }
-        for (const auto &controller : controllers) {
-            controller->update_internal_state();
-        }
     }
 
-    void MainWindow::reload_controllers() {
-        for (const auto &controller : controllers) {
-            Input::remove_device(controller.get());
-        }
-        controllers.clear();
+    auto MainWindow::reload_controllers() -> void {
 
-        for (int32_t i = 0; i < SDL_NumJoysticks(); ++i) {
-            if (SDL_IsGameController(i)) {
-                auto controller = std::make_unique<Input::SDLControllerDevice>(i);
-                Input::register_device(controller.get());
-
-                if (controller->is_open()) {
-                    controllers.push_back(std::move(controller));
-                }
-            }
-        }
     }
 }

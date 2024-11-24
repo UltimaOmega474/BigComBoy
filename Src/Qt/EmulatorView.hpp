@@ -74,7 +74,7 @@ namespace QtFrontend {
 
     public:
         explicit EmulatorView(MainWindow *parent);
-        ~EmulatorView();
+        ~EmulatorView() override;
         EmulatorView(const EmulatorView &) = delete;
         EmulatorView(EmulatorView &&) = delete;
         EmulatorView &operator=(const EmulatorView &) = delete;

@@ -17,6 +17,8 @@
 */
 
 #include "DeviceRegistry.hpp"
+#include "SDLControllerDevice.hpp"
+#include <SDL.h>
 
 namespace Input {
     static std::unordered_set<InputDevice *> devices_;
@@ -30,6 +32,25 @@ namespace Input {
     }
 
     void remove_device(InputDevice *device) { devices_.erase(device); }
+
+    auto update_state() -> void {
+        SDL_Event event;
+
+        if (SDL_PollEvent(&event)) {
+            switch (event.type) {
+            case SDL_CONTROLLERDEVICEADDED: {
+                auto controller = std::make_unique<Input::SDLControllerDevice>(event.cdevice.which);
+                register_device(controller.get());
+                break;
+            }
+            case SDL_CONTROLLERDEVICEREMOVED: {
+
+                break;
+            }
+            }
+        }
+
+    }
 
     std::optional<InputDevice *> try_find_by_name(std::string_view name) {
         for (auto device : devices_) {

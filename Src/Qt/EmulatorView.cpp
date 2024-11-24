@@ -31,14 +31,8 @@
 
 namespace QtFrontend {
     EmulatorThread::EmulatorThread(QObject *parent)
-        : QThread(parent), input_timer(), gb_controller(new GBEmulatorController) {
+        : QThread(parent), input_timer(), gb_controller() {
 
-        connect(gb_controller, &GBEmulatorController::on_show,
-                dynamic_cast<QOpenGLWidget *>(parent), &QWidget::show);
-        connect(gb_controller, &GBEmulatorController::on_hide,
-                dynamic_cast<QOpenGLWidget *>(parent), &QWidget::hide);
-        connect(this, &EmulatorThread::on_post_input, gb_controller,
-                &GBEmulatorController::copy_input);
 
         connect(&input_timer, &QTimer::timeout, this, &EmulatorThread::update_input);
 
@@ -66,7 +60,7 @@ namespace QtFrontend {
         auto accumulator = std::chrono::nanoseconds::zero();
         auto last_timer_time = std::chrono::steady_clock::now();
         auto last_callback_time = std::chrono::steady_clock::now();
-        auto interval = Common::Math::freq_to_nanoseconds(60);
+        constexpr auto interval = Common::Math::freq_to_nanoseconds(60);
 
         std::array<double, 100> samples{};
         size_t next = 0;
@@ -109,7 +103,8 @@ namespace QtFrontend {
                     emit on_update_fps_display(QString::fromStdString(
                         fmt::format("FPS:{} Avg:{:05.2f}ms", fps, current_average)));
 
-                    if (gb_controller->try_run_frame()) {
+                    gb_controller->run();
+                    {
                         auto &image = image_buffer.next_rendering_image();
                         auto ppu_image = gb_controller->get_core().ppu.framebuffer();
 
@@ -155,18 +150,18 @@ namespace QtFrontend {
     }
 
     void EmulatorView::showEvent(QShowEvent *ev) {
-        window->get_reset_action()->setDisabled(false);
-        window->get_pause_action()->setDisabled(false);
-        window->get_stop_action()->setDisabled(false);
+        window->reset_action()->setDisabled(false);
+        window->pause_action()->setDisabled(false);
+        window->stop_action()->setDisabled(false);
     }
 
     void EmulatorView::hideEvent(QHideEvent *ev) {
         DiscordRPC::set_idle();
-        window->get_pause_action()->setChecked(false);
+        window->pause_action()->setChecked(false);
 
-        window->get_reset_action()->setDisabled(true);
-        window->get_pause_action()->setDisabled(true);
-        window->get_stop_action()->setDisabled(true);
+        window->reset_action()->setDisabled(true);
+        window->pause_action()->setDisabled(true);
+        window->stop_action()->setDisabled(true);
     }
 
     void EmulatorView::initializeGL() {
@@ -208,28 +203,11 @@ namespace QtFrontend {
     }
 
     void EmulatorView::connect_slots() {
-        connect(thread, &EmulatorThread::on_update_fps_display, window->get_fps_counter(),
+        connect(thread, &EmulatorThread::on_update_fps_display, window->fps_counter_label(),
                 &QLabel::setText);
-
-        connect(thread->gb_controller, &GBEmulatorController::on_load_success, window,
-                &MainWindow::rom_load_success);
-
-        connect(thread->gb_controller, &GBEmulatorController::on_load_fail, window,
-                &MainWindow::rom_load_fail);
 
         connect(thread, &EmulatorThread::update_textures, this, &EmulatorView::update_textures);
 
-        connect(window->get_reset_action(), &QAction::triggered, thread->gb_controller,
-                &GBEmulatorController::reset_emulation);
-
-        connect(window->get_pause_action(), &QAction::triggered, thread->gb_controller,
-                &GBEmulatorController::set_pause);
-
-        connect(window->get_stop_action(), &QAction::triggered, thread->gb_controller,
-                &GBEmulatorController::stop_emulation);
-
-        connect(window, &MainWindow::rom_loaded, thread->gb_controller,
-                &GBEmulatorController::start_rom);
     }
 
     void EmulatorView::update_textures() {
