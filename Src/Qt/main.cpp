@@ -34,6 +34,7 @@ void save_config() { Common::Config::current().write_to_file(QtFrontend::Paths::
 
 int main(int argc, char *argv[]) {
     QSurfaceFormat format;
+    format.setRenderableType(QSurfaceFormat::OpenGL);
     format.setDepthBufferSize(24);
     format.setStencilBufferSize(8);
     format.setVersion(4, 1);
